@@ -5,6 +5,7 @@
     <meta charset="utf-8">
     <title>@yield('title', 'Restoran - 50 Qəpik')</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="50 Qəpik — Elmlərdə milli və Avropa mətbəxi, çay dəstgahı və qəlyan seti. Dadlı yeməklər, sərfəli qiymətlər.">
 
     <link href="{{ asset('img/logo.png') }}" rel="icon">
@@ -20,7 +21,8 @@
     <link href="{{ asset('lib/owlcarousel/assets/owl.carousel.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/custom.css') }}?v=4" rel="stylesheet">
+    <link href="{{ asset('css/custom.css') }}?v=7" rel="stylesheet">
+    <link href="{{ asset('css/games.css') }}?v=11" rel="stylesheet">
     @yield('css')
 </head>
 
@@ -40,9 +42,15 @@
             <div class="navbar-nav ms-auto align-items-lg-center">
                 <a href="{{ route('home') }}" class="nav-item nav-link {{ request()->routeIs('home') ? 'active' : '' }}">Ana səhifə</a>
                 <a href="{{ route('menu') }}" class="nav-item nav-link {{ request()->routeIs('menu') ? 'active' : '' }}">Menyu</a>
+                <a href="{{ route('games.index') }}" class="nav-item nav-link {{ request()->routeIs('games.*') ? 'active' : '' }}">Oyunlar</a>
                 <a href="{{ route('contact') }}" class="nav-item nav-link {{ request()->routeIs('contact') ? 'active' : '' }}">Əlaqə</a>
             </div>
-            <a href="tel:+994702275050" class="btn btn-primary nav-cta"><i class="fa fa-phone-alt me-2"></i>Zəng et</a>
+            @auth
+                <a href="{{ route('account') }}" class="nav-user"><i class="fa fa-user-circle"></i>{{ \Illuminate\Support\Str::of(auth()->user()->name)->explode(' ')->first() }}</a>
+            @else
+                <a href="{{ route('login') }}" class="nav-user"><i class="fa fa-user-circle"></i>Daxil ol</a>
+            @endauth
+            <a href="tel:+994517171565" class="btn btn-primary nav-cta"><i class="fa fa-phone-alt me-2"></i>Zəng et</a>
         </div>
     </nav>
 
@@ -60,7 +68,7 @@
                     <p class="mb-0">Hər zövqə uyğun menyu: səhər yeməyindən qazan yeməklərinə, çay dəstgahından qəlyan setinə qədər.</p>
                     <div class="socials">
                         <a href="https://www.instagram.com/50qepik_elmler/" target="_blank" rel="noopener" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
-                        <a href="tel:+994702275050" aria-label="Zəng et"><i class="fa fa-phone-alt"></i></a>
+                        <a href="tel:+994517171565" aria-label="Zəng et"><i class="fa fa-phone-alt"></i></a>
                     </div>
                 </div>
                 <div class="col-6 col-lg-3">
@@ -68,13 +76,14 @@
                     <ul>
                         <li><a href="{{ route('home') }}">Ana səhifə</a></li>
                         <li><a href="{{ route('menu') }}">Menyu</a></li>
+                        <li><a href="{{ route('games.index') }}">Oyunlar</a></li>
                         <li><a href="{{ route('contact') }}">Əlaqə</a></li>
                     </ul>
                 </div>
                 <div class="col-6 col-lg-4">
                     <h5>Əlaqə</h5>
                     <ul>
-                        <li><i class="fa fa-phone-alt"></i><a href="tel:+994702275050">+994 70 227 50 50</a></li>
+                        <li><i class="fa fa-phone-alt"></i><a href="tel:+994517171565">+994 51 717 15 65</a></li>
                         <li><i class="fab fa-instagram"></i><a href="https://www.instagram.com/50qepik_elmler/" target="_blank" rel="noopener">@50qepik_elmler</a></li>
                         <li><i class="fa fa-map-marker-alt"></i>Elmlər, Bakı</li>
                     </ul>

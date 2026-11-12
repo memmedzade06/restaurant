@@ -1,0 +1,101 @@
+@extends('frontend.layouts.app')
+@section('title', 'Hesabım - 50 Qəpik')
+
+@section('content')
+<section class="page-hero page-hero-sm">
+    <div class="container">
+        <span class="eyebrow">Hesabım</span>
+        <h1>Salam, {{ auth()->user()->name }}!</h1>
+        <p>Qeydiyyatınız təsdiqlənib</p>
+    </div>
+</section>
+
+<section class="section pt-4">
+    <div class="container">
+        <div class="auth-card">
+            <ul class="account-list">
+                <li><span>Ad</span><b>{{ auth()->user()->name }}</b></li>
+                <li><span>Telefon</span><b>{{ \App\Support\Phone::format(auth()->user()->phone) }} <i class="fa fa-check-circle text-success ms-1" title="Telegram ilə təsdiqlənib"></i></b></li>
+                <li><span>E-poçt</span><b>{{ auth()->user()->email }}</b></li>
+                <li><span>Qeydiyyat tarixi</span><b>{{ auth()->user()->created_at->format('d.m.Y') }}</b></li>
+            </ul>
+
+            @php
+                $nard = \App\Models\GameResult::where('user_id', auth()->id())->where('game', 'nard')
+                    ->selectRaw('COUNT(*) as games, COALESCE(SUM(won),0) as wins, COALESCE(SUM(points),0) as points')->first();
+                $prizes = \App\Models\WheelSpin::where('user_id', auth()->id())->whereNotNull('code')->latest('id')->take(10)->get();
+            @endphp
+
+            <h5 class="account-section-title"><i class="fa fa-dice me-2 text-primary"></i>Nərd</h5>
+            <ul class="account-list">
+                <li><span>Oyun / qələbə</span><b>{{ (int) $nard->games }} / {{ (int) $nard->wins }}</b></li>
+                <li><span>Xal</span><b>{{ (int) $nard->points }}</b></li>
+            </ul>
+
+            @php($stackBest = (int) \App\Models\GameResult::where('user_id', auth()->id())->where('game', 'stack')->max('points'))
+            <h5 class="account-section-title"><i class="fa fa-layer-group me-2 text-primary"></i>Stəkan qülləsi</h5>
+            <ul class="account-list">
+                <li><span>Rekord</span><b>{{ $stackBest }} xal</b></li>
+            </ul>
+
+            <h5 class="account-section-title"><i class="fa fa-gift me-2 text-primary"></i>Hədiyyələrim</h5>
+            @if ($prizes->isEmpty())
+                <p class="text-muted mb-4">Hələ hədiyyə yoxdur. <a href="{{ route('games.wheel') }}">Bəxt çarxını fırladın</a>!</p>
+            @else
+                <ul class="prize-list">
+                    @foreach ($prizes as $p)
+                        <li>
+                            <div>
+                                <b>{{ $p->prize_label }}</b><br>
+                                <span class="muted"><i class="fa fa-clock"></i> {{ $p->created_at->timezone('Asia/Baku')->format('d.m.Y H:i') }} ·</span>
+                                <span class="muted">
+                                    @if ($p->redeemed_at) İstifadə olunub
+                                    @elseif ($p->isActive()) {{ $p->expires_at->timezone('Asia/Baku')->format('d.m.Y') }} tarixinədək
+                                    @else Vaxtı keçib
+                                    @endif
+                                </span>
+                            </div>
+                            <code style="{{ $p->isActive() ? '' : 'opacity:.4;text-decoration:line-through' }}">{{ $p->code }}</code>
+                        </li>
+                    @endforeach
+                </ul>
+            @endif
+
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit" class="btn btn-wine w-100 py-3"><i class="fa fa-sign-out-alt me-2"></i>Çıxış</button>
+            </form>
+        </div>
+    </div>
+</section>
+
+@if (session('registered'))
+    {{-- Qeydiyyat təsdiqlənəndən sonra bir dəfə görünür, 5 saniyəyə özü bağlanır --}}
+    <div class="modal fade" id="registeredModal" tabindex="-1" aria-labelledby="registeredTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content success-modal">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Bağla"></button>
+                <div class="success-ico"><i class="fa fa-check"></i></div>
+                <h3 id="registeredTitle">Qeydiyyatınız təsdiqləndi!</h3>
+                <p>Telefon nömrəniz Telegram vasitəsilə uğurla təsdiqləndi. 50 Qəpik ailəsinə xoş gəlmisiniz!</p>
+                <button type="button" class="btn btn-primary px-5 py-2" data-bs-dismiss="modal">Oldu</button>
+                <span class="success-bar"></span>
+            </div>
+        </div>
+    </div>
+@endif
+@endsection
+
+@section('js')
+@if (session('registered'))
+<script>
+    (function () {
+        const el = document.getElementById('registeredModal');
+        const modal = new bootstrap.Modal(el);
+        modal.show();
+        const timer = setTimeout(() => modal.hide(), 5000);
+        el.addEventListener('hidden.bs.modal', () => clearTimeout(timer));
+    })();
+</script>
+@endif
+@endsection

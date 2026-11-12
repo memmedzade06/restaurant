@@ -15,11 +15,11 @@
     <div class="container">
         <div class="row g-4">
             <div class="col-lg-5">
-                <a class="contact-card" href="tel:+994702275050">
+                <a class="contact-card" href="tel:+994517171565">
                     <span class="ico"><i class="fa fa-phone-alt"></i></span>
                     <div>
                         <h5>Telefon</h5>
-                        <p>+994 70 227 50 50</p>
+                        <p>+994 51 717 15 65</p>
                     </div>
                 </a>
                 <a class="contact-card" href="https://www.instagram.com/50qepik_elmler/" target="_blank" rel="noopener">
@@ -41,7 +41,7 @@
                         <h2 style="font-size:24px">Masa sifarişi</h2>
                         <p>Zəng edin, sizin üçün yer ayıraq.</p>
                     </div>
-                    <a href="tel:+994702275050" class="btn btn-primary">Zəng et</a>
+                    <a href="tel:+994517171565" class="btn btn-primary">Zəng et</a>
                 </div>
             </div>
             <div class="col-lg-7">

@@ -19,3 +19,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 
+
+// Telegram bot webhook-u (qeydiyyat təsdiqi). Gizli açar başlıqda yoxlanılır.
+Route::post('/telegram/webhook', [\App\Http\Controllers\Auth\TelegramVerifyController::class, 'webhook'])
+    ->middleware('throttle:120,1')
+    ->name('telegram.webhook');

@@ -1,0 +1,328 @@
+<?php
+
+namespace App\Http\Controllers\Frontend;
+
+use App\Http\Controllers\Controller;
+use App\Models\GameResult;
+use App\Models\User;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use App\Models\WheelSpin;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+use Illuminate\View\View;
+
+/**
+ * Oyunlar: hamı oynaya bilər, xal və hədiyyələr yalnız Telegram ilə təsdiqlənmiş istifadəçilərə yazılır.
+ */
+class GameController extends Controller
+{
+    public function index(): View
+    {
+        return view('frontend.games.index', [
+            'leaders' => $this->leaders(5),
+            'stackLeaders' => $this->stackLeaders(5),
+        ]);
+    }
+
+    public function stack(Request $request): View
+    {
+        $user = $request->user();
+
+        return view('frontend.games.stack', [
+            'leaders' => $this->stackLeaders(5),
+            'best' => $user && $user->hasVerifiedPhone() ? $this->stackBest($user->id) : null,
+        ]);
+    }
+
+    /** Stəkan qülləsi: oyunun hesabını yazır, ən yaxşı nəticəni qaytarır (yalnız təsdiqlənmiş istifadəçi) */
+    public function stackResult(Request $request): JsonResponse
+    {
+        $data = $request->validate(['score' => ['required', 'integer', 'min:0', 'max:1000']]);
+
+        $before = $this->stackBest($request->user()->id);
+
+        GameResult::create([
+            'user_id' => $request->user()->id,
+            'game' => 'stack',
+            'won' => false,
+            'points' => $data['score'],
+        ]);
+
+        return response()->json([
+            'saved' => true,
+            'best' => max($before, $data['score']),
+            'record' => $data['score'] > $before && $data['score'] > 0,
+        ]);
+    }
+
+    public function nard(Request $request): View
+    {
+        $user = $request->user();
+
+        return view('frontend.games.nard', [
+            'leaders' => $this->leaders(5),
+            'myStats' => $user && $user->hasVerifiedPhone() ? $this->stats($user->id) : null,
+        ]);
+    }
+
+    /** Nərd oyununun nəticəsini yazır (yalnız təsdiqlənmiş istifadəçi) */
+    public function nardResult(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'won' => ['required', 'boolean'],
+            'mars' => ['sometimes', 'boolean'],
+        ]);
+
+        $won = (bool) $data['won'];
+        $mars = $won && ($data['mars'] ?? false);
+        $points = $won ? config($mars ? 'games.nard.points_mars' : 'games.nard.points_win') : 0;
+
+        GameResult::create([
+            'user_id' => $request->user()->id,
+            'game' => 'nard',
+            'won' => $won,
+            'mars' => $mars,
+            'points' => $points,
+        ]);
+
+        return response()->json(['saved' => true, 'points' => $points, 'stats' => $this->stats($request->user()->id)]);
+    }
+
+    public function wheel(Request $request): View
+    {
+        $user = $request->user();
+        $verified = $user && $user->hasVerifiedPhone();
+
+        return view('frontend.games.wheel', [
+            'segments' => $this->segments(),
+            'verified' => $verified,
+            'attempts' => $this->attempts(),
+            'state' => $verified ? $this->wheelState($user->id) : null,
+        ]);
+    }
+
+    /**
+     * Çarxı fırladır. Nəticəni server seçir (brauzerdə dəyişdirmək olmur).
+     * Təsdiqlənmiş istifadəçinin gündə 3 cəhdi var; hər fırlatmadan sonra ya hədiyyəni götürür,
+     * ya da yenidən fırladır (əvvəlki nəticə itir). Qonaqlar üçün sınaq fırlatmasıdır.
+     */
+    public function spin(Request $request): JsonResponse
+    {
+        $segments = $this->segments();
+        $user = $request->user();
+
+        if (! $user || ! $user->hasVerifiedPhone()) {
+            $index = $this->pickIndex($segments);
+
+            return response()->json([
+                'index' => $index,
+                'label' => $segments[$index]['label'],
+                'prize' => $segments[$index]['prize'],
+                'demo' => true,
+            ]);
+        }
+
+        return DB::transaction(function () use ($user, $segments) {
+            User::whereKey($user->id)->lockForUpdate()->first(); // eyni anda iki fırlatmanın qarşısını alır
+            $state = $this->wheelState($user->id);
+
+            if ($state['claimed']) {
+                return response()->json(['message' => 'Bu günün hədiyyəsini artıq götürmüsünüz. Sabah yenə gəlin!', 'state' => $state], 429);
+            }
+            if ($state['attemptsLeft'] <= 0) {
+                return response()->json(['message' => 'Bu gün üçün cəhdləriniz bitdi. Sabah yenə gəlin!', 'state' => $state], 429);
+            }
+
+            $index = $this->pickIndex($segments);
+            $segment = $segments[$index];
+
+            // Fırlatma bazaya yazılmır: cəhd sayı və son nəticə serverin keşində saxlanılır
+            $round = $this->round($user->id);
+            $round['count']++;
+            $round['last'] = ['key' => $segment['key'], 'label' => $segment['label']];
+            $this->saveRound($user->id, $round);
+
+            return response()->json([
+                'index' => $index,
+                'demo' => false,
+                'label' => $segment['label'],
+                'prize' => (bool) $segment['prize'],
+                'state' => $this->wheelState($user->id),
+            ]);
+        });
+    }
+
+    /** "Hədiyyəni götür": son fırlatmanın hədiyyəsi üçün kod yaradır və bu günün raundunu bağlayır */
+    public function claim(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        return DB::transaction(function () use ($user) {
+            User::whereKey($user->id)->lockForUpdate()->first();
+            $state = $this->wheelState($user->id);
+
+            if ($state['claimed']) {
+                return response()->json(['state' => $state]); // artıq götürülüb — eyni kodu qaytarırıq
+            }
+
+            $round = $this->round($user->id);
+            $last = $round['last'];
+            if (! $last || ! $this->isPrize($last['key'])) {
+                return response()->json(['message' => 'Götürüləcək hədiyyə yoxdur. Çarxı fırladın.', 'state' => $state], 422);
+            }
+
+            // Bazaya yalnız götürülən hədiyyə yazılır
+            WheelSpin::create([
+                'user_id' => $user->id,
+                'prize_key' => $last['key'],
+                'prize_label' => $last['label'],
+                'code' => $this->newCode(),
+                'spun_on' => $this->today(),
+                'expires_at' => now()->addDays((int) config('games.wheel.code_valid_days', 7)),
+            ]);
+
+            $round['last'] = null;
+            $this->saveRound($user->id, $round);
+
+            return response()->json(['state' => $this->wheelState($user->id)]);
+        });
+    }
+
+    /**
+     * Bu günün vəziyyəti: neçə cəhd qalıb, son nəticə, götürülmüş hədiyyə.
+     */
+    private function wheelState(int $userId): array
+    {
+        $claimed = WheelSpin::where('user_id', $userId)->whereDate('spun_on', $this->today())->whereNotNull('code')->latest('id')->first();
+        $round = $this->round($userId);
+        $last = $round['last'];
+
+        return [
+            'attempts' => $this->attempts(),
+            'attemptsLeft' => $claimed ? 0 : max(0, $this->attempts() - $round['count']),
+            'last' => $last && ! $claimed ? ['label' => $last['label'], 'prize' => $this->isPrize($last['key'])] : null,
+            'claimed' => $claimed ? $this->spinPayload($claimed) : null,
+        ];
+    }
+
+    /** Bu günün raundu (keşdə): ['count' => fırlatma sayı, 'last' => son nəticə və ya null] */
+    private function round(int $userId): array
+    {
+        return Cache::get($this->roundKey($userId), ['count' => 0, 'last' => null]);
+    }
+
+    private function saveRound(int $userId, array $round): void
+    {
+        // Bakı vaxtı ilə gün bitəndə özü silinir — sabah yenə 3 cəhd
+        Cache::put($this->roundKey($userId), $round, now('Asia/Baku')->endOfDay());
+    }
+
+    private function roundKey(int $userId): string
+    {
+        return "wheel_round:{$userId}:" . $this->today();
+    }
+
+    private function attempts(): int
+    {
+        return max(1, (int) config('games.wheel.attempts_per_day', 3));
+    }
+
+    private function isPrize(string $key): bool
+    {
+        return (bool) (collect($this->segments())->firstWhere('key', $key)['prize'] ?? false);
+    }
+
+    /* ---------------------------------------------------------------- */
+
+    private function segments(): array
+    {
+        return array_values(config('games.wheel.segments'));
+    }
+
+    private function pickIndex(array $segments): int
+    {
+        $total = array_sum(array_column($segments, 'weight'));
+        $roll = random_int(1, max(1, $total));
+
+        foreach ($segments as $i => $segment) {
+            $roll -= $segment['weight'];
+            if ($roll <= 0) {
+                return $i;
+            }
+        }
+
+        return array_key_last($segments);
+    }
+
+    private function newCode(): string
+    {
+        do {
+            $code = 'QP-' . strtoupper(Str::random(6));
+        } while (WheelSpin::where('code', $code)->exists());
+
+        return $code;
+    }
+
+    private function spinPayload(WheelSpin $spin): array
+    {
+        return [
+            'label' => $spin->prize_label,
+            'prize' => (bool) $spin->code,
+            'code' => $spin->code,
+            'expires' => $spin->expires_at?->timezone('Asia/Baku')->format('d.m.Y'),
+            // "Hədiyyəni götür" basılan an (Bakı vaxtı)
+            'claimed_at' => $spin->created_at?->timezone('Asia/Baku')->format('d.m.Y H:i'),
+        ];
+    }
+
+    private function today(): string
+    {
+        return now('Asia/Baku')->toDateString();
+    }
+
+    /** Nərd rekordlar cədvəli: ən çox xal toplayanlar */
+    private function leaders(int $limit = 10): Collection
+    {
+        return GameResult::query()
+            ->where('game', 'nard')
+            ->selectRaw('user_id, SUM(points) as points, SUM(won) as wins, COUNT(*) as games')
+            ->groupBy('user_id')
+            ->having('points', '>', 0)
+            ->orderByDesc('points')
+            ->orderByDesc('wins')
+            ->limit($limit)
+            ->with('user:id,name')
+            ->get();
+    }
+
+    /** Stəkan qülləsi liderləri: hər oyunçunun ən yüksək nəticəsi */
+    private function stackLeaders(int $limit = 10): Collection
+    {
+        return GameResult::query()
+            ->where('game', 'stack')
+            ->selectRaw('user_id, MAX(points) as points, COUNT(*) as games')
+            ->groupBy('user_id')
+            ->having('points', '>', 0)
+            ->orderByDesc('points')
+            ->limit($limit)
+            ->with('user:id,name')
+            ->get();
+    }
+
+    private function stackBest(int $userId): int
+    {
+        return (int) GameResult::where('game', 'stack')->where('user_id', $userId)->max('points');
+    }
+
+    private function stats(int $userId): array
+    {
+        $row = GameResult::where('game', 'nard')->where('user_id', $userId)
+            ->selectRaw('COUNT(*) as games, COALESCE(SUM(won),0) as wins, COALESCE(SUM(points),0) as points')
+            ->first();
+
+        return ['games' => (int) $row->games, 'wins' => (int) $row->wins, 'points' => (int) $row->points];
+    }
+}

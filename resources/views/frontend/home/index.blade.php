@@ -12,7 +12,7 @@
                 <p class="lead animated fadeIn">Səhər yeməyindən qazan yeməklərinə, çay dəstgahından qəlyan setinə qədər. Hər zövqə uyğun menyu, sərfəli qiymətlər.</p>
                 <div class="hero-actions animated fadeInUp">
                     <a href="{{ route('menu') }}" class="btn btn-primary"><i class="fa fa-book-open me-2"></i>Menyuya bax</a>
-                    <a href="tel:+994702275050" class="btn btn-ghost"><i class="fa fa-phone-alt me-2"></i>Masa sifariş et</a>
+                    <a href="tel:+994517171565" class="btn btn-ghost"><i class="fa fa-phone-alt me-2"></i>Masa sifariş et</a>
                 </div>
             </div>
             <div class="col-lg-6">
@@ -124,7 +124,7 @@
                 <h2>Masanızı əvvəlcədən sifariş edin</h2>
                 <p>Ad günü, ailəvi məclis və ya dostlarla görüş üçün bizə zəng edin.</p>
             </div>
-            <a href="tel:+994702275050" class="btn btn-primary"><i class="fa fa-phone-alt me-2"></i>+994 70 227 50 50</a>
+            <a href="tel:+994517171565" class="btn btn-primary"><i class="fa fa-phone-alt me-2"></i>+994 51 717 15 65</a>
         </div>
     </div>
 </section>

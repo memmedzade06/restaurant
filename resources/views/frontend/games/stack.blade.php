@@ -1,0 +1,92 @@
+@extends('frontend.layouts.app')
+@section('title', 'Stəkan qülləsi - 50 Qəpik Oyunlar')
+
+@section('content')
+<section class="page-hero page-hero-sm">
+    <div class="container">
+        <span class="eyebrow">Oyunlar</span>
+        <h1>Stəkan qülləsi</h1>
+        <p>Armudu stəkanları üst-üstə düzün — qüllə aşmasın!</p>
+    </div>
+</section>
+
+@php
+    $canSave = auth()->check() && auth()->user()->hasVerifiedPhone();
+@endphp
+
+<section class="section pt-4">
+    <div class="container">
+        <a href="{{ route('games.index') }}" class="back-link"><i class="fa fa-arrow-left"></i> Oyunlara qayıt</a>
+        <div class="row g-4">
+            <div class="col-lg-7 col-xl-6">
+                <div id="stack" class="stack-game"
+                     data-can-save="{{ $canSave ? 1 : 0 }}"
+                     data-save-url="{{ route('games.stack.result') }}"
+                     data-bg-logo="{{ asset('img/games/stack-logo.png') }}"
+                     data-register-url="{{ auth()->check() ? route('verify.telegram') : route('register') }}"
+                     data-best="{{ $best ?? 0 }}">
+                    <div class="st-stage">
+                        <canvas aria-label="Stəkan qülləsi oyunu"></canvas>
+
+                        <div class="st-start">
+                            <div class="st-start-box">
+                                <i class="fa fa-hand-pointer"></i>
+                                <b>Başlamaq üçün toxunun</b>
+                                <span>Stəkan düşsün deyə ekrana toxunun və ya <kbd>Boşluq</kbd> basın</span>
+                            </div>
+                        </div>
+
+                        <div class="st-result" hidden>
+                            <div class="nb-result-box">
+                                <h3 class="st-title"></h3>
+                                <div class="st-score">0</div>
+                                <p class="st-note"></p>
+                                <button type="button" class="btn btn-primary px-5 st-again">Yenidən oyna</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5 col-xl-6">
+                <div class="game-side">
+                    @if ($canSave)
+                        <div class="side-card">
+                            <h5><i class="fa fa-user-circle me-2 text-primary"></i>Sizin rekord</h5>
+                            <p class="mb-0"><b id="stBest" class="st-best">{{ $best }}</b> xal</p>
+                        </div>
+                    @else
+                        <div class="side-card side-cta">
+                            <h5>Rekordunuz saxlanılsın?</h5>
+                            <p>Nəticəniz liderlər cədvəlinə düşsün deyə daxil olun və ya qeydiyyatdan keçin.</p>
+                            <a href="{{ auth()->check() ? route('verify.telegram') : route('register') }}" class="btn btn-primary w-100 mb-2">{{ auth()->check() ? 'Nömrəni təsdiqlə' : 'Qeydiyyat' }}</a>
+                            @guest <a href="{{ route('login') }}" class="btn btn-ghost-dark w-100">Daxil ol</a> @endguest
+                        </div>
+                    @endif
+
+                    <div class="side-card">
+                        <h5><i class="fa fa-trophy me-2 text-primary"></i>Liderlər</h5>
+                        @include('frontend.games._leaders', ['leaders' => $leaders])
+                    </div>
+
+                    <div class="side-card">
+                        <h5><i class="fa fa-book me-2 text-primary"></i>Necə oynanır?</h5>
+                        <ul class="rules">
+                            <li>Yuxarıda stəkan sağa-sola yellənir.</li>
+                            <li>Toxunun — stəkan düşüb qüllənin üstünə qonur.</li>
+                            <li>Hər stəkan <b>1 xal</b>, dəqiq üstünə qonsa <b>«Əla!» — 2 xal</b>.</li>
+                            <li><b>Ağırlıq nəzərə alınır:</b> qüllə düz xətt boyunca yığılmalıdır. Stəkanları hey bir tərəfə sürüşdürsəniz, qüllə əyilir və üstdəki yük ağır gəlib <b>aşır</b>.</li>
+                            <li>«Diqqət, qüllə əyilir!» yazısı çıxsa — növbəti stəkanı əks tərəfə qoyub tarazlığı düzəldin.</li>
+                            <li>Qüllə ucaldıqca stəkan daha sürətli yellənir.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+@endsection
+
+@section('js')
+<script src="{{ asset('js/games/stack.js') }}?v=16"></script>
+@endsection
