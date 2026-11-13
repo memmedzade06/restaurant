@@ -94,11 +94,12 @@
                             <li>Yuxarıda stəkan sağa-sola yellənir.</li>
                             <li>Toxunun — stəkan düşüb qüllənin üstünə qonur.</li>
                             <li>Hər stəkan <b>1 xal</b>, dəqiq üstünə qonsa <b>«Əla!» — 2 xal</b>.</li>
-                            <li><b>Ağırlıq nəzərə alınır:</b> qüllə düz xətt boyunca yığılmalıdır. Stəkanları hey bir tərəfə sürüşdürsəniz, qüllə əyilir və üstdəki yük ağır gəlib <b>aşır</b>.</li>
-                            <li>«Diqqət, qüllə əyilir!» yazısı çıxsa — növbəti stəkanı əks tərəfə qoyub tarazlığı düzəldin.</li>
-                            <li>Qüllə ucaldıqca stəkan daha sürətli yellənir, <b>30 xaldan sonra</b> isə sürət daha kəskin artır.</li>
                             @foreach ($prizes as $min => $p)
-                                <li><b>{{ $min }} xal</b> — <b>{{ $p['label'] }}</b>! «Hədiyyəni götür» seçsəniz, kod verilir və yeni oyun başlayır.{{ $loop->last ? '' : ' Davam etsəniz, xal toplamağa davam edirsiniz və növbəti hədiyyəyə şans qazanırsınız — amma qüllə aşsa, hədiyyə yanır.' }}</li>
+                                @if ($loop->last)
+                                    <li><b>{{ $min }} xal — Finiş! 🏁</b> <b>{{ $p['label'] }}</b> qazanırsınız və oyun sona çatır.</li>
+                                @else
+                                    <li><b>{{ $min }} xal</b> — <b>{{ $p['label'] }}</b>! «Hədiyyəni götür» seçsəniz, kod verilir və yeni oyun başlayır. Davam etsəniz, xal toplamağa davam edirsiniz və növbəti hədiyyəyə şans qazanırsınız — amma qüllə aşsa, hədiyyə yanır.</li>
+                                @endif
                             @endforeach
                         </ul>
                     </div>
@@ -110,5 +111,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/stack.js') }}?v=23"></script>
+<script src="{{ asset('js/games/stack.js') }}?v=26"></script>
 @endsection

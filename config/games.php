@@ -33,11 +33,18 @@ return [
     'stack' => [
         // Bu xala çatanda oyunçuya hədiyyə təklif olunur: ya "Hədiyyəni qəbul et" (kod verilir, oyun bitir),
         // ya da davam edir — qüllə aşsa, hədiyyə yanır.
-        'prizes' => [
-            40 => ['key' => 'stack_tea', 'label' => 'Çay Hədiyyə'],
-            50 => ['key' => 'stack_hookah', 'label' => 'Qəlyan Hədiyyə'],
-            60 => ['key' => 'stack_discount_50', 'label' => 'Hesaba 50% endirim'],
-        ],
+        // Sonuncu hədəf — finiş: oyun bitir, davam etmək olmur. Test üçün .env-də STACK_FINISH_SCORE=10 yazmaq olar
+        // (finişdən yuxarı hədəflər avtomatik çıxarılır).
+        'prizes' => (function () {
+            $finish = max(1, (int) env('STACK_FINISH_SCORE', 100));
+            $prizes = array_filter([
+                50 => ['key' => 'stack_tea', 'label' => 'Çay Hədiyyə'],
+                60 => ['key' => 'stack_hookah', 'label' => 'Qəlyan Hədiyyə'],
+                70 => ['key' => 'stack_discount_50', 'label' => 'Hesaba 50% endirim'],
+            ], fn ($min) => $min < $finish, ARRAY_FILTER_USE_KEY);
+
+            return $prizes + [$finish => ['key' => 'stack_discount_100', 'label' => 'Hesaba 100% endirim']];
+        })(),
         'prizes_per_day' => (int) env('STACK_PRIZES_PER_DAY', 1), // istifadəçiyə gündə neçə hədiyyə
         // Saxtakarlığa qarşı: oyun başlayandan bəri ən azı (stəkan sayı × bu qədər) saniyə keçməlidir.
         // "Əla!" 2 xal verdiyi üçün stəkan sayı = xal / 2 (yuxarı yuvarlaqlaşdırılır).

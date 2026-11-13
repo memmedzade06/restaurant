@@ -62,6 +62,7 @@
             shake: 0,
             popups: [],
             time: 0,
+            finish: false,
             offered: {},              // bu oyunda təklif olunmuş hədiyyələr
             claiming: false,
         };
@@ -204,6 +205,13 @@
         const reached = mins.filter(m => g.score >= m && !g.offered[m]);
         if (!reached.length) return;
         reached.forEach(m => { g.offered[m] = true; });
+        // sonuncu hədəf — finiş: oyun burada bitir
+        g.finish = g.score >= mins[mins.length - 1];
+        const noPrize = !cfg.canSave || (cfg.prizeLeft !== null && cfg.prizeLeft <= 0);
+        if (g.finish && noPrize) {
+            gameOver(true);
+            return;
+        }
         // bu günün hədiyyəsi artıq götürülüb — oyunu dayandırmırıq, sadəcə xal toplanır
         if (cfg.canSave && cfg.prizeLeft !== null && cfg.prizeLeft <= 0) {
             g.popups.push({text: "Bugünkü hədiyyə artıq götürülüb", x: LW / 2, y: topBottomY() - GH - 40, life: 2.2, warn: true});
@@ -215,20 +223,23 @@
         const isLast = min === mins[mins.length - 1];
         const next = mins.find(m => m > min);
 
-        offer.querySelector('.st-offer-title').textContent = `${prize.label} qazandınız!`;
+        offer.querySelector('.st-offer-title').textContent = g.finish ? `Finiş! 🏁 ${prize.label} qazandınız!` : `${prize.label} qazandınız!`;
         const note = offer.querySelector('.st-offer-note');
         const accept = offer.querySelector('.st-accept');
         const cont = offer.querySelector('.st-continue');
         accept.disabled = false;
         accept.querySelector('span').textContent = 'Hədiyyəni götür';
         cont.querySelector('span').textContent = isLast ? 'Hədiyyəsiz davam et' : 'Davam et';
+        cont.hidden = g.finish; // finişdən sonra davam etmək olmur
 
         if (!cfg.canSave) {
             note.innerHTML = `Hədiyyə kodu almaq üçün <a href="${cfg.registerUrl}">qeydiyyatdan keçin</a> və nömrənizi təsdiqləyin.`;
             accept.hidden = true;
         } else {
             accept.hidden = false;
-            note.innerHTML = isLast
+            note.innerHTML = g.finish
+                ? 'Oyunu sona çatdırdınız! Hədiyyəni götürün — kod veriləcək.'
+                : isLast
                 ? 'Hədiyyəni götürsəniz, kod veriləcək və yeni oyun başlayacaq. Davam etsəniz, sadəcə xal toplayırsınız.'
                 : `Hədiyyəni götürsəniz, kod veriləcək və yeni oyun başlayacaq. Davam etsəniz, növbəti hədəf: <b>${next} xal — ${esc(cfg.prizes[next].label)}</b>! Amma qüllə aşsa, hədiyyə yanır.`;
         }
@@ -259,6 +270,12 @@
             accept.querySelector('span').textContent = 'Hədiyyəni götür';
             if (r && r.status === 429) { cfg.prizeLeft = 0; accept.hidden = true; }
             if (r && r.status === 422) accept.hidden = true;
+            if (g.finish && accept.hidden) {
+                const msg = d.message;
+                offer.hidden = true;
+                await gameOver(true);
+                if (msg) overlay.querySelector('.st-note').innerHTML += `<br>${esc(msg)}`;
+            }
             return;
         }
 
@@ -550,6 +567,93 @@
         ctx.fillRect(x0, top - 1, x1 - x0, 3);
     }
 
+    /** Bir limon dilimi: sarı qabıq, açıq ət, ağ dilim xətləri. tilt — eninə sıxılma (yanakı görünüş) */
+    function drawLemon(x, y, r, tilt = 1, rot = 0) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(rot);
+        ctx.scale(tilt, 1);
+        ctx.fillStyle = '#e8b417';                      // qabıq
+        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff6cf';                      // ağ qat
+        ctx.beginPath(); ctx.arc(0, 0, r * 0.86, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fbe26a';                      // ət
+        ctx.beginPath(); ctx.arc(0, 0, r * 0.76, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 250, 225, .95)';   // dilimlər
+        ctx.lineWidth = 0.9;
+        for (let i = 0; i < 8; i++) {
+            const a = i * Math.PI / 4;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(Math.cos(a) * r * 0.74, Math.sin(a) * r * 0.74);
+            ctx.stroke();
+        }
+        ctx.fillStyle = '#fffbe8';
+        ctx.beginPath(); ctx.arc(0, 0, r * 0.12, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+    }
+
+    /** Ayaqlı büllur qab, içində limon dilimləri. (cx, y) — qabın dibinin ortası */
+    function drawLemonDish(cx, y) {
+        const glass = 'rgba(235, 245, 250, .55)';
+        const edge = 'rgba(150, 175, 190, .9)';
+        const shine = 'rgba(255, 255, 255, .85)';
+        ctx.lineWidth = 1;
+
+        // kölgə
+        ctx.fillStyle = 'rgba(60, 0, 0, .18)';
+        ctx.beginPath(); ctx.ellipse(cx, y + 1, 24, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+
+        // ayaq (oturacaq)
+        ctx.fillStyle = glass; ctx.strokeStyle = edge;
+        ctx.beginPath(); ctx.ellipse(cx, y - 2, 20, 4.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+        // gövdə — üzlü büllur
+        const stemTop = y - 17;
+        ctx.beginPath();
+        ctx.moveTo(cx - 13, y - 3);
+        ctx.quadraticCurveTo(cx - 7, y - 9, cx - 6, stemTop);
+        ctx.lineTo(cx + 6, stemTop);
+        ctx.quadraticCurveTo(cx + 7, y - 9, cx + 13, y - 3);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = 'rgba(150, 175, 190, .55)';
+        for (const dx of [-6, -2, 2, 6]) {
+            ctx.beginPath(); ctx.moveTo(cx + dx * 1.6, y - 4); ctx.lineTo(cx + dx * 0.8, stemTop + 1); ctx.stroke();
+        }
+
+        // qabın arxa kənarı
+        const rimY = y - 30, rx = 34;
+        ctx.fillStyle = 'rgba(225, 238, 245, .5)'; ctx.strokeStyle = edge;
+        ctx.beginPath(); ctx.ellipse(cx, rimY, rx, 6, 0, Math.PI, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+        // limon dilimləri — qabda yelpik kimi düzülüb
+        const lemons = [
+            [-22, -5, 10, 0.55, -0.5], [22, -5, 10, 0.55, 0.5],
+            [-13, -9, 11, 0.8, -0.25], [13, -9, 11, 0.8, 0.25],
+            [0, -11, 12, 1, 0], [-6, -3, 10, 0.95, -0.1], [7, -3, 10, 0.95, 0.12],
+        ];
+        for (const [dx, dy, r, t, a] of lemons) drawLemon(cx + dx, rimY + dy, r, t, a);
+
+        // qabın ön tərəfi (limonların alt hissəsini örtür)
+        ctx.fillStyle = glass; ctx.strokeStyle = edge;
+        ctx.beginPath();
+        ctx.moveTo(cx - rx, rimY);
+        ctx.quadraticCurveTo(cx - rx + 6, stemTop + 1, cx - 6, stemTop);
+        ctx.lineTo(cx + 6, stemTop);
+        ctx.quadraticCurveTo(cx + rx - 6, stemTop + 1, cx + rx, rimY);
+        ctx.ellipse(cx, rimY, rx, 6, 0, 0, Math.PI);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+
+        // qızılı haşiyə və parıltı
+        ctx.strokeStyle = '#E9A23B'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.ellipse(cx, rimY, rx, 6, 0, 0, Math.PI); ctx.stroke();
+        ctx.strokeStyle = shine; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(cx - rx + 7, rimY + 4); ctx.quadraticCurveTo(cx - rx + 10, stemTop + 3, cx - 10, stemTop + 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx - 4, y - 5); ctx.lineTo(cx - 3, stemTop + 2); ctx.stroke();
+    }
+
     function drawScene() {
         const cam = g.camY;
         const sx = g.shake ? Math.sin(g.time * 60) * g.shake : 0;
@@ -622,6 +726,13 @@
         ctx.ellipse(LW / 2, BASE_Y + 4, GW * 0.8, 9, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
+
+        // masanın sağında: ayaqlı büllur qabda limon dilimləri
+        ctx.save();
+        ctx.translate(LW - 62, BASE_Y + 9);
+        ctx.scale(0.72, 0.72); // qabın ölçüsü
+        drawLemonDish(0, 0);
+        ctx.restore();
 
         // masada dağılmış çay ləkələri
         for (const p of g.puddles) {
@@ -709,14 +820,15 @@
 
     /* ---------- Oyunun sonu ---------- */
 
-    async function gameOver() {
+    async function gameOver(finished = false) {
         g.state = 'over';
+        offer.hidden = true;
         const score = g.score;
         const record = score > best;
         if (record) best = score;
 
         overlay.querySelector('.st-score').textContent = score;
-        overlay.querySelector('.st-title').textContent = record && score > 0 ? 'Yeni rekord! 🎉' : 'Qüllə aşdı!';
+        overlay.querySelector('.st-title').textContent = finished ? 'Finiş! 🏁' : (record && score > 0 ? 'Yeni rekord! 🎉' : 'Qüllə aşdı!');
         const note = overlay.querySelector('.st-note');
         note.innerHTML = `Ən yaxşı nəticəniz: <b>${best}</b>`;
         overlay.hidden = false;
