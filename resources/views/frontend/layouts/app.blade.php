@@ -45,7 +45,7 @@
                 <a href="{{ route('games.index') }}" class="nav-item nav-link {{ request()->routeIs('games.*') ? 'active' : '' }}">Oyunlar</a>
                 <a href="{{ route('contact') }}" class="nav-item nav-link {{ request()->routeIs('contact') ? 'active' : '' }}">Əlaqə</a>
                 @if (auth()->user()?->is_admin)
-                    <a href="{{ route('admin.prizes') }}" class="nav-item nav-link {{ request()->routeIs('admin.*') ? 'active' : '' }}"><i class="fa fa-shield-alt me-1"></i>Admin</a>
+                    <a href="{{ route('admin.prizes') }}" class="nav-item nav-link {{ request()->routeIs('admin.*') ? 'active' : '' }}"><i class="fa fa-gift me-1"></i>Hədiyyələr</a>
                 @endif
             </div>
             @auth
