@@ -22,8 +22,8 @@ class GameController extends Controller
     public function index(): View
     {
         return view('frontend.games.index', [
-            'leaders' => $this->leaders(5),
-            'stackLeaders' => $this->stackLeaders(5),
+            'leaders' => $this->leaders(10),
+            'stackLeaders' => $this->stackLeaders(10),
             'onlineUsers' => User::online()->orderByDesc('last_seen_at')->limit(30)->get(['id', 'name', 'last_seen_at']),
             'onlineCount' => User::online()->count(),
         ]);
@@ -36,7 +36,7 @@ class GameController extends Controller
         $verified = $user && $user->hasVerifiedPhone();
 
         return view('frontend.games.stack', [
-            'leaders' => $this->stackLeaders(5),
+            'leaders' => $this->stackLeaders(10),
             'best' => $verified ? $this->stackBest($user->id) : null,
             'prizes' => $this->stackPrizes(),
             'prizeLeft' => $verified ? $this->stackPrizesLeft($user->id) : null,
@@ -138,7 +138,7 @@ class GameController extends Controller
         $user = $request->user();
 
         return view('frontend.games.nard', [
-            'leaders' => $this->leaders(5),
+            'leaders' => $this->leaders(10),
             'myStats' => $user && $user->hasVerifiedPhone() ? $this->stats($user->id) : null,
         ]);
     }
