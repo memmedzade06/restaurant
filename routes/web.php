@@ -68,8 +68,15 @@ Route::middleware('auth')->group(function () {
     // Yalnız təsdiqlənmiş istifadəçilər
     Route::middleware('phone.verified')->group(function () {
         Route::get('/hesabim', fn () => view('frontend.account.index'))->name('account');
+        Route::get('/hediyyelerim', [\App\Http\Controllers\Frontend\PrizeController::class, 'index'])->name('prizes');
     });
+
+    // "İndi saytda" siqnalları (açıq səhifədən avtomatik göndərilir)
+    Route::post('/aktiv', [\App\Http\Controllers\Frontend\PresenceController::class, 'ping'])->middleware('throttle:40,1')->name('presence.ping');
+    Route::post('/aktiv/cixis', [\App\Http\Controllers\Frontend\PresenceController::class, 'leave'])->middleware('throttle:40,1')->name('presence.leave');
 });
+
+Route::get('/oyunlar/onlayn', [\App\Http\Controllers\Frontend\PresenceController::class, 'online'])->middleware('throttle:30,1')->name('games.online');
 
 /*
 |--------------------------------------------------------------------------
@@ -81,8 +88,21 @@ Route::prefix('oyunlar')->name('games.')->controller(\App\Http\Controllers\Front
     Route::get('/nerd', 'nard')->name('nard');
     Route::post('/nerd/netice', 'nardResult')->middleware(['auth', 'phone.verified', 'throttle:20,1'])->name('nard.result');
     Route::get('/stekan', 'stack')->name('stack');
+    Route::post('/stekan/basla', 'stackStart')->middleware(['auth', 'phone.verified', 'throttle:60,1'])->name('stack.start');
+    Route::post('/stekan/hediyye', 'stackPrize')->middleware(['auth', 'phone.verified', 'throttle:10,1'])->name('stack.prize');
     Route::post('/stekan/netice', 'stackResult')->middleware(['auth', 'phone.verified', 'throttle:30,1'])->name('stack.result');
     Route::get('/bext-carxi', 'wheel')->name('wheel');
     Route::post('/bext-carxi/firlat', 'spin')->middleware('throttle:15,1')->name('wheel.spin');
     Route::post('/bext-carxi/gotur', 'claim')->middleware(['auth', 'phone.verified', 'throttle:15,1'])->name('wheel.claim');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Admin panel — hədiyyə kodlarının yoxlanması (php artisan admin:make <telefon>)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
+    Route::get('/', fn () => redirect()->route('admin.prizes'));
+    Route::get('/hediyyeler', [\App\Http\Controllers\Admin\PrizeController::class, 'index'])->name('prizes');
+    Route::post('/hediyyeler/{prize}/istifade', [\App\Http\Controllers\Admin\PrizeController::class, 'redeem'])->name('prizes.redeem');
 });

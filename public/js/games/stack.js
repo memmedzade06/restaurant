@@ -3,7 +3,7 @@
  *
  * Yuxarıda stəkan sağa-sola yellənir; toxunanda (klik / boşluq) düşür və qüllənin üstünə qonur.
  * Mərkəzə yaxın qonsa — qüllə böyüyür, çox kənara qonsa — stəkan aşır və oyun bitir.
- * Dəqiq qonuş ("Əla!") bonus xal verir. Hər stəkandan sonra sürət artır.
+ * Dəqiq qonuş ("Əla!") bonus xal verir. Sürət hər xalda artır, 30 xaldan sonra daha kəskin.
  *
  * Bütün hesablamalar 400×560 ölçülü "məntiqi" koordinatlarda aparılır, kətan ekrana uyğun böyüdülür.
  */
@@ -16,11 +16,19 @@
     const canvas = root.querySelector('canvas');
     const ctx = canvas.getContext('2d');
     const overlay = root.querySelector('.st-result');
+    const offer = root.querySelector('.st-offer');
     const startHint = root.querySelector('.st-start');
     const cfg = {
         canSave: root.dataset.canSave === '1',
         saveUrl: root.dataset.saveUrl,
         registerUrl: root.dataset.registerUrl,
+        startUrl: root.dataset.startUrl,
+        prizeUrl: root.dataset.prizeUrl,
+        prizesUrl: root.dataset.prizesUrl,
+        // {xal: {key, label}} — bu xala çatanda hədiyyə təklif olunur
+        prizes: JSON.parse(root.dataset.prizes || '{}'),
+        // bu gün qalan hədiyyə sayı (boş — istifadəçi təsdiqlənməyib)
+        prizeLeft: root.dataset.prizeLeft === '' ? null : +root.dataset.prizeLeft,
         csrf: document.querySelector('meta[name="csrf-token"]')?.content,
     };
 
@@ -40,7 +48,7 @@
 
     function reset() {
         g = {
-            state: 'ready',           // ready | swing | drop | fall | over
+            state: 'ready',           // ready | swing | drop | offer | fall | over
             tower: [{x: LW / 2}],     // qüllədəki stəkanların mərkəzləri
             score: 0,
             combo: 0,
@@ -54,12 +62,23 @@
             shake: 0,
             popups: [],
             time: 0,
+            offered: {},              // bu oyunda təklif olunmuş hədiyyələr
+            claiming: false,
         };
         overlay.hidden = true;
+        offer.hidden = true;
+        overlay.querySelector('.st-prize').hidden = true;
+        overlay.querySelector('.st-again').textContent = 'Yenidən oyna';
         startHint.hidden = false;
     }
 
-    const speed = () => Math.min(480, 150 + g.score * 9);
+    // 30 xala qədər stəkan yavaş-yavaş sürətlənir, 30-dan sonra hər xalda daha kəskin
+    const SPEED_BASE = 150, SPEED_FROM = 30, SPEED_STEP_SLOW = 3, SPEED_STEP = 8, SPEED_MAX = 480;
+    const speed = () => {
+        const slow = Math.min(g.score, SPEED_FROM) * SPEED_STEP_SLOW;
+        const fast = Math.max(0, g.score - SPEED_FROM) * SPEED_STEP;
+        return Math.min(SPEED_MAX, SPEED_BASE + slow + fast);
+    };
     const topBottomY = () => BASE_Y - (g.tower.length - 1) * GH; // ən üst stəkanın dibi
     const swingY = () => topBottomY() - GH - SWING_GAP;           // yellənən stəkanın dibi
 
@@ -69,6 +88,7 @@
         if (g.state === 'ready') {
             g.state = 'swing';
             startHint.hidden = true;
+            post(cfg.startUrl, {}); // server oyunun başladığı vaxtı yadda saxlayır
             return;
         }
         if (g.state === 'swing') {
@@ -160,6 +180,107 @@
         g.state = 'swing';
         // növbəti stəkan kənardan başlasın
         g.swing.x = g.swing.dir > 0 ? GW / 2 + 12 : LW - GW / 2 - 12;
+
+        checkPrize();
+    }
+
+    /* ---------- Hədiyyə: 4 xalda çay, 8 xalda qəlyan ---------- */
+
+    function post(url, body) {
+        if (!cfg.canSave || !url) return Promise.resolve(null);
+        return fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': cfg.csrf},
+            credentials: 'same-origin',
+            body: JSON.stringify(body),
+        }).catch(() => null);
+    }
+
+    const esc = s => String(s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+
+    /** Xal hədiyyə həddini keçibsə — oyunu dayandırıb təklif göstəririk */
+    function checkPrize() {
+        const mins = Object.keys(cfg.prizes).map(Number).sort((a, b) => a - b);
+        const reached = mins.filter(m => g.score >= m && !g.offered[m]);
+        if (!reached.length) return;
+        reached.forEach(m => { g.offered[m] = true; });
+        // bu günün hədiyyəsi artıq götürülüb — oyunu dayandırmırıq, sadəcə xal toplanır
+        if (cfg.canSave && cfg.prizeLeft !== null && cfg.prizeLeft <= 0) {
+            g.popups.push({text: "Bugünkü hədiyyə artıq götürülüb", x: LW / 2, y: topBottomY() - GH - 40, life: 2.2, warn: true});
+            return;
+        }
+
+        const min = reached[reached.length - 1];
+        const prize = cfg.prizes[min];
+        const isLast = min === mins[mins.length - 1];
+        const next = mins.find(m => m > min);
+
+        offer.querySelector('.st-offer-title').textContent = `${prize.label} qazandınız!`;
+        const note = offer.querySelector('.st-offer-note');
+        const accept = offer.querySelector('.st-accept');
+        const cont = offer.querySelector('.st-continue');
+        accept.disabled = false;
+        accept.querySelector('span').textContent = 'Hədiyyəni götür';
+        cont.querySelector('span').textContent = isLast ? 'Hədiyyəsiz davam et' : 'Davam et';
+
+        if (!cfg.canSave) {
+            note.innerHTML = `Hədiyyə kodu almaq üçün <a href="${cfg.registerUrl}">qeydiyyatdan keçin</a> və nömrənizi təsdiqləyin.`;
+            accept.hidden = true;
+        } else {
+            accept.hidden = false;
+            note.innerHTML = isLast
+                ? 'Hədiyyəni götürsəniz, kod veriləcək və yeni oyun başlayacaq. Davam etsəniz, sadəcə xal toplayırsınız.'
+                : `Hədiyyəni götürsəniz, kod veriləcək və yeni oyun başlayacaq. Davam etsəniz, növbəti hədəf: <b>${next} xal — ${esc(cfg.prizes[next].label)}</b>! Amma qüllə aşsa, hədiyyə yanır.`;
+        }
+
+        g.state = 'offer';
+        offer.hidden = false;
+    }
+
+    function continueGame() {
+        offer.hidden = true;
+        if (g.state === 'offer') g.state = 'swing';
+    }
+
+    async function acceptPrize() {
+        if (g.claiming) return;
+        g.claiming = true;
+        const accept = offer.querySelector('.st-accept');
+        accept.disabled = true;
+        accept.querySelector('span').textContent = 'Gözləyin...';
+
+        const r = await post(cfg.prizeUrl, {score: g.score});
+        const d = r ? await r.json().catch(() => ({})) : {};
+        g.claiming = false;
+
+        if (!r || !r.ok || !d.prize) {
+            offer.querySelector('.st-offer-note').textContent = d.message || 'Xəta baş verdi. Yenidən cəhd edin.';
+            accept.disabled = false;
+            accept.querySelector('span').textContent = 'Hədiyyəni götür';
+            if (r && r.status === 429) { cfg.prizeLeft = 0; accept.hidden = true; }
+            if (r && r.status === 422) accept.hidden = true;
+            return;
+        }
+
+        if (cfg.prizeLeft !== null) cfg.prizeLeft--;
+        offer.hidden = true;
+        g.state = 'over';
+        if (d.best !== undefined) {
+            best = d.best;
+            const el = document.getElementById('stBest');
+            if (el) el.textContent = d.best;
+        }
+
+        overlay.querySelector('.st-score').textContent = g.score;
+        overlay.querySelector('.st-title').textContent = 'Təbriklər! 🎉';
+        overlay.querySelector('.st-note').innerHTML = `<b>${esc(d.prize.label)}</b> qazandınız.`;
+        const box = overlay.querySelector('.st-prize');
+        box.innerHTML = `<div class="prize-code">${esc(d.prize.code)}</div>` +
+            `<p class="small text-muted mb-3">Kodu ofisianta göstərin. ${esc(d.prize.expires)} tarixinədək etibarlıdır. ` +
+            `Kod <a href="${cfg.prizesUrl}">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>`;
+        box.hidden = false;
+        overlay.querySelector('.st-again').textContent = 'Yeni oyun';
+        overlay.hidden = false;
     }
 
     /* ---------- Sınma: şüşə qırıqları, çay damcıları, masada çay ləkəsi ---------- */
@@ -371,6 +492,64 @@
         ctx.restore();
     }
 
+    /** Masanın üstündə süfrə: düz qırmızı parça, yumşaq qırışlarla aşağı sallanır, alt kənarı dalğalıdır */
+    function drawCloth() {
+        const top = BASE_Y + 8, bottom = LH - 8;
+        const x0 = 26, x1 = LW - 26, flare = 10;          // aşağıda bir az genişlənir
+        const folds = 9;
+        const fw = (x1 - x0 + flare * 2) / folds;
+
+        // qırışlar: eninə açıq-tünd növbələşən çalarlar
+        const shade = ctx.createLinearGradient(x0 - flare, 0, x1 + flare, 0);
+        for (let i = 0; i <= folds * 2; i++) {
+            const t = i / (folds * 2);
+            const edge = Math.min(t, 1 - t) < 0.06;     // kənarlar bir az tünd
+            shade.addColorStop(t, edge ? '#b81f1f' : (i % 2 ? '#d42a2a' : '#e8403a'));
+        }
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(x0, top);
+        ctx.lineTo(x1, top);
+        ctx.quadraticCurveTo(x1 + flare * 0.4, (top + bottom) / 2, x1 + flare, bottom);
+        // alt kənar: hər qırışda bir az aşağı sallanır
+        for (let i = folds; i > 0; i--) {
+            const xa = x0 - flare + i * fw;
+            const dip = 4 + (i % 3) * 1.5;
+            ctx.quadraticCurveTo(xa - fw / 2, bottom + dip, xa - fw, bottom);
+        }
+        ctx.quadraticCurveTo(x0 - flare * 0.4, (top + bottom) / 2, x0, top);
+        ctx.closePath();
+        ctx.fillStyle = shade;
+        ctx.fill();
+        ctx.clip();
+
+        // yuxarıdan aşağı işıq-kölgə: masanın kənarı parlaq, aşağı tünd
+        const depth = ctx.createLinearGradient(0, top, 0, bottom + 8);
+        depth.addColorStop(0, 'rgba(255, 255, 255, .18)');
+        depth.addColorStop(0.15, 'rgba(255, 255, 255, 0)');
+        depth.addColorStop(1, 'rgba(60, 0, 0, .28)');
+        ctx.fillStyle = depth;
+        ctx.fillRect(x0 - flare, top, x1 - x0 + flare * 2, bottom - top + 10);
+
+        // qırışların incə xətləri
+        ctx.strokeStyle = 'rgba(110, 10, 10, .22)';
+        ctx.lineWidth = 1.2;
+        for (let i = 1; i < folds; i++) {
+            const xb = x0 - flare + i * fw;
+            const xt = x0 + (xb - (x0 - flare)) * (x1 - x0) / (x1 - x0 + flare * 2);
+            ctx.beginPath();
+            ctx.moveTo(xt, top + 10);
+            ctx.quadraticCurveTo((xt + xb) / 2 + 2, (top + bottom) / 2, xb, bottom + 4);
+            ctx.stroke();
+        }
+        ctx.restore();
+
+        // masanın üst kənarı — parçanın qatlandığı yer
+        ctx.fillStyle = '#f04a43';
+        ctx.fillRect(x0, top - 1, x1 - x0, 3);
+    }
+
     function drawScene() {
         const cam = g.camY;
         const sx = g.shake ? Math.sin(g.time * 60) * g.shake : 0;
@@ -435,6 +614,7 @@
         table.addColorStop(1, '#4a250f');
         ctx.fillStyle = table;
         ctx.fillRect(0, BASE_Y + 8, LW, 400);
+        drawCloth();
         ctx.fillStyle = '#fff';
         ctx.strokeStyle = '#E9A23B';
         ctx.lineWidth = 2;
@@ -593,6 +773,8 @@
         }
     });
     root.querySelector('.st-again').addEventListener('click', reset);
+    offer.querySelector('.st-continue').addEventListener('click', continueGame);
+    offer.querySelector('.st-accept').addEventListener('click', acceptPrize);
     window.addEventListener('resize', resize);
 
     resize();
@@ -601,7 +783,7 @@
 
     // Testlər üçün
     window.__stack = {
-        state: () => g, tap, consts: {GW, PERFECT, SUPPORT}, stability,
+        state: () => g, tap, consts: {GW, PERFECT, SUPPORT}, stability, checkPrize, continueGame,
         manual: on => { manual = on; },
         step: (dt = 1 / 60) => { if (g.state !== 'over' || g.falling) update(dt); },
     };

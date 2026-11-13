@@ -137,7 +137,117 @@ class GamesTest extends TestCase
         $this->actingAs($u)->postJson('/oyunlar/nerd/netice', ['won' => false])->assertJson(['points' => 0]);
 
         $this->assertSame(2, (int) GameResult::where('user_id', $u->id)->sum('points'));
-        $this->get('/oyunlar')->assertSee('Oyunçu T.')->assertSee('2 xal');
+        $this->get('/oyunlar')->assertSee('Test O')->assertSee('2 xal');
         $this->actingAs($u)->get('/hesabim')->assertOk()->assertSee('Hədiyyələrim');
+    }
+
+    public function test_games_page_lists_online_users(): void
+    {
+        $online = $this->user();
+        $online->forceFill(['name' => 'Onlayn Oyunçu', 'last_seen_at' => now()->subSeconds(20)])->save();
+        $stale = $this->user();
+        $stale->forceFill(['name' => 'Köhnə Ziyarətçi', 'last_seen_at' => now()->subMinutes(3)])->save();
+        $unverified = $this->user(false);
+        $unverified->forceFill(['name' => 'Təsdiqsiz Adam', 'last_seen_at' => now()])->save();
+
+        $this->get('/oyunlar')->assertOk()
+            ->assertSee('İndi saytda')
+            ->assertSee('Oyunçu O')
+            ->assertDontSee('Ziyarətçi K')
+            ->assertDontSee('Adam T');
+    }
+
+    public function test_visiting_updates_last_seen(): void
+    {
+        $u = $this->user();
+        $this->assertNull($u->last_seen_at);
+
+        $this->actingAs($u)->get('/oyunlar')->assertOk()->assertSee($u->short_name);
+        $this->assertNotNull($u->fresh()->last_seen_at);
+    }
+
+    public function test_presence_ping_leave_and_logout(): void
+    {
+        $u = $this->user();
+        $u->forceFill(['name' => 'Canlı Oyunçu'])->save();
+
+        $this->actingAs($u)->postJson('/aktiv')->assertNoContent();
+        $this->getJson('/oyunlar/onlayn')->assertOk()->assertJsonFragment(['name' => 'Oyunçu C', 'me' => true]);
+
+        // Səhifə bağlandı — qısa müddətdən sonra siyahıdan düşür
+        $this->actingAs($u)->postJson('/aktiv/cixis')->assertNoContent();
+        $this->travel(15)->seconds();
+        $this->assertFalse(User::online()->whereKey($u->id)->exists());
+        $this->travelBack();
+
+        // Çıxış edən dərhal düşür
+        $this->actingAs($u)->postJson('/aktiv');
+        $this->actingAs($u)->post('/cixis');
+        $this->assertNull($u->fresh()->last_seen_at);
+    }
+
+    public function test_guest_cannot_ping(): void
+    {
+        $this->postJson('/aktiv')->assertUnauthorized();
+    }
+
+    public function test_stack_prize_requires_started_game_and_enough_time(): void
+    {
+        $u = $this->user();
+
+        // Oyun başlamayıb
+        $this->actingAs($u)->postJson('/oyunlar/stekan/hediyye', ['score' => 40])->assertStatus(422);
+
+        // Çox tez — 40 xal üçün ən azı 20 stəkan × 0.8 san
+        $this->actingAs($u)->postJson('/oyunlar/stekan/basla')->assertOk();
+        $this->actingAs($u)->postJson('/oyunlar/stekan/hediyye', ['score' => 40])->assertStatus(422);
+        $this->assertSame(0, WheelSpin::where('user_id', $u->id)->count());
+    }
+
+    public function test_stack_prize_gives_tea_then_daily_limit(): void
+    {
+        $u = $this->user();
+
+        // 39 xal — hədiyyə yoxdur
+        $this->actingAs($u)->withSession(['stack_started_at' => microtime(true) - 60])
+            ->postJson('/oyunlar/stekan/hediyye', ['score' => 39])->assertStatus(422);
+
+        $r = $this->actingAs($u)->withSession(['stack_started_at' => microtime(true) - 60])
+            ->postJson('/oyunlar/stekan/hediyye', ['score' => 45])->assertOk()
+            ->assertJsonPath('prize.label', 'Çay Hədiyyə');
+        $spin = WheelSpin::where('user_id', $u->id)->first();
+        $this->assertSame('stack', $spin->game);
+        $this->assertSame($r->json('prize.code'), $spin->code);
+        $this->assertSame(45, (int) GameResult::where('user_id', $u->id)->where('game', 'stack')->max('points'));
+
+        // Gündə bir hədiyyə
+        $this->actingAs($u)->withSession(['stack_started_at' => microtime(true) - 60])
+            ->postJson('/oyunlar/stekan/hediyye', ['score' => 55])->assertStatus(429);
+
+        // Stəkan hədiyyəsi bəxt çarxını bloklamır
+        $this->onlySegment(true);
+        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertOk()->assertJson(['demo' => false]);
+    }
+
+    public function test_stack_prize_fifty_points_is_hookah(): void
+    {
+        $u = $this->user();
+        $this->actingAs($u)->withSession(['stack_started_at' => microtime(true) - 60])
+            ->postJson('/oyunlar/stekan/hediyye', ['score' => 50])->assertOk()
+            ->assertJsonPath('prize.label', 'Qəlyan Hədiyyə');
+    }
+
+    public function test_stack_prize_sixty_points_is_half_price_bill(): void
+    {
+        $u = $this->user();
+        $this->actingAs($u)->withSession(['stack_started_at' => microtime(true) - 60])
+            ->postJson('/oyunlar/stekan/hediyye', ['score' => 60])->assertOk()
+            ->assertJsonPath('prize.label', 'Hesaba 50% endirim');
+    }
+
+    public function test_stack_prize_needs_verified_user(): void
+    {
+        $this->postJson('/oyunlar/stekan/hediyye', ['score' => 8])->assertUnauthorized();
+        $this->actingAs($this->user(false))->postJson('/oyunlar/stekan/hediyye', ['score' => 8])->assertForbidden();
     }
 }

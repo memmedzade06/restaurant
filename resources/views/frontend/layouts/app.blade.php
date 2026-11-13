@@ -22,7 +22,7 @@
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
     <link href="{{ asset('css/custom.css') }}?v=7" rel="stylesheet">
-    <link href="{{ asset('css/games.css') }}?v=11" rel="stylesheet">
+    <link href="{{ asset('css/games.css') }}?v=14" rel="stylesheet">
     @yield('css')
 </head>
 
@@ -44,6 +44,9 @@
                 <a href="{{ route('menu') }}" class="nav-item nav-link {{ request()->routeIs('menu') ? 'active' : '' }}">Menyu</a>
                 <a href="{{ route('games.index') }}" class="nav-item nav-link {{ request()->routeIs('games.*') ? 'active' : '' }}">Oyunlar</a>
                 <a href="{{ route('contact') }}" class="nav-item nav-link {{ request()->routeIs('contact') ? 'active' : '' }}">Əlaqə</a>
+                @if (auth()->user()?->is_admin)
+                    <a href="{{ route('admin.prizes') }}" class="nav-item nav-link {{ request()->routeIs('admin.*') ? 'active' : '' }}"><i class="fa fa-shield-alt me-1"></i>Admin</a>
+                @endif
             </div>
             @auth
                 <a href="{{ route('account') }}" class="nav-user"><i class="fa fa-user-circle"></i>{{ \Illuminate\Support\Str::of(auth()->user()->name)->explode(' ')->first() }}</a>
@@ -107,6 +110,28 @@
 <script src="{{ asset('lib/counterup/counterup.min.js') }}"></script>
 <script src="{{ asset('lib/owlcarousel/owl.carousel.min.js') }}"></script>
 <script src="{{ asset('js/main.js') }}"></script>
+@auth
+<script>
+    // "İndi saytda": səhifə açıq olduqca serverə siqnal göndəririk
+    (function () {
+        var token = document.querySelector('meta[name="csrf-token"]').content;
+        var ping = function () {
+            fetch('{{ route('presence.ping') }}', {
+                method: 'POST', credentials: 'same-origin', keepalive: true,
+                headers: { 'X-CSRF-TOKEN': token, 'X-Requested-With': 'XMLHttpRequest' }
+            }).catch(function () {});
+        };
+        ping();
+        setInterval(ping, 25000);
+        document.addEventListener('visibilitychange', function () { if (!document.hidden) ping(); });
+        window.addEventListener('pagehide', function () {
+            var data = new FormData();
+            data.append('_token', token);
+            navigator.sendBeacon && navigator.sendBeacon('{{ route('presence.leave') }}', data);
+        });
+    })();
+</script>
+@endauth
 @yield('js')
 </body>
 

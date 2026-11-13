@@ -46,7 +46,7 @@
                             <li>Sizin <b>{{ $attempts }} cəhdiniz</b> var.</li>
                             <li>Hər fırlatmadan sonra seçin: <b>Hədiyyəni götür</b> və ya <b>yenidən fırlat</b>.</li>
                             <li>Yenidən fırladanda əvvəlki nəticə itir — risk sizindir!</li>
-                            <li>Hədiyyəni götürəndə <b>kod</b> yaranır — restoranda ofisianta göstərin. Kod {{ config('games.wheel.code_valid_days') }} gün etibarlıdır.</li>
+                            <li>Hədiyyəni götürəndə <b>kod</b> yaranır — restoranda ofisianta göstərin. Kod {{ config('games.wheel.code_valid_days') }} gün etibarlıdır, istifadə olunandan sonra qüvvədən düşür. Bütün kodlarınız: <a href="{{ route('prizes') }}">Hədiyyələrim</a>.</li>
                         </ul>
                         @unless ($verified)
                             <div class="alert-soft mt-3">
@@ -66,5 +66,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/wheel.js') }}?v=5"></script>
+<script src="{{ asset('js/games/wheel.js') }}?v=6"></script>
 @endsection

@@ -24,6 +24,8 @@ class GameController extends Controller
         return view('frontend.games.index', [
             'leaders' => $this->leaders(5),
             'stackLeaders' => $this->stackLeaders(5),
+            'onlineUsers' => User::online()->orderByDesc('last_seen_at')->limit(30)->get(['id', 'name', 'last_seen_at']),
+            'onlineCount' => User::online()->count(),
         ]);
     }
 
@@ -31,10 +33,83 @@ class GameController extends Controller
     {
         $user = $request->user();
 
+        $verified = $user && $user->hasVerifiedPhone();
+
         return view('frontend.games.stack', [
             'leaders' => $this->stackLeaders(5),
-            'best' => $user && $user->hasVerifiedPhone() ? $this->stackBest($user->id) : null,
+            'best' => $verified ? $this->stackBest($user->id) : null,
+            'prizes' => $this->stackPrizes(),
+            'prizeLeft' => $verified ? $this->stackPrizesLeft($user->id) : null,
         ]);
+    }
+
+    /** Yeni oyun başladı — vaxtı sessiyada saxlayırıq (hədiyyə tələbini yoxlamaq üçün) */
+    public function stackStart(Request $request): JsonResponse
+    {
+        $request->session()->put('stack_started_at', microtime(true));
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * "Hədiyyəni qəbul et": oyunçunun xalına uyğun hədiyyə üçün kod yaradır, oyunun nəticəsini yazır.
+     * Hər oyunda bir dəfə, gündə config('games.stack.prizes_per_day') dəfə.
+     */
+    public function stackPrize(Request $request): JsonResponse
+    {
+        $data = $request->validate(['score' => ['required', 'integer', 'min:1', 'max:1000']]);
+        $score = (int) $data['score'];
+        $user = $request->user();
+
+        $prize = collect($this->stackPrizes())->filter(fn ($p, $min) => $score >= $min)->last();
+        if (! $prize) {
+            return response()->json(['message' => 'Bu xal hədiyyə üçün kifayət deyil.'], 422);
+        }
+
+        // Oyun bu sessiyada başlamalı və xala uyğun qədər vaxt çəkməlidir
+        $started = $request->session()->pull('stack_started_at');
+        $glasses = (int) ceil($score / 2);
+        if (! $started || microtime(true) - $started < $glasses * (float) config('games.stack.min_seconds_per_glass', 0.8)) {
+            return response()->json(['message' => 'Oyun təsdiqlənmədi. Yenidən oynayın.'], 422);
+        }
+
+        return DB::transaction(function () use ($user, $score, $prize) {
+            User::whereKey($user->id)->lockForUpdate()->first();
+
+            if ($this->stackPrizesLeft($user->id) <= 0) {
+                return response()->json(['message' => 'Bu günün hədiyyəsini artıq götürmüsünüz. Sabah yenə gəlin!'], 429);
+            }
+
+            GameResult::create(['user_id' => $user->id, 'game' => 'stack', 'won' => true, 'points' => $score]);
+
+            $spin = WheelSpin::create([
+                'user_id' => $user->id,
+                'game' => 'stack',
+                'prize_key' => $prize['key'],
+                'prize_label' => $prize['label'],
+                'code' => $this->newCode(),
+                'spun_on' => $this->today(),
+                'expires_at' => now()->addDays((int) config('games.wheel.code_valid_days', 7)),
+            ]);
+
+            return response()->json(['prize' => $this->spinPayload($spin), 'best' => $this->stackBest($user->id)]);
+        });
+    }
+
+    /** [xal => ['key', 'label']], xala görə artan sırada */
+    private function stackPrizes(): array
+    {
+        $prizes = config('games.stack.prizes', []);
+        ksort($prizes);
+
+        return $prizes;
+    }
+
+    private function stackPrizesLeft(int $userId): int
+    {
+        $taken = WheelSpin::where('game', 'stack')->where('user_id', $userId)->whereDate('spun_on', $this->today())->count();
+
+        return max(0, (int) config('games.stack.prizes_per_day', 1) - $taken);
     }
 
     /** Stəkan qülləsi: oyunun hesabını yazır, ən yaxşı nəticəni qaytarır (yalnız təsdiqlənmiş istifadəçi) */
@@ -177,6 +252,7 @@ class GameController extends Controller
             // Bazaya yalnız götürülən hədiyyə yazılır
             WheelSpin::create([
                 'user_id' => $user->id,
+                'game' => 'wheel',
                 'prize_key' => $last['key'],
                 'prize_label' => $last['label'],
                 'code' => $this->newCode(),
@@ -196,7 +272,7 @@ class GameController extends Controller
      */
     private function wheelState(int $userId): array
     {
-        $claimed = WheelSpin::where('user_id', $userId)->whereDate('spun_on', $this->today())->whereNotNull('code')->latest('id')->first();
+        $claimed = WheelSpin::where('game', 'wheel')->where('user_id', $userId)->whereDate('spun_on', $this->today())->whereNotNull('code')->latest('id')->first();
         $round = $this->round($userId);
         $last = $round['last'];
 

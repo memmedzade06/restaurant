@@ -17,7 +17,7 @@ class LoginController extends Controller
         return view('frontend.auth.login');
     }
 
-    /** Telefon və ya e-poçt + şifrə ilə giriş */
+    /** Telefon, e-poçt və ya istifadəçi adı (admin) + şifrə ilə giriş */
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
@@ -26,9 +26,12 @@ class LoginController extends Controller
         ]);
 
         $login = trim($request->input('login'));
-        $credentials = str_contains($login, '@')
-            ? ['email' => $login]
-            : ['phone' => Phone::normalize($login) ?? $login];
+        $phone = Phone::normalize($login);
+        $credentials = match (true) {
+            str_contains($login, '@') => ['email' => $login],
+            $phone !== null => ['phone' => $phone],
+            default => ['username' => strtolower($login)],
+        };
 
         if (! Auth::attempt($credentials + ['password' => $request->input('password')], $request->boolean('remember'))) {
             throw ValidationException::withMessages(['login' => 'Telefon/e-poçt və ya şifrə yanlışdır.']);
@@ -36,11 +39,13 @@ class LoginController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('account'));
+        return redirect()->intended($request->user()->is_admin ? route('admin.prizes') : route('account'));
     }
 
     public function destroy(Request $request): RedirectResponse
     {
+        // Çıxış edən istifadəçi "İndi saytda" siyahısından dərhal düşsün
+        $request->user()?->forceFill(['last_seen_at' => null])->saveQuietly();
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

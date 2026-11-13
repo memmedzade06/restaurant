@@ -23,7 +23,7 @@
             @php
                 $nard = \App\Models\GameResult::where('user_id', auth()->id())->where('game', 'nard')
                     ->selectRaw('COUNT(*) as games, COALESCE(SUM(won),0) as wins, COALESCE(SUM(points),0) as points')->first();
-                $prizes = \App\Models\WheelSpin::where('user_id', auth()->id())->whereNotNull('code')->latest('id')->take(10)->get();
+                $prizes = \App\Models\WheelSpin::where('user_id', auth()->id())->whereNotNull('code')->latest('id')->take(5)->get();
             @endphp
 
             <h5 class="account-section-title"><i class="fa fa-dice me-2 text-primary"></i>Nərd</h5>
@@ -38,25 +38,14 @@
                 <li><span>Rekord</span><b>{{ $stackBest }} xal</b></li>
             </ul>
 
-            <h5 class="account-section-title"><i class="fa fa-gift me-2 text-primary"></i>Hədiyyələrim</h5>
+            <h5 class="account-section-title d-flex align-items-center"><i class="fa fa-gift me-2 text-primary"></i>Hədiyyələrim
+                <a href="{{ route('prizes') }}" class="ms-auto small fw-bold">Hamısına bax <i class="fa fa-arrow-right ms-1"></i></a></h5>
             @if ($prizes->isEmpty())
-                <p class="text-muted mb-4">Hələ hədiyyə yoxdur. <a href="{{ route('games.wheel') }}">Bəxt çarxını fırladın</a>!</p>
+                <p class="text-muted mb-4">Hələ hədiyyə yoxdur.</p>
             @else
-                <ul class="prize-list">
+                <ul class="prize-cards mb-4">
                     @foreach ($prizes as $p)
-                        <li>
-                            <div>
-                                <b>{{ $p->prize_label }}</b><br>
-                                <span class="muted"><i class="fa fa-clock"></i> {{ $p->created_at->timezone('Asia/Baku')->format('d.m.Y H:i') }} ·</span>
-                                <span class="muted">
-                                    @if ($p->redeemed_at) İstifadə olunub
-                                    @elseif ($p->isActive()) {{ $p->expires_at->timezone('Asia/Baku')->format('d.m.Y') }} tarixinədək
-                                    @else Vaxtı keçib
-                                    @endif
-                                </span>
-                            </div>
-                            <code style="{{ $p->isActive() ? '' : 'opacity:.4;text-decoration:line-through' }}">{{ $p->code }}</code>
-                        </li>
+                        @include('frontend.prizes._card', ['p' => $p])
                     @endforeach
                 </ul>
             @endif

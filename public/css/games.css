@@ -233,3 +233,63 @@
 .mini-glass { width: 36px; height: 36px; display: block; position: relative; background: linear-gradient(rgba(255,255,255,.35) 22%, #cd2a0a 22%, #a01204 60%, #620602); border: 2px solid #fff; border-top: 4px solid #E9A23B; border-radius: 30% 30% 45% 45% / 20% 20% 60% 60%; box-shadow: 0 4px 10px rgba(0, 0, 0, .2); }
 .mini-glass.g1 { transform: translateX(-6px); }
 .mini-glass.g3 { transform: translateX(5px); }
+
+/* İndi saytda olanlar */
+.online-dot { width: 9px; height: 9px; flex: none; border-radius: 50%; background: #2fb36b; box-shadow: 0 0 0 3px rgba(47, 179, 107, .18); display: inline-block; }
+.online-count { font-size: 12px; font-weight: 900; color: var(--wine); background: var(--cream); border-radius: 999px; padding: 2px 9px; }
+.online-users { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.online-users li { display: inline-flex; align-items: center; gap: 7px; padding: 6px 13px; border-radius: 999px; background: #faf5ef; border: 1px solid #f3eadf; font-size: 14px; font-weight: 700; }
+.online-users li.me { background: var(--cream); border-color: var(--primary); }
+.online-users li.more { color: var(--muted); font-weight: 600; }
+.rules-note { background: var(--cream); border-left: 4px solid var(--primary); color: var(--wine); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 14px; font-weight: 700; }
+
+/* Hədiyyələrim (oyunçu) */
+.prize-cards { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.prize-item { display: flex; align-items: center; gap: 14px; justify-content: space-between; padding: 14px 16px; border-radius: 14px; border: 1px dashed var(--primary); background: #fffaf2; }
+.prize-info { display: flex; flex-direction: column; min-width: 0; }
+.prize-info b { color: var(--wine); font-size: 16px; }
+.prize-info .muted { color: var(--muted); font-size: 13px; }
+.prize-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: none; }
+.prize-side code { font-size: 17px; font-weight: 900; letter-spacing: 1px; color: var(--wine); background: #fff; border-radius: 8px; padding: 4px 10px; }
+.prize-badge { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .5px; border-radius: 999px; padding: 2px 9px; background: #2fb36b; color: #fff; }
+.prize-used, .prize-expired { border-style: solid; border-color: #e6e0d9; background: #f6f4f1; filter: grayscale(1); opacity: .75; }
+.prize-used code, .prize-expired code { text-decoration: line-through; }
+.prize-used .prize-badge { background: #8a8a8a; }
+.prize-expired .prize-badge { background: #b9b2a9; }
+
+/* Admin panel */
+.admin-alert { border-radius: 14px; font-weight: 700; }
+.admin-search { display: flex; gap: 10px; }
+.admin-search-input { position: relative; flex: 1; }
+.admin-search-input i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+.admin-search-input input { width: 100%; height: 52px; padding: 0 16px 0 42px; border: 2px solid #eee3d6; border-radius: 12px; font-size: 17px; font-weight: 700; text-transform: uppercase; }
+.admin-search-input input::placeholder { text-transform: none; font-weight: 500; }
+.admin-search-input input:focus { outline: none; border-color: var(--primary); }
+.code-check { margin-top: 16px; padding: 18px 20px; border-radius: 16px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: space-between; border: 2px solid #2fb36b; background: #f1fbf5; }
+.code-check code { font-size: 20px; font-weight: 900; color: var(--wine); }
+.code-check h4 { margin: 4px 0; }
+.code-check .muted { color: var(--muted); font-size: 14px; }
+.code-used, .code-expired { border-color: #d9534f; background: #fdf2f2; }
+.admin-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.admin-tabs a { padding: 6px 14px; border-radius: 999px; background: #faf5ef; color: var(--text); font-weight: 700; font-size: 14px; text-decoration: none; }
+.admin-tabs a span { font-size: 12px; color: var(--muted); margin-left: 3px; }
+.admin-tabs a.active { background: var(--wine); color: #fff; }
+.admin-tabs a.active span { color: rgba(255, 255, 255, .7); }
+.admin-table th { font-size: 13px; color: var(--muted); font-weight: 800; white-space: nowrap; }
+.admin-table code { font-weight: 900; color: var(--wine); }
+.admin-table .row-used td, .admin-table .row-expired td { color: #9a948d; }
+.admin-table .row-used code, .admin-table .row-expired code { color: #9a948d; text-decoration: line-through; }
+.status-pill { display: inline-block; font-size: 12px; font-weight: 900; border-radius: 999px; padding: 3px 10px; color: #fff; background: #2fb36b; white-space: nowrap; }
+.status-used { background: #8a8a8a; }
+.status-expired { background: #d9534f; }
+@media (max-width: 575px) { .admin-search { flex-direction: column; } .prize-item { flex-direction: column; align-items: flex-start; } .prize-side { align-items: flex-start; } }
+
+/* Stəkan qülləsi: hədiyyə təklifi */
+.st-offer { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(30, 11, 11, .55); }
+.st-offer[hidden] { display: none; }
+.st-offer .eyebrow { display: block; }
+.st-offer h3 { font-size: 26px; margin: 4px 0 14px; }
+.st-choice { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.st-choice .btn { flex: 1 1 100%; padding: 12px 14px; white-space: nowrap; }
+.st-choice .btn[hidden] { display: none; }
+.st-offer-note { color: var(--muted); }

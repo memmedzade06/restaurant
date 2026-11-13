@@ -2,12 +2,24 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WheelSpin extends Model
 {
-    protected $fillable = ['user_id', 'prize_key', 'prize_label', 'code', 'spun_on', 'expires_at', 'redeemed_at'];
+    public const ACTIVE = 'active';
+    public const USED = 'used';
+    public const EXPIRED = 'expired';
+
+    /** Statusların göstərilən adları */
+    public const STATUS_LABELS = [
+        self::ACTIVE => 'Aktiv',
+        self::USED => 'İstifadə olunub',
+        self::EXPIRED => 'Vaxtı keçib',
+    ];
+
+    protected $fillable = ['user_id', 'game', 'prize_key', 'prize_label', 'code', 'spun_on', 'expires_at', 'redeemed_at', 'redeemed_by'];
 
     protected $casts = [
         'spun_on' => 'date',
@@ -15,14 +27,58 @@ class WheelSpin extends Model
         'redeemed_at' => 'datetime',
     ];
 
+    /** Hədiyyənin gəldiyi oyunun adı */
+    public const GAME_LABELS = [
+        'wheel' => 'Bəxt çarxı',
+        'stack' => 'Stəkan qülləsi',
+    ];
+
+    public function gameLabel(): string
+    {
+        return self::GAME_LABELS[$this->game] ?? $this->game;
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /** Kodu "istifadə olundu" kimi qeyd edən admin */
+    public function redeemer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'redeemed_by');
+    }
+
     /** Kod hələ istifadə oluna bilərmi */
     public function isActive(): bool
     {
-        return $this->code && ! $this->redeemed_at && (! $this->expires_at || $this->expires_at->isFuture());
+        return $this->status() === self::ACTIVE;
+    }
+
+    public function status(): string
+    {
+        if ($this->redeemed_at) {
+            return self::USED;
+        }
+
+        return ! $this->expires_at || $this->expires_at->isFuture() ? self::ACTIVE : self::EXPIRED;
+    }
+
+    public function statusLabel(): string
+    {
+        return self::STATUS_LABELS[$this->status()];
+    }
+
+    /** Yalnız kodu olan (götürülmüş) hədiyyələr, statusa görə süzgəclə */
+    public function scopePrizes(Builder $query, ?string $status = null): Builder
+    {
+        $query->whereNotNull('code');
+
+        return match ($status) {
+            self::ACTIVE => $query->whereNull('redeemed_at')->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now())),
+            self::USED => $query->whereNotNull('redeemed_at'),
+            self::EXPIRED => $query->whereNull('redeemed_at')->where('expires_at', '<=', now()),
+            default => $query,
+        };
     }
 }

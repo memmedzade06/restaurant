@@ -63,9 +63,69 @@
                 </div>
             </div>
         </div>
+
+        <div class="side-card mt-4 mb-0" id="online-box" data-url="{{ route('games.online') }}">
+            <h5 class="d-flex align-items-center">
+                <span class="online-dot me-2"></span>İndi saytda
+                <span class="online-count ms-2" id="online-count">{{ $onlineCount }}</span>
+            </h5>
+            <p class="text-muted mb-0 {{ $onlineUsers->isEmpty() ? '' : 'd-none' }}" id="online-empty">Hazırda saytda heç kim yoxdur.</p>
+            <ul class="online-users" id="online-list">
+                @foreach ($onlineUsers as $u)
+                    <li class="{{ auth()->id() === $u->id ? 'me' : '' }}"><span class="online-dot"></span>{{ $u->short_name }}</li>
+                @endforeach
+                @if ($onlineCount > $onlineUsers->count())
+                    <li class="more">+{{ $onlineCount - $onlineUsers->count() }} nəfər</li>
+                @endif
+            </ul>
+        </div>
         @guest
             <p class="small text-muted mt-3 mb-0 text-center">Xallarınızın saxlanması üçün <a href="{{ route('register') }}">qeydiyyatdan keçin</a>.</p>
         @endguest
     </div>
 </section>
+@endsection
+
+@section('js')
+<script>
+    // "İndi saytda" siyahısını səhifəni yeniləmədən hər 15 saniyədən bir yeniləyirik
+    (function () {
+        var box = document.getElementById('online-box');
+        var list = document.getElementById('online-list');
+        var count = document.getElementById('online-count');
+        var empty = document.getElementById('online-empty');
+
+        function render(data) {
+            count.textContent = data.count;
+            empty.classList.toggle('d-none', data.users.length > 0);
+            list.innerHTML = '';
+            data.users.forEach(function (u) {
+                var li = document.createElement('li');
+                if (u.me) li.className = 'me';
+                var dot = document.createElement('span');
+                dot.className = 'online-dot';
+                li.appendChild(dot);
+                li.appendChild(document.createTextNode(u.name));
+                list.appendChild(li);
+            });
+            if (data.count > data.users.length) {
+                var more = document.createElement('li');
+                more.className = 'more';
+                more.textContent = '+' + (data.count - data.users.length) + ' nəfər';
+                list.appendChild(more);
+            }
+        }
+
+        function refresh() {
+            if (document.hidden) return;
+            fetch(box.dataset.url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (data) { if (data) render(data); })
+                .catch(function () {});
+        }
+
+        setInterval(refresh, 15000);
+        document.addEventListener('visibilitychange', refresh);
+    })();
+</script>
 @endsection

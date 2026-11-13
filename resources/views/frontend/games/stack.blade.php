@@ -22,6 +22,11 @@
                 <div id="stack" class="stack-game"
                      data-can-save="{{ $canSave ? 1 : 0 }}"
                      data-save-url="{{ route('games.stack.result') }}"
+                     data-start-url="{{ route('games.stack.start') }}"
+                     data-prize-url="{{ route('games.stack.prize') }}"
+                     data-prizes-url="{{ route('prizes') }}"
+                     data-prizes='@json($prizes)'
+                     data-prize-left="{{ $prizeLeft ?? '' }}"
                      data-bg-logo="{{ asset('img/games/stack-logo.png') }}"
                      data-register-url="{{ auth()->check() ? route('verify.telegram') : route('register') }}"
                      data-best="{{ $best ?? 0 }}">
@@ -36,11 +41,24 @@
                             </div>
                         </div>
 
+                        <div class="st-offer" hidden>
+                            <div class="nb-result-box">
+                                <span class="eyebrow">Təbriklər! 🎉</span>
+                                <h3 class="st-offer-title"></h3>
+                                <div class="st-choice">
+                                    <button type="button" class="btn btn-primary st-accept"><i class="fa fa-gift me-2"></i><span>Hədiyyəni götür</span></button>
+                                    <button type="button" class="btn btn-ghost-dark st-continue"><i class="fa fa-play me-2"></i><span>Davam et</span></button>
+                                </div>
+                                <p class="st-offer-note small mb-0"></p>
+                            </div>
+                        </div>
+
                         <div class="st-result" hidden>
                             <div class="nb-result-box">
                                 <h3 class="st-title"></h3>
                                 <div class="st-score">0</div>
                                 <p class="st-note"></p>
+                                <div class="st-prize" hidden></div>
                                 <button type="button" class="btn btn-primary px-5 st-again">Yenidən oyna</button>
                             </div>
                         </div>
@@ -71,13 +89,17 @@
 
                     <div class="side-card">
                         <h5><i class="fa fa-book me-2 text-primary"></i>Necə oynanır?</h5>
+                        <div class="rules-note"><i class="fa fa-info-circle me-2"></i>Minimal masa hesabı <b>10 AZN</b> olmalıdır.</div>
                         <ul class="rules">
                             <li>Yuxarıda stəkan sağa-sola yellənir.</li>
                             <li>Toxunun — stəkan düşüb qüllənin üstünə qonur.</li>
                             <li>Hər stəkan <b>1 xal</b>, dəqiq üstünə qonsa <b>«Əla!» — 2 xal</b>.</li>
                             <li><b>Ağırlıq nəzərə alınır:</b> qüllə düz xətt boyunca yığılmalıdır. Stəkanları hey bir tərəfə sürüşdürsəniz, qüllə əyilir və üstdəki yük ağır gəlib <b>aşır</b>.</li>
                             <li>«Diqqət, qüllə əyilir!» yazısı çıxsa — növbəti stəkanı əks tərəfə qoyub tarazlığı düzəldin.</li>
-                            <li>Qüllə ucaldıqca stəkan daha sürətli yellənir.</li>
+                            <li>Qüllə ucaldıqca stəkan daha sürətli yellənir, <b>30 xaldan sonra</b> isə sürət daha kəskin artır.</li>
+                            @foreach ($prizes as $min => $p)
+                                <li><b>{{ $min }} xal</b> — <b>{{ $p['label'] }}</b>! «Hədiyyəni götür» seçsəniz, kod verilir və yeni oyun başlayır.{{ $loop->last ? '' : ' Davam etsəniz, xal toplamağa davam edirsiniz və növbəti hədiyyəyə şans qazanırsınız — amma qüllə aşsa, hədiyyə yanır.' }}</li>
+                            @endforeach
                         </ul>
                     </div>
                 </div>
@@ -88,5 +110,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/stack.js') }}?v=16"></script>
+<script src="{{ asset('js/games/stack.js') }}?v=23"></script>
 @endsection
