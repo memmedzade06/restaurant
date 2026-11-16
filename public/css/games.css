@@ -4,12 +4,65 @@
 .game-card { display: block; height: 100%; background: #fff; border-radius: 22px; overflow: hidden; box-shadow: var(--shadow); color: var(--text); text-decoration: none; transition: transform .3s, box-shadow .3s; }
 .game-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); color: var(--text); }
 .game-art { height: 190px; display: grid; place-items: center; position: relative; overflow: hidden; }
-.nard-art { background: radial-gradient(circle at 30% 30%, #b97a45, #6b3b1c); }
-.nard-art span { font-size: 86px; color: #fff; line-height: 1; text-shadow: 0 10px 25px rgba(0, 0, 0, .35); position: absolute; }
-.nard-art .dice-a { transform: translate(-34px, -6px) rotate(-14deg); }
-.nard-art .dice-b { transform: translate(38px, 12px) rotate(12deg); color: var(--primary); }
+/* Oyunlar səhifəsində Nərd kartı: oyundakı lövhənin kiçik surəti və fırlanan zərlər */
+.nard-art { background: radial-gradient(circle at 50% 40%, #4a1d18, #2b0f0d); }
+.na-board { position: relative; height: 166px; aspect-ratio: 3 / 2; filter: drop-shadow(0 8px 14px rgba(60, 20, 10, .3)); }
+.na-board svg { display: block; width: 100%; height: 100%; }
+.na-dice { position: absolute; top: 50%; left: 75%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 7px; }
+.na-die { width: 30px; height: 30px; padding: 4px; border-radius: 8px; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+    background: linear-gradient(145deg, #ffffff, #efe4d3); box-shadow: 0 6px 12px rgba(0, 0, 0, .4), inset 0 -2px 0 rgba(0, 0, 0, .08); }
+.na-die i { width: 72%; height: 72%; margin: auto; border-radius: 50%; }
+.na-die i.on { background: var(--wine); box-shadow: inset 0 1px 1px rgba(0, 0, 0, .35); }
+.na-die.spin { animation: dieRoll .14s linear infinite; }
+.na-double { width: 22px; height: 22px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 10px; font-weight: 900; display: grid; place-items: center; }
+.na-double[hidden] { display: none; }
+/* Nərd dəvətləri — saytın sağ aşağı küncündə bildiriş kartları */
+.nard-inbox { position: fixed; right: 16px; bottom: 90px; z-index: 1050; display: flex; flex-direction: column; gap: 10px; max-width: 340px; width: calc(100% - 32px); }
+.ni-card { background: #fff; border-radius: 16px; box-shadow: 0 12px 30px rgba(40, 10, 10, .25); padding: 14px 16px; border-left: 4px solid var(--primary); animation: niIn .3s ease-out; }
+.ni-text { color: var(--text); margin-bottom: 10px; font-size: 15px; }
+.ni-actions { display: flex; gap: 8px; }
+.ni-actions .btn { flex: 1; }
+@keyframes niIn { from { transform: translateY(12px); opacity: 0; } }
+
+/* Nərd — böyük ekran rejimi: qat bütün ekranı tutur, lövhə nisbətini saxlayıb ekrana sığır */
+.nb-full { margin-left: auto; width: 38px; height: 38px; border: 0; border-radius: 12px; background: rgba(30, 11, 11, .08); color: var(--wine); font-size: 16px; display: grid; place-items: center; cursor: pointer; transition: background .2s; }
+.nb-full:hover { background: rgba(30, 11, 11, .16); }
+.nard-stage.is-full { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 12px; overflow: auto; background: radial-gradient(circle at 50% 30%, #4a1a1a, #1e0b0b); }
+.nard-stage.is-full .nard { width: min(100%, calc((100vh - 24px) * var(--nard-ratio, 1.2))); max-width: none; margin: 0; }
+/* Enli, alçaq ekran (telefon yan çevrilib): lövhə bütün eni tutur, xanalar hündürlüyə uyğun qısalır,
+   daşlar xananın hündürlüyünə görə kiçilir (container query: 1cqh = xananın hündürlüyünün 1%-i) */
+.nard-stage.is-full.is-wide { padding: 6px; }
+.nard-stage.is-full.is-wide .nard { width: 100%; height: calc(100vh - 12px); display: flex; flex-direction: column; padding: 8px 12px; border-radius: 14px; }
+.nard-stage.is-wide .nb-top-bar { margin-bottom: 4px; }
+.nard-stage.is-wide .nb-bottom-bar { margin-top: 4px; }
+.nard-stage.is-wide .nb-player { font-size: 13px; gap: 6px; }
+.nard-stage.is-wide .nb-player .nb-chk { width: 18px; height: 18px; }
+.nard-stage.is-wide .nb-off-count { font-size: 12px; }
+.nard-stage.is-wide .nb-full { width: 30px; height: 30px; font-size: 13px; }
+.nard-stage.is-wide .nb-actions .btn { padding: 5px 14px; font-size: 13px; }
+.nard-stage.is-wide .nb-status { margin: 2px 0 0; font-size: 12px; min-height: 0; }
+.nard-stage.is-wide .nb-wrap { flex: 1 1 auto; min-height: 0; grid-template-rows: 100%; }
+.nard-stage.is-wide .nb-board { min-height: 0; border-width: 6px; padding: 4px; gap: 8px; }
+.nard-stage.is-wide .nb-row { flex: 1 1 0; min-height: 0; }
+.nard-stage.is-wide .nb-quad { height: 100%; }
+.nard-stage.is-wide .nb-pt { aspect-ratio: auto; height: 100%; container-type: size; }
+.nard-stage.is-wide .nb-chk { width: min(88%, 21cqh); font-size: 9px; border-width: 1px; }
+.nard-stage.is-wide .nb-tray { padding: 6px 0; }
+.nard-stage.is-wide .nb-wrap .nb-die { width: min(56px, 13vh); height: min(56px, 13vh); padding: 5px; border-radius: 10px; }
+.nard-stage.is-wide .nb-wrap .nb-die.small { width: min(42px, 10vh); height: min(42px, 10vh); padding: 4px; }
+
+/* Nərd səhifəsində "Dostla oyna" — onlayn oyunçular və dəvət düymələri */
+.nard-players { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.nard-players li { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.nard-players .np-name { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nard-players .btn { padding: 4px 12px; font-size: 13px; white-space: nowrap; }
+.np-busy { font-size: 12px; color: var(--muted); }
+.np-wait { background: #fdf4e8; border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; font-size: 14px; }
+.nard.is-online .nb-player.ai .nb-online { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #2ecc71; margin-left: 6px; }
+.nard.is-online .nb-player.ai.off-line .nb-online { background: #bbb; }
+
 /* Oyunlar səhifəsində Bəxt çarxının kartı: oyundakı çarxın kiçik surəti (SVG) */
-.wheel-art { background: radial-gradient(circle at 50% 45%, #fbefe0, #f1dcc2); }
+.wheel-art { background: radial-gradient(circle at 50% 45%, #4a1d18, #2b0f0d); }
 .wheel-art-svg { height: 172px; width: 172px; overflow: visible; filter: drop-shadow(0 8px 14px rgba(60, 20, 10, .3)); font-family: inherit; }
 .wheel-art-svg .wa-spin { transform-origin: 100px 100px; transform-box: view-box; transition: transform 1.6s cubic-bezier(.2, .8, .2, 1); }
 .game-card:hover .wheel-art-svg .wa-spin { transform: rotate(360deg); }

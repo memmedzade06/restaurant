@@ -72,11 +72,30 @@ Route::middleware('auth')->group(function () {
     });
 
     // "İndi saytda" siqnalları (açıq səhifədən avtomatik göndərilir)
-    Route::post('/aktiv', [\App\Http\Controllers\Frontend\PresenceController::class, 'ping'])->middleware('throttle:40,1')->name('presence.ping');
-    Route::post('/aktiv/cixis', [\App\Http\Controllers\Frontend\PresenceController::class, 'leave'])->middleware('throttle:40,1')->name('presence.leave');
+    Route::post('/aktiv', [\App\Http\Controllers\Frontend\PresenceController::class, 'ping'])->middleware('throttle:poll')->name('presence.ping');
+    Route::post('/aktiv/cixis', [\App\Http\Controllers\Frontend\PresenceController::class, 'leave'])->middleware('throttle:poll')->name('presence.leave');
 });
 
-Route::get('/oyunlar/onlayn', [\App\Http\Controllers\Frontend\PresenceController::class, 'online'])->middleware('throttle:30,1')->name('games.online');
+Route::get('/oyunlar/onlayn', [\App\Http\Controllers\Frontend\PresenceController::class, 'online'])->middleware('throttle:poll')->name('games.online');
+
+/*
+| İki nəfərlik nərd: dəvətlər və oyun (yalnız təsdiqlənmiş istifadəçilər).
+| Brauzer vəziyyəti tez-tez soruşduğu üçün limitlər yüksəkdir.
+*/
+Route::prefix('oyunlar/nerd')->name('games.nard.')->middleware(['auth', 'phone.verified'])
+    ->controller(\App\Http\Controllers\Frontend\NardOnlineController::class)->group(function () {
+        Route::get('/oyuncular', 'players')->middleware('throttle:poll')->name('players');
+        Route::post('/devet', 'invite')->middleware('throttle:game-action')->name('invite');
+        Route::get('/devetler', 'inbox')->middleware('throttle:poll')->name('inbox');
+        Route::post('/devet/{invite}/qebul', 'accept')->middleware('throttle:game-action')->name('invite.accept');
+        Route::post('/devet/{invite}/redd', 'decline')->middleware('throttle:game-action')->name('invite.decline');
+        Route::post('/devet/{invite}/legv', 'cancel')->middleware('throttle:game-action')->name('invite.cancel');
+        Route::get('/oyun/{match}', 'show')->name('match');
+        Route::get('/oyun/{match}/veziyyet', 'state')->middleware('throttle:poll')->name('match.state');
+        Route::post('/oyun/{match}/zer', 'roll')->middleware('throttle:game-action')->name('match.roll');
+        Route::post('/oyun/{match}/gedis', 'move')->middleware('throttle:game-action')->name('match.move');
+        Route::post('/oyun/{match}/teslim', 'resign')->middleware('throttle:game-action')->name('match.resign');
+    });
 
 /*
 |--------------------------------------------------------------------------

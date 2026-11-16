@@ -28,6 +28,14 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Diqqət: "throttle:40,1" kimi limitlər istifadənin BÜTÜN ünvanlarına birlikdə sayılır.
+        // Səhifələrin tez-tez soruşduğu ünvanlar (onlayn siqnal, nərd dəvətləri və oyunun vəziyyəti)
+        // bir-birinin limitini yeməsin deyə hər ünvanın öz sayğacı var.
+        $perRoute = fn (int $perMinute) => fn (Request $request) => Limit::perMinute($perMinute)
+            ->by(($request->route()?->getName() ?? $request->path()) . '|' . ($request->user()?->id ?: $request->ip()));
+        RateLimiter::for('poll', $perRoute(90));        // avtomatik soruşmalar (hər bir neçə saniyədən bir)
+        RateLimiter::for('game-action', $perRoute(60)); // oyunçunun hərəkətləri: zər, gediş, dəvət
+
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')

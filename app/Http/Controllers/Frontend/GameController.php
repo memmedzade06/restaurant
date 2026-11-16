@@ -460,6 +460,12 @@ class GameController extends Controller
         return now('Asia/Baku')->toDateString();
     }
 
+    /** Nərd liderləri — iki nəfərlik oyun səhifəsi üçün */
+    public function nardLeaders(int $limit = 10): Collection
+    {
+        return $this->leaders($limit);
+    }
+
     /** Nərd rekordlar cədvəli: ən çox xal toplayanlar */
     private function leaders(int $limit = 10): Collection
     {

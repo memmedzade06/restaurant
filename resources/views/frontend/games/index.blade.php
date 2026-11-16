@@ -16,7 +16,42 @@
             <div class="col-md-6 col-lg-4">
                 <a href="{{ route('games.nard') }}" class="game-card">
                     <div class="game-art nard-art">
-                        <span class="dice-a">⚅</span><span class="dice-b">⚂</span>
+                        {{-- oyundakı lövhənin kiçik surəti: başlanğıc düzülüşü və fırlanan zərlər --}}
+                        <div class="na-board">
+                            <svg viewBox="0 0 300 200" aria-hidden="true">
+                                <defs>
+                                    <linearGradient id="naWood" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0" stop-color="#8a5228"/><stop offset="1" stop-color="#6b3b1c"/>
+                                    </linearGradient>
+                                    <radialGradient id="naW" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#fffdf7"/><stop offset="1" stop-color="#e9dcc3"/></radialGradient>
+                                    <radialGradient id="naB" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#a83232"/><stop offset="1" stop-color="#4a0e0e"/></radialGradient>
+                                </defs>
+                                <rect width="300" height="200" rx="10" fill="#4a250f"/>
+                                <rect x="6" y="6" width="288" height="188" rx="6" fill="url(#naWood)"/>
+                                @for ($i = 0; $i < 12; $i++)
+                                    @php
+                                        $x = $i < 6 ? 10 + $i * 22.5 : 156 + ($i - 6) * 22.5;
+                                        $dark = $i % 2 === 0;
+                                    @endphp
+                                    {{-- yuxarı və aşağı sıranın üçbucaqları (rənglər növbələşir) --}}
+                                    <path d="M{{ $x + 1 }} 10 H{{ $x + 21.5 }} L{{ $x + 11.25 }} 88 Z" fill="{{ $dark ? '#3a0d0d' : '#e8c99b' }}" opacity=".9"/>
+                                    <path d="M{{ $x + 1 }} 190 H{{ $x + 21.5 }} L{{ $x + 11.25 }} 112 Z" fill="{{ $dark ? '#e8c99b' : '#3a0d0d' }}" opacity=".9"/>
+                                @endfor
+                                <rect x="147" y="10" width="6" height="80" rx="3" fill="#4a250f"/>
+                                <rect x="147" y="110" width="6" height="80" rx="3" fill="#4a250f"/>
+                                {{-- başlar: ağ daşlar sağ yuxarıda, qırmızılar sol aşağıda, hərəsi 15 --}}
+                                @for ($k = 0; $k < 5; $k++)
+                                    <circle cx="279.25" cy="{{ 20 + $k * 18 }}" r="10" fill="url(#naW)" stroke="#b79a6a" stroke-width="1.2"/>
+                                    <circle cx="21.25" cy="{{ 180 - $k * 18 }}" r="10" fill="url(#naB)" stroke="#2a0606" stroke-width="1.2"/>
+                                @endfor
+                                <text x="279.25" y="95" text-anchor="middle" font-size="8" font-weight="900" fill="#1E0B0B">15</text>
+                                <text x="21.25" y="111" text-anchor="middle" font-size="8" font-weight="900" fill="#fff">15</text>
+                            </svg>
+                            {{-- zərlər: bir neçə saniyədən bir fırlanıb yeni rəqəm göstərir --}}
+                            <div class="na-dice">
+                                <span class="na-die"></span><span class="na-die"></span><span class="na-double" hidden>×4</span>
+                            </div>
+                        </div>
                     </div>
                     <div class="game-body">
                         <h4>Uzun nərd</h4>
@@ -217,6 +252,45 @@
 
         setInterval(refresh, 15000);
         document.addEventListener('visibilitychange', refresh);
+    })();
+
+    // Nərd kartı: zərlər bir neçə saniyədən bir fırlanıb yeni rəqəm göstərir (kartın üstünə gələndə dərhal)
+    (function () {
+        var dice = document.querySelectorAll('.na-die');
+        var dbl = document.querySelector('.na-double');
+        if (dice.length !== 2) return;
+        var PIPS = {1: [5], 2: [1, 9], 3: [1, 5, 9], 4: [1, 3, 7, 9], 5: [1, 3, 5, 7, 9], 6: [1, 3, 4, 6, 7, 9]};
+        var face = function (el, v) {
+            var html = '';
+            for (var i = 1; i <= 9; i++) html += '<i class="' + (PIPS[v].indexOf(i) >= 0 ? 'on' : '') + '"></i>';
+            el.innerHTML = html;
+        };
+        var rnd = function () { return 1 + Math.floor(Math.random() * 6); };
+        var rolling = false;
+
+        function roll() {
+            if (rolling || document.hidden) return;
+            rolling = true;
+            dbl.hidden = true;
+            dice.forEach(function (d) { d.classList.add('spin'); });
+            var n = 0;
+            var t = setInterval(function () {
+                dice.forEach(function (d) { face(d, rnd()); });
+                if (++n < 9) return;
+                clearInterval(t);
+                var a = rnd(), b = rnd();
+                face(dice[0], a); face(dice[1], b);
+                dice.forEach(function (d) { d.classList.remove('spin'); });
+                dbl.hidden = a !== b; // cüt düşəndə "×4"
+                rolling = false;
+            }, 80);
+        }
+
+        face(dice[0], 6); face(dice[1], 3);
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        setInterval(roll, 3200);
+        var card = dice[0].closest('.game-card');
+        card && card.addEventListener('mouseenter', roll);
     })();
 </script>
 @endsection

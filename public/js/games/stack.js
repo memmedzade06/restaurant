@@ -763,7 +763,7 @@
     const BG = {photo: new Image(), cloth: new Image(), logo: new Image()};
     BG.photo.src = root.dataset.bgPhoto;
     if (root.dataset.logo) BG.logo.src = root.dataset.logo;
-    const LOGO = {y: 122, r: 26}; // yuxarıdakı kiçik yumru loqo (xalın altında): mərkəzin hündürlüyü və radiusu
+    const LOGO = {x: 34, y: 34, r: 24}; // sol yuxarı küncdəki kiçik yumru loqo: mərkəz və radius
     if (root.dataset.cloth) BG.cloth.src = root.dataset.cloth;
     const TABLE_DEPTH = 34;     // masanın üst səthinin görünən dərinliyi (perspektivdə), px
     const BG_DARKEN = 0.35;     // arxa fon şəklinin qaraldılması (0 — olduğu kimi, 1 — tam qara)
@@ -1148,7 +1148,7 @@
 
         // 50 Qəpik loqosu — fon şəklinin üstündə, yuxarıda kiçik yumru nişan (yerində qalır)
         if (!PHOTO_IS_BASE && BG.logo.complete && BG.logo.naturalWidth) {
-            const cx = LW / 2, cy = LOGO.y, r = LOGO.r;
+            const cx = LOGO.x, cy = LOGO.y, r = LOGO.r;
             ctx.save();
             ctx.globalAlpha = 1 - h * 0.4; // yuxarı qalxdıqca gecədə bir az solur
             ctx.shadowColor = 'rgba(0, 0, 0, .55)';
@@ -1545,10 +1545,11 @@
         ctx.shadowBlur = 4;
         ctx.fillStyle = '#fff';
         ctx.font = '800 13px Nunito, sans-serif';
-        ctx.fillText(`${icon}${W.windy ? ' 💨' : ''} Bakı${W.temp !== null ? ` ${W.temp}°C` : ''}`, 12, 24);
+        const bx = LOGO.x + LOGO.r + 10; // hava yazısı loqonun sağında
+        ctx.fillText(`${icon}${W.windy ? ' 💨' : ''} Bakı${W.temp !== null ? ` ${W.temp}°C` : ''}`, bx, 30);
         ctx.font = '700 11px Nunito, sans-serif';
         ctx.globalAlpha = 0.85;
-        ctx.fillText(W.label, 12, 40);
+        ctx.fillText(W.label, bx, 46);
         ctx.restore();
     }
 

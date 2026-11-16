@@ -28,6 +28,18 @@
         saveUrl: root.dataset.saveUrl,
         csrf: document.querySelector('meta[name="csrf-token"]')?.content,
     };
+    // İki nəfərlik oyun (dəvətlə): vəziyyət serverdədir, bu brauzer onu soruşub göstərir.
+    // Oyunçu özünü həmişə ağ daşlarla (HUMAN), rəqibi qara daşlarla (AI yerində) görür.
+    const MP = root.dataset.matchUrl ? {
+        stateUrl: root.dataset.matchUrl,
+        rollUrl: root.dataset.rollUrl,
+        moveUrl: root.dataset.moveUrl,
+        resignUrl: root.dataset.resignUrl,
+        version: 0,
+        timer: null,
+        finished: false,
+    } : null;
+    const OPP_NAME = root.dataset.oppName || 'Kompüter';
 
     /* ================= Qaydalar ================= */
 
@@ -277,6 +289,7 @@
 
     async function humanRoll() {
         if (game.over || game.busy || game.turn !== HUMAN || game.ctx) return;
+        if (MP) return mpRoll();
         game.busy = true;
         const d1 = rollDie(), d2 = rollDie();
         await animateDice([d1, d2]);
@@ -314,6 +327,7 @@
     }
 
     function humanMove(m) {
+        if (MP) return mpMove(m);
         game.history.push({s: game.s, ctx: game.ctx});
         game.s = m.ns;
         game.ctx = nextCtx(game.ctx, m);
@@ -442,7 +456,7 @@
             el.classList.toggle('can-from', fromSet.has(b));
             el.classList.toggle('selected', sel === b);
             el.classList.toggle('can-to', toSet.has(b));
-            el.classList.toggle('last', !!game.lastMove && (game.lastMove.from === b || game.lastMove.to === b));
+            el.classList.toggle('last', (!!game.lastMove && (game.lastMove.from === b || game.lastMove.to === b)) || !!(game.lastMarks && game.lastMarks.has(b)));
         });
 
         els.offH.textContent = s.off[HUMAN];
@@ -462,7 +476,7 @@
     function renderDice(rolled, remaining, opening) {
         if (!rolled.length) { els.dice.innerHTML = ''; return; }
         if (opening) {
-            els.dice.innerHTML = `<span class="nb-die-label">Siz</span>${dieHtml(rolled[0], false)}${dieHtml(rolled[1], false, 'ai')}<span class="nb-die-label">Kompüter</span>`;
+            els.dice.innerHTML = `<span class="nb-die-label">Siz</span>${dieHtml(rolled[0], false)}${dieHtml(rolled[1], false, 'ai')}<span class="nb-die-label">${esc(OPP_NAME)}</span>`;
             return;
         }
         // Cüt düşəndə də iki zər göstərilir; neçə gediş qaldığı yanında yazılır
@@ -488,6 +502,7 @@
     }
 
     function setStatus(html) { els.status.innerHTML = html; }
+    const esc = s => String(s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 
     /* ================= Klik ================= */
 
@@ -518,13 +533,263 @@
     els.roll.addEventListener('click', humanRoll);
     els.undo.addEventListener('click', undo);
     els.restart.addEventListener('click', () => {
+        if (MP) return mpResign();
         if (game && !game.over && game.history.length + game.s.off[0] > 0 && !confirm('Yeni oyuna başlansın? Bu oyun itəcək.')) return;
         startGame();
     });
     root.querySelector('.nb-again')?.addEventListener('click', startGame);
 
+    /* ================= İki nəfərlik oyun (dəvətlə) ================= */
+
+    async function mpRequest(url, body) {
+        const opts = {credentials: 'same-origin', headers: {'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest'}};
+        if (body !== undefined) {
+            opts.method = 'POST';
+            opts.headers['Content-Type'] = 'application/json';
+            opts.headers['X-CSRF-TOKEN'] = cfg.csrf;
+            opts.body = JSON.stringify(body);
+        }
+        const r = await fetch(url, opts);
+        const d = await r.json().catch(() => null);
+        if (d && d.version !== undefined) mpApply(d, true);
+        if (!r.ok && d && d.message) setStatus(esc(d.message));
+        return d;
+    }
+
+    /** Serverdən gələn vəziyyəti lövhəyə köçürür */
+    function mpApply(d, force) {
+        root.querySelector('.nb-player.ai')?.classList.toggle('off-line', !d.oppOnline);
+        if (!force && d.version === MP.version) return;
+        MP.version = d.version;
+
+        game.s = {pts: d.pts.map(([o, n]) => ({o, n})), off: d.off};
+        game.over = !!d.result;
+        game.turn = d.result ? null : (d.turn === 0 ? HUMAN : AI);
+        game.ctx = d.turn === 0 && d.rolled.length && !d.result ? {dice: d.dice} : null;
+        game.legal = d.legal.map(([from, to, die]) => ({from, to, die}));
+        if (!game.legal.some(m => m.from === game.selected)) game.selected = null;
+        game.history = [];
+        // rəqibin son gedişləri işıqlanır (mənim növbəm başlayanda) və ya bu növbədəki gedişlər
+        const marks = d.turn === 0 && !d.rolled.length ? d.last : d.turnMoves;
+        game.lastMarks = new Set((marks || []).flat().filter(b => b !== 'off'));
+
+        const untouched = d.off[0] + d.off[1] === 0 && d.pts[0][1] === 15 && d.pts[12][1] === 15;
+        if (d.rolled.length) renderDice(d.rolled, d.dice, false);
+        else if (d.skip) renderDice(d.skip.rolled, [], false);
+        else if (untouched && d.opening) renderDice(d.opening, [], true);
+        else renderDice([], [], false);
+
+        const opp = esc(OPP_NAME);
+        if (d.result) {
+            mpResult(d.result);
+        } else if (d.turn === 0) {
+            if (d.rolled.length) setStatus('Daş seçin, sonra işıqlanan xanaya basın.');
+            else if (d.skip && d.skip.who === 'opp') setStatus(`${opp} ${d.skip.rolled.join('-')} atdı, gediş yox idi. Sizin növbəniz — <b>zər atın</b>.`);
+            else if (untouched) setStatus(`Kim başlayır? Siz: <b>${d.opening[0]}</b> · ${opp}: <b>${d.opening[1]}</b> — siz başlayırsınız, <b>zər atın</b>.`);
+            else setStatus('Sizin növbəniz — <b>zər atın</b>.');
+        } else {
+            if (d.skip && d.skip.who === 'me') setStatus(`${d.skip.rolled.join('-')} zərinizlə gediş yox idi — növbə ${opp}-ə keçdi.`);
+            else if (untouched && !d.rolled.length) setStatus(`Kim başlayır? Siz: <b>${d.opening[0]}</b> · ${opp}: <b>${d.opening[1]}</b> — ${opp} başlayır.`);
+            else setStatus(d.rolled.length ? `${opp} gedir…` : `${opp} zər atır…`);
+        }
+        render();
+    }
+
+    async function mpRoll() {
+        game.busy = true;
+        render();
+        const spin = setInterval(() => { els.dice.innerHTML = dieHtml(rollDie(), false, 'spin') + dieHtml(rollDie(), false, 'spin'); }, 70);
+        try {
+            await Promise.all([mpRequest(MP.rollUrl, {}), sleep(450)]);
+        } finally {
+            clearInterval(spin);
+            game.busy = false;
+            mpRequest(MP.stateUrl); // zər animasiyası üstünə yazmasın deyə vəziyyəti yenidən çəkirik
+        }
+    }
+
+    async function mpMove(m) {
+        game.busy = true;
+        game.selected = null;
+        render();
+        try {
+            await mpRequest(MP.moveUrl, {from: m.from, to: m.to, die: m.die});
+        } finally {
+            game.busy = false;
+            render();
+        }
+    }
+
+    async function mpResign() {
+        if (game.over || !confirm('Təslim olursunuz? Qələbə rəqibə veriləcək.')) return;
+        await mpRequest(MP.resignUrl, {});
+    }
+
+    function mpResult(res) {
+        if (MP.finished) return;
+        MP.finished = true;
+        clearInterval(MP.timer);
+        const box = els.result;
+        const opp = esc(OPP_NAME);
+        let title, note;
+        if (res.reason === 'left') {
+            title = res.won ? 'Qalib gəldiniz! 🎉' : 'Oyun bitdi';
+            note = res.won ? `${opp} oyundan çıxdı.` : 'Uzun müddət səhifədə olmadığınız üçün oyun bitdi.';
+        } else if (res.reason === 'resigned') {
+            title = res.won ? 'Qalib gəldiniz! 🎉' : 'Təslim oldunuz';
+            note = res.won ? `${opp} təslim oldu.` : `Qələbə ${opp}-ə verildi.`;
+        } else {
+            title = res.won ? (res.mars ? 'Mars! Təbriklər! 🎉' : 'Qalib gəldiniz! 🎉') : (res.mars ? 'Mars oldunuz…' : `${opp} qalib gəldi`);
+            note = res.won ? 'Möhtəşəm oyun idi!' : 'Növbəti dəfə şansınız gətirəcək.';
+        }
+        box.querySelector('.nb-result-title').innerHTML = title;
+        box.querySelector('.nb-result-note').innerHTML = note;
+        box.hidden = false;
+        setStatus(title);
+        els.restart.disabled = true;
+    }
+
+    function mpStart() {
+        game = {s: newState(), turn: null, ctx: null, legal: [], selected: null, history: [], firstTurn: [true, true], rolled: [], over: false, busy: false};
+        render();
+        setStatus('Oyun yüklənir…');
+        const poll = () => { if (!game.busy) mpRequest(MP.stateUrl).catch(() => {}); };
+        poll();
+        MP.timer = setInterval(poll, 1500);
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
+    }
+
+    /* ================= Dostla oyna: onlayn oyunçular və dəvət ================= */
+
+    function setupFriends() {
+        const panel = document.getElementById('nardFriends');
+        if (!panel) return;
+        const list = panel.querySelector('.nard-players');
+        const empty = panel.querySelector('.np-empty');
+        const wait = panel.querySelector('.np-wait');
+        let pendingId = null;
+
+        const post = (url, body) => fetch(url, {
+            method: 'POST', credentials: 'same-origin',
+            headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': cfg.csrf},
+            body: JSON.stringify(body || {}),
+        }).then(async r => ({ok: r.ok, data: await r.json().catch(() => ({}))}));
+
+        function showWait(html, cancellable) {
+            wait.innerHTML = html + (cancellable ? ' <a href="#" class="np-cancel">Ləğv et</a>' : '');
+            wait.hidden = !html;
+        }
+
+        async function load() {
+            if (document.hidden) return;
+            try {
+                const r = await fetch(panel.dataset.playersUrl, {credentials: 'same-origin', headers: {'Accept': 'application/json'}});
+                if (!r.ok) return;
+                const d = await r.json();
+                empty.hidden = d.players.length > 0;
+                list.innerHTML = d.players.map(p => `<li>
+                    <span class="np-name"><span class="online-dot"></span>${esc(p.name)}</span>
+                    ${p.busy ? '<span class="np-busy">oyundadır</span>'
+                        : `<button type="button" class="btn btn-primary np-invite" data-id="${p.id}" data-name="${esc(p.name)}">Dəvət et</button>`}
+                </li>`).join('');
+            } catch (e) { /* növbəti dəfə */ }
+        }
+
+        panel.addEventListener('click', async e => {
+            const btn = e.target.closest('.np-invite');
+            if (btn) {
+                btn.disabled = true;
+                const r = await post(panel.dataset.inviteUrl, {user_id: +btn.dataset.id});
+                btn.disabled = false;
+                if (r.ok) {
+                    pendingId = r.data.invite.id;
+                    showWait(`<b>${esc(r.data.invite.to)}</b> dəvət olundu — cavab gözlənilir…`, true);
+                    window.nardInboxCheck && window.nardInboxCheck();
+                } else {
+                    showWait(esc(r.data.message || 'Dəvət göndərilmədi.'), false);
+                }
+                return;
+            }
+            if (e.target.closest('.np-cancel')) {
+                e.preventDefault();
+                if (pendingId) post(panel.dataset.cancelUrl.replace('__ID__', pendingId));
+                pendingId = null;
+                showWait('', false);
+            }
+        });
+
+        // göndərdiyim dəvətin taleyi (saytın ümumi dəvət yoxlaması xəbər verir)
+        document.addEventListener('nard:inbox', e => {
+            const out = e.detail.outgoing;
+            if (!out || out.id !== pendingId) return;
+            if (out.status === 'declined') { showWait(`<b>${esc(out.to)}</b> dəvəti rədd etdi.`, false); pendingId = null; }
+            else if (out.status === 'expired') { showWait('Dəvətin vaxtı keçdi — cavab gəlmədi.', false); pendingId = null; }
+            else if (out.status === 'cancelled') { showWait('', false); pendingId = null; }
+        });
+
+        load();
+        setInterval(load, 8000);
+    }
+
+    /* ================= Böyük ekran ================= */
+    // Lövhənin qatı (nard-stage) bütün ekranı tutur. Fullscreen API olmayan brauzerlərdə
+    // (məs. iPhone Safari) qat CSS ilə ekranı örtür. Lövhənin eni ekranın hündürlüyünə görə seçilir ki, sığsın.
+    function setupFullscreen() {
+        const stage = root.parentElement;
+        const btn = root.querySelector('.nb-full');
+        if (!stage || !btn) return;
+        const nativeFull = () => document.fullscreenElement || document.webkitFullscreenElement;
+
+        let ratio = 1.2;
+        // ekran alçaq və lövhənin öz nisbətindən xeyli enlidirsə (telefon yan çevrilib) — lövhə bütün eni tutsun;
+        // kompüterin böyük ekranında lövhə nisbətini saxlayır
+        const fitWide = () => stage.classList.toggle('is-wide',
+            stage.classList.contains('is-full') && window.innerHeight < 600
+            && window.innerWidth / window.innerHeight > Math.max(ratio, 1.2) * 1.08);
+        window.addEventListener('resize', fitWide);
+        window.addEventListener('orientationchange', () => setTimeout(fitWide, 250));
+
+        function setFull(on) {
+            if (on && !stage.classList.contains('is-full')) {
+                ratio = root.offsetWidth / root.offsetHeight;
+                root.style.setProperty('--nard-ratio', ratio.toFixed(3));
+            }
+            stage.classList.toggle('is-full', on);
+            fitWide();
+            document.body.classList.toggle('st-no-scroll', on);
+            btn.querySelector('i').className = on ? 'fa fa-compress' : 'fa fa-expand';
+            btn.title = on ? 'Kiçik ekran' : 'Böyük ekran';
+            btn.setAttribute('aria-label', btn.title);
+        }
+
+        btn.addEventListener('click', () => {
+            const on = !stage.classList.contains('is-full');
+            if (on) {
+                setFull(true); // nisbəti ölçmək üçün əvvəlcə adi ölçüdə ölçülür, sonra qat açılır
+                const req = stage.requestFullscreen || stage.webkitRequestFullscreen;
+                if (req) { const p = req.call(stage); if (p && p.catch) p.catch(() => {}); }
+            } else {
+                if (nativeFull()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+                setFull(false);
+            }
+            btn.blur();
+        });
+        const onChange = () => { if (!nativeFull() && stage.classList.contains('is-full')) setFull(false); };
+        document.addEventListener('fullscreenchange', onChange);
+        document.addEventListener('webkitfullscreenchange', onChange);
+        window.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && stage.classList.contains('is-full') && !nativeFull()) setFull(false);
+        });
+    }
+
     buildBoard();
-    startGame();
+    setupFullscreen();
+    if (MP) {
+        mpStart();
+    } else {
+        startGame();
+        setupFriends();
+    }
 
     // Testlər üçün qaydalar mühərriki
     window.__nard = {newState, legalMoves, makeCtx: (pl, a, b) => ({pl, dice: a === b ? [a, a, a, a] : [a, b], headUsed: 0, headLimit: 1}), toBoard, toPath, hasIllegalPrime, bestSequence, apply, game: () => game};
