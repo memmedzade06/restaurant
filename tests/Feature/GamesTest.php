@@ -200,19 +200,17 @@ class GamesTest extends TestCase
         $this->actingAs($this->user(false))->postJson('/oyunlar/bext-carxi/firlat')->assertOk()->assertJson(['demo' => true]);
     }
 
-    public function test_nard_result_saved_only_for_verified(): void
+    public function test_nard_vs_computer_gives_no_points(): void
     {
         $this->postJson('/oyunlar/nerd/netice', ['won' => true])->assertUnauthorized();
         $this->actingAs($this->user(false))->postJson('/oyunlar/nerd/netice', ['won' => true])->assertForbidden();
 
+        // kompüterə qarşı qələbə xal vermir — xal yalnız dostla oyunda
         $u = $this->user();
         $this->actingAs($u)->postJson('/oyunlar/nerd/netice', ['won' => true, 'mars' => true])
-            ->assertOk()->assertJson(['saved' => true, 'points' => 2]);
-        $this->actingAs($u)->postJson('/oyunlar/nerd/netice', ['won' => false])->assertJson(['points' => 0]);
-
-        $this->assertSame(2, (int) GameResult::where('user_id', $u->id)->sum('points'));
-        $this->get('/oyunlar')->assertSee('Test O')->assertSee('2 xal');
-        $this->actingAs($u)->get('/hesabim')->assertOk()->assertSee('Hədiyyələrim');
+            ->assertOk()->assertJson(['saved' => false, 'points' => 0]);
+        $this->assertSame(0, GameResult::where('user_id', $u->id)->count());
+        $this->actingAs($u)->get('/hesabim')->assertOk()->assertSee('Nərd (dostla oyun)')->assertSee('Hədiyyələrim');
     }
 
     public function test_games_page_lists_online_users(): void

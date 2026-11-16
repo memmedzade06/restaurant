@@ -31,7 +31,18 @@ class WheelSpin extends Model
     public const GAME_LABELS = [
         'wheel' => 'Bəxt çarxı',
         'stack' => 'Stəkan qülləsi',
+        'nard' => 'Nərd — günün qalibi',
     ];
+
+    /** Unikal hədiyyə kodu: QP-XXXXXX */
+    public static function newCode(): string
+    {
+        do {
+            $code = 'QP-' . strtoupper(\Illuminate\Support\Str::random(6));
+        } while (static::where('code', $code)->exists());
+
+        return $code;
+    }
 
     public function gameLabel(): string
     {

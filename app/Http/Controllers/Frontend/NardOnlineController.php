@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\NardInvite;
 use App\Models\NardMatch;
 use App\Models\User;
+use App\Services\NardLeaderboard;
 use App\Services\NardRules;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,8 @@ use Illuminate\View\View;
  * İki nəfərlik nərd: saytdakı təsdiqlənmiş oyunçular bir-birini dəvət edir və oynayır.
  * Saytda canlı əlaqə (websocket) olmadığı üçün brauzer vəziyyəti bir neçə saniyədən bir soruşur.
  * Oyunun vəziyyəti serverdədir: zərləri server atır, hər gedişi NardRules ilə yoxlayır.
- * Bu oyunlar xal vermir (iki hesabla bir-birinə uduzub xal yığmaq olmasın deyə).
+ * Xal yalnız bu oyunlarda verilir və günün cədvəlinə düşür (App\Services\NardLeaderboard):
+ * oyun sona qədər oynanmalıdır, eyni iki oyunçu arasında gündə məhdud sayda oyun xal verir.
  */
 class NardOnlineController extends Controller
 {
@@ -158,11 +160,13 @@ class NardOnlineController extends Controller
     {
         $seat = $match->seatOf($request->user());
         abort_if($seat === null, 403);
+        NardLeaderboard::finalizePastDays();
         $opp = $seat === 0 ? $match->player1 : $match->player0;
 
         return view('frontend.games.nard', [
-            'leaders' => app(GameController::class)->nardLeaders(10),
-            'myStats' => null,
+            'leaders' => NardLeaderboard::today(),
+            'lastWinners' => NardLeaderboard::yesterdayWinners(),
+            'myStats' => NardLeaderboard::myToday($request->user()->id),
             'match' => $match,
             'opponentName' => $opp->short_name,
         ]);
@@ -284,6 +288,8 @@ class NardOnlineController extends Controller
         $match->mars = $reason === 'finished' && $s['off'][1 - $winner] === 0;
         $match->end_reason = $reason;
         $s['turn'] = null;
+        // günün cədvəli üçün xal (yalnız sona qədər oynanan oyun)
+        $s['awarded'] = NardLeaderboard::award($match);
         $match->state = $s;
         $match->version++;
     }
@@ -318,6 +324,7 @@ class NardOnlineController extends Controller
                 'won' => (int) $match->winner === $seat,
                 'mars' => $match->mars,
                 'reason' => $match->end_reason,
+                'points' => (int) $match->winner === $seat ? (int) ($s['awarded'] ?? 0) : 0, // qalibin bu oyundan aldığı xal
             ],
             'oppOnline' => $oppSeen && $oppSeen->gt(now()->subSeconds(20)),
             // son atışda gediş olmayıbsa: kim atdı (me / opp) və nə düşdü

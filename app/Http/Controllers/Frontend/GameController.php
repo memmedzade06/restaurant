@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\Models\WheelSpin;
 use App\Services\BakuWeather;
+use App\Services\NardLeaderboard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -22,8 +23,11 @@ class GameController extends Controller
 {
     public function index(): View
     {
+        NardLeaderboard::finalizePastDays(); // bitmiş günə yekun (cron olmasa da)
+
         return view('frontend.games.index', [
-            'leaders' => $this->leaders(10),
+            'leaders' => NardLeaderboard::today(),
+            'lastWinners' => NardLeaderboard::yesterdayWinners(),
             'stackLeaders' => $this->stackLeaders(10),
             'onlineUsers' => User::online()->orderByDesc('last_seen_at')->limit(30)->get(['id', 'name', 'last_seen_at']),
             'onlineCount' => User::online()->count(),
@@ -236,35 +240,27 @@ class GameController extends Controller
 
     public function nard(Request $request): View
     {
+        NardLeaderboard::finalizePastDays(); // bitmiş günə yekun (cron olmasa da)
         $user = $request->user();
 
         return view('frontend.games.nard', [
-            'leaders' => $this->leaders(10),
-            'myStats' => $user && $user->hasVerifiedPhone() ? $this->stats($user->id) : null,
+            'leaders' => NardLeaderboard::today(),
+            'lastWinners' => NardLeaderboard::yesterdayWinners(),
+            'myStats' => $user && $user->hasVerifiedPhone() ? NardLeaderboard::myToday($user->id) : null,
         ]);
     }
 
     /** Nərd oyununun nəticəsini yazır (yalnız təsdiqlənmiş istifadəçi) */
     public function nardResult(Request $request): JsonResponse
     {
-        $data = $request->validate([
+        $request->validate([
             'won' => ['required', 'boolean'],
             'mars' => ['sometimes', 'boolean'],
         ]);
 
-        $won = (bool) $data['won'];
-        $mars = $won && ($data['mars'] ?? false);
-        $points = $won ? config($mars ? 'games.nard.points_mars' : 'games.nard.points_win') : 0;
-
-        GameResult::create([
-            'user_id' => $request->user()->id,
-            'game' => 'nard',
-            'won' => $won,
-            'mars' => $mars,
-            'points' => $points,
-        ]);
-
-        return response()->json(['saved' => true, 'points' => $points, 'stats' => $this->stats($request->user()->id)]);
+        // Kompüterə qarşı oyun xal vermir — xal yalnız dostla oyunda (NardLeaderboard).
+        // Köhnə səhifə açıq qalanda da xəta verməsin deyə ünvan saxlanılıb.
+        return response()->json(['saved' => false, 'points' => 0]);
     }
 
     public function wheel(Request $request): View
@@ -436,11 +432,7 @@ class GameController extends Controller
 
     private function newCode(): string
     {
-        do {
-            $code = 'QP-' . strtoupper(Str::random(6));
-        } while (WheelSpin::where('code', $code)->exists());
-
-        return $code;
+        return WheelSpin::newCode();
     }
 
     private function spinPayload(WheelSpin $spin): array
@@ -460,26 +452,6 @@ class GameController extends Controller
         return now('Asia/Baku')->toDateString();
     }
 
-    /** Nərd liderləri — iki nəfərlik oyun səhifəsi üçün */
-    public function nardLeaders(int $limit = 10): Collection
-    {
-        return $this->leaders($limit);
-    }
-
-    /** Nərd rekordlar cədvəli: ən çox xal toplayanlar */
-    private function leaders(int $limit = 10): Collection
-    {
-        return GameResult::query()
-            ->where('game', 'nard')
-            ->selectRaw('user_id, SUM(points) as points, SUM(won) as wins, COUNT(*) as games')
-            ->groupBy('user_id')
-            ->having('points', '>', 0)
-            ->orderByDesc('points')
-            ->orderByDesc('wins')
-            ->limit($limit)
-            ->with('user:id,name')
-            ->get();
-    }
 
     /** Stəkan qülləsi liderləri: hər oyunçunun ən yüksək nəticəsi */
     private function stackLeaders(int $limit = 10): Collection
@@ -498,14 +470,5 @@ class GameController extends Controller
     private function stackBest(int $userId): int
     {
         return (int) GameResult::where('game', 'stack')->where('user_id', $userId)->max('points');
-    }
-
-    private function stats(int $userId): array
-    {
-        $row = GameResult::where('game', 'nard')->where('user_id', $userId)
-            ->selectRaw('COUNT(*) as games, COALESCE(SUM(won),0) as wins, COALESCE(SUM(points),0) as points')
-            ->first();
-
-        return ['games' => (int) $row->games, 'wins' => (int) $row->wins, 'points' => (int) $row->points];
     }
 }

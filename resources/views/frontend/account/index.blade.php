@@ -21,15 +21,16 @@
             </ul>
 
             @php
-                $nard = \App\Models\GameResult::where('user_id', auth()->id())->where('game', 'nard')
-                    ->selectRaw('COUNT(*) as games, COALESCE(SUM(won),0) as wins, COALESCE(SUM(points),0) as points')->first();
+                // nərd: yalnız dostla oyunlar; nəticələr hər gecə silinir, qalib olduğu günlər qalır
+                $nardToday = \App\Services\NardLeaderboard::myToday(auth()->id());
+                $nardWins = \App\Models\NardDailyWinner::where('user_id', auth()->id())->count();
                 $prizes = \App\Models\WheelSpin::where('user_id', auth()->id())->whereNotNull('code')->latest('id')->take(5)->get();
             @endphp
 
-            <h5 class="account-section-title"><i class="fa fa-dice me-2 text-primary"></i>Nərd</h5>
+            <h5 class="account-section-title"><i class="fa fa-dice me-2 text-primary"></i>Nərd (dostla oyun)</h5>
             <ul class="account-list">
-                <li><span>Oyun / qələbə</span><b>{{ (int) $nard->games }} / {{ (int) $nard->wins }}</b></li>
-                <li><span>Xal</span><b>{{ (int) $nard->points }}</b></li>
+                <li><span>Bu gün</span><b>{{ $nardToday['points'] }} xal · {{ $nardToday['wins'] }} qələbə · {{ $nardToday['games'] }} oyun</b></li>
+                <li><span>Günün qalibi olub</span><b>{{ $nardWins }} dəfə</b></li>
             </ul>
 
             @php($stackBest = (int) \App\Models\GameResult::where('user_id', auth()->id())->where('game', 'stack')->max('points'))

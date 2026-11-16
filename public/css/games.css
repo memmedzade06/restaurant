@@ -24,32 +24,51 @@
 .ni-actions .btn { flex: 1; }
 @keyframes niIn { from { transform: translateY(12px); opacity: 0; } }
 
-/* Nərd — böyük ekran rejimi: qat bütün ekranı tutur, lövhə nisbətini saxlayıb ekrana sığır */
+/* Nərd — böyük ekran rejimi: oyun bütün ekranı tutur (eni də, hündürlüyü də).
+   Xanalar ekranın hündürlüyünə uyğun uzanır/qısalır, daşlar xananın ölçüsünə görə böyüyür/kiçilir
+   (container query: 1cqh = xananın hündürlüyünün 1%-i) */
 .nb-full { margin-left: auto; width: 38px; height: 38px; border: 0; border-radius: 12px; background: rgba(30, 11, 11, .08); color: var(--wine); font-size: 16px; display: grid; place-items: center; cursor: pointer; transition: background .2s; }
 .nb-full:hover { background: rgba(30, 11, 11, .16); }
-.nard-stage.is-full { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 12px; overflow: auto; background: radial-gradient(circle at 50% 30%, #4a1a1a, #1e0b0b); }
-.nard-stage.is-full .nard { width: min(100%, calc((100vh - 24px) * var(--nard-ratio, 1.2))); max-width: none; margin: 0; }
-/* Enli, alçaq ekran (telefon yan çevrilib): lövhə bütün eni tutur, xanalar hündürlüyə uyğun qısalır,
-   daşlar xananın hündürlüyünə görə kiçilir (container query: 1cqh = xananın hündürlüyünün 1%-i) */
-.nard-stage.is-full.is-wide { padding: 6px; }
-.nard-stage.is-full.is-wide .nard { width: 100%; height: calc(100vh - 12px); display: flex; flex-direction: column; padding: 8px 12px; border-radius: 14px; }
-.nard-stage.is-wide .nb-top-bar { margin-bottom: 4px; }
-.nard-stage.is-wide .nb-bottom-bar { margin-top: 4px; }
-.nard-stage.is-wide .nb-player { font-size: 13px; gap: 6px; }
-.nard-stage.is-wide .nb-player .nb-chk { width: 18px; height: 18px; }
-.nard-stage.is-wide .nb-off-count { font-size: 12px; }
-.nard-stage.is-wide .nb-full { width: 30px; height: 30px; font-size: 13px; }
-.nard-stage.is-wide .nb-actions .btn { padding: 5px 14px; font-size: 13px; }
-.nard-stage.is-wide .nb-status { margin: 2px 0 0; font-size: 12px; min-height: 0; }
-.nard-stage.is-wide .nb-wrap { flex: 1 1 auto; min-height: 0; grid-template-rows: 100%; }
-.nard-stage.is-wide .nb-board { min-height: 0; border-width: 6px; padding: 4px; gap: 8px; }
-.nard-stage.is-wide .nb-row { flex: 1 1 0; min-height: 0; }
-.nard-stage.is-wide .nb-quad { height: 100%; }
-.nard-stage.is-wide .nb-pt { aspect-ratio: auto; height: 100%; container-type: size; }
-.nard-stage.is-wide .nb-chk { width: min(88%, 21cqh); font-size: 9px; border-width: 1px; }
-.nard-stage.is-wide .nb-tray { padding: 6px 0; }
-.nard-stage.is-wide .nb-wrap .nb-die { width: min(56px, 13vh); height: min(56px, 13vh); padding: 5px; border-radius: 10px; }
-.nard-stage.is-wide .nb-wrap .nb-die.small { width: min(42px, 10vh); height: min(42px, 10vh); padding: 4px; }
+.nard-stage.is-full { position: fixed; inset: 0; z-index: 2000; padding: 0; background: #1e0b0b; }
+.nard-stage.is-full .nard { width: 100%; height: 100vh; height: 100dvh; max-width: none; margin: 0; border-radius: 0; box-shadow: none; display: flex; flex-direction: column; padding: 10px 16px; }
+.nard-stage.is-full .nb-top-bar { margin-bottom: 6px; }
+.nard-stage.is-full .nb-bottom-bar { margin-top: 6px; }
+.nard-stage.is-full .nb-status { margin-top: 4px; }
+.nard-stage.is-full .nb-wrap { flex: 1 1 auto; min-height: 0; grid-template-rows: 100%; }
+.nard-stage.is-full .nb-board { min-height: 0; }
+.nard-stage.is-full .nb-row { flex: 1 1 0; min-height: 0; }
+.nard-stage.is-full .nb-quad { height: 100%; }
+.nard-stage.is-full .nb-pt { aspect-ratio: auto; height: 100%; container-type: size; }
+.nard-stage.is-full .nb-stack .nb-chk { width: min(88%, 21cqh); }
+.nard-stage.is-full .nb-wrap .nb-die { width: clamp(30px, 9vh, 80px); height: clamp(30px, 9vh, 80px); padding: clamp(4px, 1.3vh, 12px); }
+.nard-stage.is-full .nb-wrap .nb-die.small { width: clamp(24px, 7vh, 60px); height: clamp(24px, 7vh, 60px); }
+/* alçaq ekran (telefon yan çevrilib): yuxarı və aşağı sətirlər yığcamlaşır ki, lövhəyə çox yer qalsın */
+@media (max-height: 600px) {
+    .nard-stage.is-full .nard { padding: 6px 10px; }
+    .nard-stage.is-full .nb-top-bar { margin-bottom: 4px; }
+    .nard-stage.is-full .nb-bottom-bar { margin-top: 4px; }
+    .nard-stage.is-full .nb-player { font-size: 13px; gap: 6px; }
+    .nard-stage.is-full .nb-player .nb-chk { width: 18px; height: 18px; }
+    .nard-stage.is-full .nb-off-count { font-size: 12px; }
+    .nard-stage.is-full .nb-full { width: 30px; height: 30px; font-size: 13px; }
+    .nard-stage.is-full .nb-actions .btn { padding: 5px 14px; font-size: 13px; }
+    .nard-stage.is-full .nb-status { margin: 2px 0 0; font-size: 12px; min-height: 0; }
+    .nard-stage.is-full .nb-board { border-width: 6px; padding: 4px; gap: 8px; }
+    .nard-stage.is-full .nb-stack .nb-chk { font-size: 9px; border-width: 1px; }
+    .nard-stage.is-full .nb-tray { padding: 6px 0; }
+}
+
+/* Nərd: keçən həftənin qalibləri */
+.nard-winners { margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(126, 26, 26, .2); }
+.nard-winners h6 { font-size: 14px; font-weight: 900; color: var(--wine); margin-bottom: 8px; }
+.nard-winners ol { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.nard-winners li { display: flex; align-items: center; gap: 8px; }
+.nard-winners li.me .who { font-weight: 900; }
+.nard-winners .medal { width: 22px; text-align: center; }
+.nard-winners .who { flex: 1; display: flex; flex-direction: column; line-height: 1.25; }
+.nard-winners .who small { color: var(--muted); font-size: 12px; }
+.nw-me { margin-top: 10px; background: #fdf4e8; border-radius: 10px; padding: 8px 10px; font-size: 13px; }
+.nard-winners .pts { font-weight: 900; color: var(--wine); }
 
 /* Nərd səhifəsində "Dostla oyna" — onlayn oyunçular və dəvət düymələri */
 .nard-players { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }

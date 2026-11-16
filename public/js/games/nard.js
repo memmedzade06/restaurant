@@ -395,26 +395,9 @@
         box.querySelector('.nb-result-title').textContent = won ? (mars ? 'Mars! Təbriklər! 🎉' : 'Qalib gəldiniz! 🎉') : (mars ? 'Mars oldunuz…' : 'Bu dəfə uduzdunuz');
         const note = box.querySelector('.nb-result-note');
         note.innerHTML = won ? 'Möhtəşəm oyun idi!' : 'Növbəti dəfə şansınız gətirəcək.';
+        // kompüterə qarşı oyun məşqdir — xal yalnız dostla oyunda verilir
+        note.innerHTML += '<br><small>Xal və günün qalibləri yalnız dostla oyunda hesablanır — sağdakı «Dostla oyna» bölməsindən dəvət göndərin.</small>';
         box.hidden = false;
-
-        if (!cfg.canSave) {
-            if (won) note.innerHTML += ` Xalın saxlanması üçün <a href="${root.dataset.registerUrl}">qeydiyyatdan keçin</a>.`;
-            return;
-        }
-        try {
-            const r = await fetch(cfg.saveUrl, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': cfg.csrf},
-                credentials: 'same-origin',
-                body: JSON.stringify({won, mars}),
-            });
-            const d = await r.json();
-            if (r.ok && d.saved) {
-                note.innerHTML += won ? ` <b>+${d.points} xal</b> hesabınıza yazıldı.` : ' Nəticə hesabınıza yazıldı.';
-                const st = document.getElementById('nbMyStats');
-                if (st && d.stats) st.textContent = `${d.stats.wins} qələbə · ${d.stats.points} xal · ${d.stats.games} oyun`;
-            }
-        } catch (e) { /* şəbəkə xətası — oyun davam edir */ }
     }
 
     /* ================= Görüntü ================= */
@@ -641,7 +624,13 @@
         } else {
             title = res.won ? (res.mars ? 'Mars! Təbriklər! 🎉' : 'Qalib gəldiniz! 🎉') : (res.mars ? 'Mars oldunuz…' : `${opp} qalib gəldi`);
             note = res.won ? 'Möhtəşəm oyun idi!' : 'Növbəti dəfə şansınız gətirəcək.';
+            if (res.won) {
+                note += res.points
+                    ? ` <b>+${res.points} xal</b> günün cədvəlinə yazıldı.`
+                    : ' Bu gün bu oyunçu ilə xal limiti dolub — bu qələbə xal vermədi.';
+            }
         }
+        if (res.reason !== 'finished' && res.won) note += ' <small>(təslim olma və ya çıxma ilə qələbə xal vermir)</small>';
         box.querySelector('.nb-result-title').innerHTML = title;
         box.querySelector('.nb-result-note').innerHTML = note;
         box.hidden = false;
@@ -740,22 +729,10 @@
         if (!stage || !btn) return;
         const nativeFull = () => document.fullscreenElement || document.webkitFullscreenElement;
 
-        let ratio = 1.2;
-        // ekran alçaq və lövhənin öz nisbətindən xeyli enlidirsə (telefon yan çevrilib) — lövhə bütün eni tutsun;
-        // kompüterin böyük ekranında lövhə nisbətini saxlayır
-        const fitWide = () => stage.classList.toggle('is-wide',
-            stage.classList.contains('is-full') && window.innerHeight < 600
-            && window.innerWidth / window.innerHeight > Math.max(ratio, 1.2) * 1.08);
-        window.addEventListener('resize', fitWide);
-        window.addEventListener('orientationchange', () => setTimeout(fitWide, 250));
-
+        // böyük ekranda lövhə ekranın bütün enini və hündürlüyünü tutur (CSS: .nard-stage.is-full),
+        // telefonu çevirəndə də ekrana uyğunlaşır
         function setFull(on) {
-            if (on && !stage.classList.contains('is-full')) {
-                ratio = root.offsetWidth / root.offsetHeight;
-                root.style.setProperty('--nard-ratio', ratio.toFixed(3));
-            }
             stage.classList.toggle('is-full', on);
-            fitWide();
             document.body.classList.toggle('st-no-scroll', on);
             btn.querySelector('i').className = on ? 'fa fa-compress' : 'fa fa-expand';
             btn.title = on ? 'Kiçik ekran' : 'Böyük ekran';

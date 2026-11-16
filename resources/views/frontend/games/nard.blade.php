@@ -14,7 +14,7 @@
         @if ($online)
             <p>Dostla oyun: <b>{{ $opponentName }}</b> ilə</p>
         @else
-            <p>Kompüterə qarşı oynayın və ya saytdakı dostunuzu dəvət edin</p>
+            <p>Saytdakı dostunuzu dəvət edin — hər gün qaliblər seçilir. Kompüterlə məşq edə bilərsiniz.</p>
         @endif
     </div>
 </section>
@@ -79,12 +79,18 @@
                     @if ($online)
                         <div class="side-card">
                             <h5><i class="fa fa-user-friends me-2 text-primary"></i>Dostla oyun</h5>
-                            <p class="mb-0">Rəqib: <b>{{ $opponentName }}</b>. Gedişlər dərhal rəqibə görünür, geri almaq olmur. Dostla oyun xal vermir.</p>
+                            <p class="mb-2">Rəqib: <b>{{ $opponentName }}</b>. Gedişlər dərhal rəqibə görünür, geri almaq olmur.</p>
+                            <p class="mb-0 small text-muted">Oyunu sona qədər oynasanız qələbə günün cədvəlinə <b>{{ config('games.nard.points_win') }} xal</b>, mars <b>{{ config('games.nard.points_mars') }} xal</b> yazır.</p>
+                        </div>
+                        <div class="side-card">
+                            <h5><i class="fa fa-user-circle me-2 text-primary"></i>Bu gün</h5>
+                            <p class="mb-0">{{ $myStats['wins'] }} qələbə · {{ $myStats['points'] }} xal · {{ $myStats['games'] }} oyun</p>
                         </div>
                     @elseif ($canSave)
                         <div class="side-card">
-                            <h5><i class="fa fa-user-circle me-2 text-primary"></i>Sizin nəticələr</h5>
+                            <h5><i class="fa fa-user-circle me-2 text-primary"></i>Bu gün</h5>
                             <p id="nbMyStats" class="mb-0">{{ $myStats['wins'] }} qələbə · {{ $myStats['points'] }} xal · {{ $myStats['games'] }} oyun</p>
+                            <p class="mb-0 mt-1 small text-muted">Xal yalnız dostla oyunda hesablanır.</p>
                         </div>
                         {{-- Dostla oyna: saytdakı oyunçular, dəvət göndərmək --}}
                         <div class="side-card" id="nardFriends"
@@ -98,16 +104,17 @@
                         </div>
                     @else
                         <div class="side-card side-cta">
-                            <h5>Xallarınız saxlanılsın?</h5>
-                            <p>Qələbələriniz rekordlar cədvəlinə düşsün və dostlarınızla oynaya biləsiniz deyə daxil olun və ya qeydiyyatdan keçin.</p>
+                            <h5>Dostlarınızla oynayın</h5>
+                            <p>Dostlarınızı dəvət edib xal toplamaq və günün qalibi olmaq üçün daxil olun və ya qeydiyyatdan keçin.</p>
                             <a href="{{ auth()->check() ? route('verify.telegram') : route('register') }}" class="btn btn-primary w-100 mb-2">{{ auth()->check() ? 'Nömrəni təsdiqlə' : 'Qeydiyyat' }}</a>
                             @guest <a href="{{ route('login') }}" class="btn btn-ghost-dark w-100">Daxil ol</a> @endguest
                         </div>
                     @endif
 
                     <div class="side-card">
-                        <h5><i class="fa fa-trophy me-2 text-primary"></i>Liderlər</h5>
+                        <h5><i class="fa fa-trophy me-2 text-primary"></i>Bu günün liderləri</h5>
                         @include('frontend.games._leaders', ['leaders' => $leaders])
+                        @include('frontend.games._nard_winners', ['winners' => $lastWinners])
                     </div>
 
                     <div class="side-card">
@@ -118,6 +125,13 @@
                             <li>Hər növbədə başdan yalnız bir daş götürülür.</li>
                             <li>Bütün daşlar evə (sağ-aşağı) çatanda çıxarmaq olar.</li>
                             <li>Rəqib heç daş çıxarmamış qalib gəlsəniz — <b>mars</b>, ikiqat xal.</li>
+                            <li>Xal <b>yalnız dostla oyunda</b> verilir: oyun sona qədər oynanmalıdır, təslim olmaq və ya çıxmaq xal vermir. Eyni oyunçu ilə gündə {{ config('games.nard.pair_daily_limit') }} oyun xal gətirir.</li>
+                            <li>Günün qalibləri endirim qazanır:
+                                @foreach (config('games.nard.daily_prizes') as $place => $p)
+                                    <b>{{ $place }}-{{ $place === 3 ? 'cü' : 'ci' }} yer — {{ $p['label'] }}</b>{{ $loop->last ? '.' : ',' }}
+                                @endforeach
+                                Kod avtomatik verilir və «Hədiyyələrim» səhifəsində görünür.</li>
+                            <li>Hər gecə saat 00:00-da (Bakı vaxtı) nəticələr silinir və yeni gün sıfırdan başlayır.</li>
                         </ul>
                     </div>
                     <button type="button" id="nbRestart" class="btn btn-ghost-dark w-100">
@@ -131,5 +145,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/nard.js') }}?v=8"></script>
+<script src="{{ asset('js/games/nard.js') }}?v=11"></script>
 @endsection

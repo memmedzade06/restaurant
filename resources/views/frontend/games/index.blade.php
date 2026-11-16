@@ -55,7 +55,7 @@
                     </div>
                     <div class="game-body">
                         <h4>Uzun nərd</h4>
-                        <p>Kompüterə qarşı klassik uzun nərd. Qələbələr rekordlar cədvəlinə düşür.</p>
+                        <p>Dostunuzu dəvət edib oynayın — hər gün ən çox xal toplayanlar endirim qazanır. Kompüterlə də məşq edə bilərsiniz.</p>
                         <span class="game-go">Oyna <i class="fa fa-arrow-right ms-1"></i></span>
                     </div>
                 </a>
@@ -178,8 +178,9 @@
         <div class="row g-4 mt-1">
             <div class="col-md-6">
                 <div class="side-card h-100">
-                    <h5><i class="fa fa-trophy me-2 text-primary"></i>Nərd liderləri</h5>
+                    <h5><i class="fa fa-trophy me-2 text-primary"></i>Nərd — bu günün liderləri</h5>
                     @include('frontend.games._leaders', ['leaders' => $leaders])
+                    @include('frontend.games._nard_winners', ['winners' => $lastWinners])
                 </div>
             </div>
             <div class="col-md-6">

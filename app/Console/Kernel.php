@@ -12,7 +12,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // Nərd: gün bitəndə qaliblərə endirim kodu və nəticələrin silinməsi (səhifə açılanda da işləyir)
+        $schedule->command('nard:finalize-day')->dailyAt('00:01')->timezone('Asia/Baku');
     }
 
     /**

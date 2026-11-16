@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\NardInvite;
 use App\Models\NardMatch;
 use App\Models\User;
+use App\Services\NardLeaderboard;
 use App\Services\NardRules;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
@@ -154,6 +155,97 @@ class NardOnlineTest extends TestCase
         $this->actingAs($c)->postJson('/oyunlar/nerd/devet', ['user_id' => $a->id])->assertStatus(422);
         $this->actingAs($c)->getJson('/oyunlar/nerd/oyuncular')->assertOk()->assertJsonFragment(['id' => $a->id, 'busy' => true]);
         $this->actingAs($a)->getJson('/oyunlar/nerd/devetler')->assertJsonPath('match_url', route('games.nard.match', NardMatch::latest('id')->first()));
+    }
+
+    /** Oyunçu 0-ın son daşı evdə, bir gedişlə çıxıb udur; oyunçu 1 heç daş çıxarmayıb (mars olsun) */
+    private function nearWin(NardMatch $match, bool $mars = true): void
+    {
+        $s = $match->state;
+        $s['pts'] = array_fill(0, 24, [-1, 0]);
+        $s['pts'][23] = [0, 1];
+        $s['pts'][12] = [1, $mars ? 15 : 14];
+        $s['off'] = [14, $mars ? 0 : 1];
+        $s['turn'] = 0;
+        $s['rolled'] = [1, 2];
+        $s['dice'] = [1]; // 2 artıq oynanıb — qalan 1 zəri ilə son daş çıxır
+        $s['headUsed'] = 0;
+        $s['headLimit'] = 1;
+        $s['turnMoves'] = [];
+        $match->forceFill(['state' => $s])->save();
+    }
+
+    public function test_finished_match_gives_weekly_points_to_winner(): void
+    {
+        [$a, $b] = [$this->player(), $this->player()];
+        $match = $this->startMatch($a, $b);
+        $this->nearWin($match);
+
+        $this->actingAs($a)->postJson("/oyunlar/nerd/oyun/{$match->id}/gedis", ['from' => 23, 'to' => 'off', 'die' => 1])->assertOk()
+            ->assertJsonPath('result.won', true)->assertJsonPath('result.mars', true)->assertJsonPath('result.points', 2);
+        $this->actingAs($b)->getJson("/oyunlar/nerd/oyun/{$match->id}/veziyyet")->assertJsonPath('result.won', false)->assertJsonPath('result.points', 0);
+
+        $this->assertSame(['games' => 1, 'wins' => 1, 'points' => 2], NardLeaderboard::myToday($a->id));
+        $this->assertSame(['games' => 1, 'wins' => 0, 'points' => 0], NardLeaderboard::myToday($b->id));
+        $this->get('/oyunlar')->assertOk()->assertSee('bu günün liderləri')->assertSee($a->short_name)->assertSee('2 xal');
+    }
+
+    public function test_resign_gives_no_points_and_pair_has_daily_limit(): void
+    {
+        [$a, $b] = [$this->player(), $this->player()];
+        $match = $this->startMatch($a, $b);
+        $this->actingAs($b)->postJson("/oyunlar/nerd/oyun/{$match->id}/teslim", [])->assertJsonPath('result.points', 0);
+        $this->actingAs($a)->getJson("/oyunlar/nerd/oyun/{$match->id}/veziyyet")->assertJsonPath('result.won', true)->assertJsonPath('result.points', 0);
+        $this->assertSame(0, NardLeaderboard::myToday($a->id)['points']);
+
+        // eyni iki oyunçu: gündə yalnız ilk N tam oyun xal verir
+        $limit = (int) config('games.nard.pair_daily_limit');
+        $got = [];
+        for ($i = 0; $i <= $limit; $i++) {
+            $match = $this->startMatch($a, $b);
+            $this->nearWin($match, false);
+            $got[] = $this->actingAs($a)->postJson("/oyunlar/nerd/oyun/{$match->id}/gedis", ['from' => 23, 'to' => 'off', 'die' => 1])->json('result.points');
+        }
+        $this->assertSame(array_merge(array_fill(0, $limit, 1), [0]), $got);
+        $this->assertSame($limit, NardLeaderboard::myToday($a->id)['points']);
+    }
+
+    private function dayResult(User $u, int $points, $at): void
+    {
+        $r = \App\Models\GameResult::create(['user_id' => $u->id, 'game' => NardLeaderboard::GAME, 'won' => $points > 0, 'points' => $points]);
+        $r->forceFill(['created_at' => $at])->save();
+    }
+
+    public function test_day_end_gives_discount_codes_and_clears_results(): void
+    {
+        [$a, $b, $c, $d] = [$this->player(), $this->player(), $this->player(), $this->player()];
+        $yesterday = NardLeaderboard::dayStart(1)->addHours(15);
+        foreach ([[$a, 5], [$b, 3], [$c, 2], [$d, 1]] as [$u, $pts]) {
+            $this->dayResult($u, $pts, $yesterday);
+        }
+        $this->dayResult($d, 4, NardLeaderboard::dayStart()->addMinute()); // bu günün nəticəsi qalmalıdır
+
+        // səhifə açılanda dünənə yekun vurulur
+        $this->actingAs($a)->get('/oyunlar/nerd')->assertOk()
+            ->assertSee('Dünənin qalibləri')->assertSee($a->short_name)->assertSee('Hesaba 50% endirim')
+            ->assertSee('siz qaliblərdəsiniz', false);
+
+        $winners = NardLeaderboard::yesterdayWinners();
+        $this->assertSame([$a->id, $b->id, $c->id], $winners->pluck('user_id')->map(fn ($id) => (int) $id)->all());
+        $this->assertSame(['nard_week_50', 'nard_week_25', 'nard_week_10'], $winners->map(fn ($w) => $w->prize->prize_key)->all());
+        $this->assertSame('Hesaba 50% endirim (1-ci yer)', $winners[0]->prize->prize_label);
+        $this->assertTrue($winners[0]->prize->isActive());
+        $this->actingAs($a)->get('/hediyyelerim')->assertOk()->assertSee($winners[0]->prize->code);
+
+        // dünənin nəticələri silindi, bu günün nəticəsi qaldı
+        $this->assertSame(0, \App\Models\GameResult::where('game', NardLeaderboard::GAME)->where('created_at', '<', NardLeaderboard::dayStart())->count());
+        $this->assertSame(4, NardLeaderboard::myToday($d->id)['points']);
+
+        // təkrar çağırış heç nəyi ikiləşdirmir
+        $codes = \App\Models\WheelSpin::where('game', 'nard')->count();
+        NardLeaderboard::finalizePastDays();
+        $this->artisan('nard:finalize-day')->assertSuccessful();
+        $this->assertSame($codes, \App\Models\WheelSpin::where('game', 'nard')->count());
+        $this->assertSame(3, \App\Models\NardDailyWinner::count());
     }
 
     public function test_frequent_state_polling_does_not_block_other_requests(): void
