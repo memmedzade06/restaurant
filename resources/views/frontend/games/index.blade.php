@@ -27,7 +27,45 @@
             </div>
             <div class="col-md-6 col-lg-4">
                 <a href="{{ route('games.wheel') }}" class="game-card">
-                    <div class="game-art wheel-art"><i class="fa fa-gift"></i></div>
+                    <div class="game-art wheel-art">
+                        {{-- oyundakı çarxın kiçik surəti: sektorlar config('games.wheel.segments')-dən gəlir --}}
+                        @php
+                            $segs = config('games.wheel.segments');
+                            $n = count($segs);
+                            $R = 90; $C = 100;
+                            $pt = fn ($deg, $r) => [round($C + $r * cos(deg2rad($deg)), 2), round($C + $r * sin(deg2rad($deg)), 2)];
+                        @endphp
+                        <svg class="wheel-art-svg" viewBox="0 0 200 200" aria-hidden="true">
+                            <circle cx="100" cy="100" r="97" fill="#E9A23B"/>
+                            <g class="wa-spin">
+                                @foreach ($segs as $i => $s)
+                                    @php
+                                        $mid = -90 + $i * 360 / $n;
+                                        [$x0, $y0] = $pt($mid - 180 / $n, $R);
+                                        [$x1, $y1] = $pt($mid + 180 / $n, $R);
+                                        [$tx, $ty] = $pt($mid, $R * 0.6);
+                                        $words = explode(' ', $s['label']);
+                                        $lines = mb_strlen($s['label']) > 12 && count($words) > 1
+                                            ? [implode(' ', array_slice($words, 0, (int) ceil(count($words) / 2))), implode(' ', array_slice($words, (int) ceil(count($words) / 2)))]
+                                            : [$s['label']];
+                                    @endphp
+                                    <path d="M100 100 L{{ $x0 }} {{ $y0 }} A{{ $R }} {{ $R }} 0 0 1 {{ $x1 }} {{ $y1 }} Z" fill="{{ $s['color'] }}" stroke="#fff" stroke-width="1.2"/>
+                                    <text transform="translate({{ $tx }} {{ $ty }}) rotate({{ $mid + 180 }})" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">
+                                        @foreach ($lines as $l => $line)
+                                            <tspan x="0" dy="{{ $l === 0 ? (count($lines) > 1 ? -2.5 : 3) : 10 }}">{{ $line }}</tspan>
+                                        @endforeach
+                                    </text>
+                                @endforeach
+                                @for ($i = 0; $i < $n * 2; $i++)
+                                    @php [$dx, $dy] = $pt(-90 + $i * 180 / $n, 93.5); @endphp
+                                    <circle cx="{{ $dx }}" cy="{{ $dy }}" r="2.2" fill="#fff"/>
+                                @endfor
+                            </g>
+                            <circle cx="100" cy="100" r="24" fill="#E9A23B" stroke="#fff" stroke-width="3"/>
+                            <text x="100" y="103.5" text-anchor="middle" font-size="9.5" font-weight="900" fill="#fff">FIRLAT</text>
+                            <path d="M91 -2 H109 L100 14 Z" fill="#1e0b0b"/>
+                        </svg>
+                    </div>
                     <div class="game-body">
                         <h4>Bəxt çarxı</h4>
                         <p>Çarxı fırladın: endirimlər və hədiyyə qəlyan qazanın.</p>
@@ -38,7 +76,60 @@
             <div class="col-md-6 col-lg-4">
                 <a href="{{ route('games.stack') }}" class="game-card">
                     <div class="game-art stack-art">
-                        <span class="mini-glass g1"></span><span class="mini-glass g2"></span><span class="mini-glass g3"></span>
+                        {{-- oyundakı kimi: rəsm fonunda xalça süfrəli masa, üstündə qüllə və yellənən stəkan --}}
+                        <svg class="stack-art-svg" viewBox="0 0 320 190" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+                            <defs>
+                                <path id="saGlassShape" d="M12.5 72 C2.1 69.8 0 46.1 8.8 30.2 C11.4 24.5 9.9 10.1 3.1 0 A22.9 3.5 0 0 0 48.9 0 C42.1 10.1 40.6 24.5 43.2 30.2 C52 46.1 49.9 69.8 39.5 72 Z"/>
+                                <clipPath id="saGlassClip"><use href="#saGlassShape"/></clipPath>
+                                <linearGradient id="saTea" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0" stop-color="#cd2a0a" stop-opacity=".92"/>
+                                    <stop offset=".55" stop-color="#a01204"/>
+                                    <stop offset="1" stop-color="#620602"/>
+                                </linearGradient>
+                                <linearGradient id="saTopShade" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0" stop-color="#000" stop-opacity=".4"/>
+                                    <stop offset="1" stop-color="#fff3dc" stop-opacity=".12"/>
+                                </linearGradient>
+                                <clipPath id="saTopClip"><path d="M58 150 H262 L284 166 H36 Z"/></clipPath>
+                                <clipPath id="saFrontClip"><path d="M36 166 H284 L290 190 H30 Z"/></clipPath>
+                                {{-- bir armudu stəkan: dib (26, 72) nöqtəsindədir --}}
+                                <g id="saGlass">
+                                    <use href="#saGlassShape" fill="rgba(255,255,255,.22)"/>
+                                    <g clip-path="url(#saGlassClip)">
+                                        <rect x="0" y="18.7" width="52" height="54" fill="url(#saTea)"/>
+                                        <rect x="0" y="18.7" width="52" height="1.6" fill="rgba(255,190,120,.7)"/>
+                                    </g>
+                                    <use href="#saGlassShape" fill="none" stroke="#fff" stroke-width="2"/>
+                                    <path d="M26 14.4 C27.8 20 37 22 34.8 36 C37 50 27.8 52 26 57.6 C24.2 52 15 50 17.2 36 C15 22 24.2 20 26 14.4 Z" fill="none" stroke="#f2c35a" stroke-width="1.4"/>
+                                    <path d="M26 22.5 C27 26 31.6 28 30.5 36 C31.6 44 27 46 26 49.5 C25 46 20.4 44 21.5 36 C20.4 28 25 26 26 22.5 Z" fill="none" stroke="#f2c35a" stroke-width=".8"/>
+                                    <circle cx="26" cy="11" r="1.6" fill="#f2c35a"/><circle cx="26" cy="61" r="1.6" fill="#f2c35a"/>
+                                    <ellipse cx="26" cy="0" rx="22.9" ry="3.5" fill="rgba(255,255,255,.2)" stroke="#E9A23B" stroke-width="2.2"/>
+                                    <ellipse cx="26" cy="72" rx="14.6" ry="4" fill="#E9A23B"/>
+                                    <path d="M8.8 62.6 Q5.2 48.2 11.4 31.7" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="3" stroke-linecap="round"/>
+                                </g>
+                            </defs>
+
+                            {{-- masa: perspektivdə üst səth və aşağı sallanan xalça süfrə --}}
+                            <ellipse cx="160" cy="188" rx="140" ry="6" fill="rgba(0,0,0,.4)"/>
+                            <image href="{{ asset('img/games/stack-cloth.webp') }}" x="20" y="120" width="280" height="140" preserveAspectRatio="xMidYMid slice" clip-path="url(#saTopClip)"/>
+                            <path d="M58 150 H262 L284 166 H36 Z" fill="url(#saTopShade)"/>
+                            <image href="{{ asset('img/games/stack-cloth.webp') }}" x="20" y="110" width="280" height="140" preserveAspectRatio="xMidYMid slice" clip-path="url(#saFrontClip)"/>
+                            <path d="M36 166 H284 L290 190 H30 Z" fill="rgba(0,0,0,.22)"/>
+                            <path d="M36 166 H284" stroke="#d9a237" stroke-width="2.5"/>
+                            <path d="M36 166 L58 150 H262 L284 166" fill="none" stroke="rgba(217,162,55,.6)"/>
+
+                            {{-- nəlbəki və qüllə --}}
+                            <ellipse cx="162" cy="160" rx="28" ry="5.5" fill="rgba(0,0,0,.35)"/>
+                            <ellipse cx="160" cy="158" rx="26" ry="5" fill="rgba(235,240,245,.6)" stroke="#E9A23B" stroke-width="1.6"/>
+                            <use href="#saGlass" transform="translate(143.9 113.4) scale(.62)"/>
+                            <use href="#saGlass" transform="translate(146.5 68.8) scale(.62)"/>
+
+                            {{-- yellənən stəkan və onun düşəcəyi yer --}}
+                            <g class="sa-swing">
+                                <line x1="160" y1="52" x2="160" y2="64" stroke="rgba(255,255,255,.45)" stroke-dasharray="3 4"/>
+                                <use href="#saGlass" transform="translate(143.9 7.4) scale(.62)"/>
+                            </g>
+                        </svg>
                     </div>
                     <div class="game-body">
                         <h4>Stəkan qülləsi</h4>

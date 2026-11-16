@@ -3,7 +3,7 @@
  *
  * Yuxarıda stəkan sağa-sola yellənir; toxunanda (klik / boşluq) düşür və qüllənin üstünə qonur.
  * Mərkəzə yaxın qonsa — qüllə böyüyür, çox kənara qonsa — stəkan aşır və oyun bitir.
- * Dəqiq qonuş ("Əla!") bonus xal verir. Sürət hər xalda artır, 30 xaldan sonra daha kəskin.
+ * Hər stəkan 1 xal verir; dəqiq qonanda "Əla!" yazısı çıxır (bonus xal yoxdur). Sürət hər xalda artır, 30 xaldan sonra daha kəskin.
  *
  * Bütün hesablamalar 400×560 ölçülü "məntiqi" koordinatlarda aparılır, kətan ekrana uyğun böyüdülür.
  */
@@ -41,8 +41,8 @@
     // false — foto sadəcə arxa fondur, qüllə masadakı nəlbəkinin üstündə qurulur
     const PHOTO_IS_BASE = false;
     const FLOOR = BASE_Y + (PHOTO_IS_BASE ? 40 : 8); // düşən stəkan burada sınır
-    const PERFECT = GW * 0.07;         // "Əla!" sayılan sapma
-    const SUPPORT = GW * 0.52;         // üstündəki yükün dayaq sahəsi (ağız + bir az ehtiyat ki, oyun çox çətin olmasın)
+    const PERFECT = GW * 0.1;          // "Əla!" sayılan sapma — bu qədər yaxın qonan stəkan düz ortaya oturur
+    const SUPPORT = GW * 0.58;         // üstündəki yükün dayaq sahəsi (ağız + bir az ehtiyat ki, oyun çox çətin olmasın)
     const WARN = 0.3;                  // dayaq ehtiyatı bundan az qalanda "qüllə əyilir" xəbərdarlığı
     let scale = 1, dpr = 1;
 
@@ -89,8 +89,8 @@
     // 30-cu stəkandan sonra yellənmə sürətlənir: bir anda artım, sonra hər yeni stəkanda daha da
     const BOOST_FROM = 30;           // neçə stəkan qoyulandan sonra başlasın
     const BOOST = 1.25;              // 30-cu stəkanda sürətə birdəfəlik artım
-    const BOOST_STEP = 0.03;         // sonrakı hər stəkanda əlavə artım (40-cı stəkanda ×1.55, 50-cidə ×1.85)
-    const SPEED_CAP = 650;           // sürətin ən yuxarı həddi — oyun tamam oynanılmaz olmasın
+    const BOOST_STEP = 0.015;        // sonrakı hər stəkanda əlavə artım (40-cı stəkanda ×1.4, 50-cidə ×1.55)
+    const SPEED_CAP = 500;           // sürətin ən yuxarı həddi — 100 xala çatmaq mümkün qalsın
     const placed = () => g.tower.length - 1; // oyunçunun qoyduğu stəkan sayı
     const boost = () => placed() < BOOST_FROM ? 1 : BOOST + (placed() - BOOST_FROM) * BOOST_STEP;
 
@@ -306,11 +306,12 @@
             return;
         }
 
-        let gain = 1, text = null;
+        // hər stəkan 1 xal; dəqiq qonanda bonus yoxdur, sadəcə «Əla!» yazısı çıxır
+        const gain = 1;
+        let text = null;
         if (perfect) {
             g.combo++;
-            gain = 2;
-            text = g.combo >= 3 ? `Əla! ×${g.combo}` : 'Əla! +2';
+            text = g.combo >= 3 ? `Əla! ${g.combo} ardıcıl` : 'Əla!';
         } else {
             g.combo = 0;
             g.shake = Math.min(7, ad / 5);
@@ -657,8 +658,10 @@
     // Arxa fon şəkli (data-bg-photo). PHOTO_IS_BASE = true olanda fotodakı stəkan qüllənin ilk stəkanıdır:
     // oyunçunun stəkanları onun ağzının üstünə düşür. PHOTO_RIM — həmin stəkanın ağzının mərkəzi
     // (şəklin eninə və hündürlüyünə nisbətən), PHOTO_TOP — şəklin yuxarı kənarı (dünya koordinatında).
-    const BG = {photo: new Image(), cloth: new Image()};
+    const BG = {photo: new Image(), cloth: new Image(), logo: new Image()};
     BG.photo.src = root.dataset.bgPhoto;
+    if (root.dataset.logo) BG.logo.src = root.dataset.logo;
+    const LOGO = {y: 122, r: 26}; // yuxarıdakı kiçik yumru loqo (xalın altında): mərkəzin hündürlüyü və radiusu
     if (root.dataset.cloth) BG.cloth.src = root.dataset.cloth;
     const TABLE_DEPTH = 34;     // masanın üst səthinin görünən dərinliyi (perspektivdə), px
     const BG_DARKEN = 0.35;     // arxa fon şəklinin qaraldılması (0 — olduğu kimi, 1 — tam qara)
@@ -987,6 +990,33 @@
             ctx.drawImage(BG.photo, LW / 2 - dw / 2, LH - dh + Math.min(LH * 0.15, cam * 0.08), dw, dh);
             ctx.fillStyle = `rgba(0, 0, 0, ${BG_DARKEN})`; // şəkli bir az qaraldırıq ki, stəkanlar önə çıxsın
             ctx.fillRect(0, 0, LW, LH);
+        }
+
+        // 50 Qəpik loqosu — fon şəklinin üstündə, yuxarıda kiçik yumru nişan (yerində qalır)
+        if (!PHOTO_IS_BASE && BG.logo.complete && BG.logo.naturalWidth) {
+            const cx = LW / 2, cy = LOGO.y, r = LOGO.r;
+            ctx.save();
+            ctx.globalAlpha = 1 - h * 0.4; // yuxarı qalxdıqca gecədə bir az solur
+            ctx.shadowColor = 'rgba(0, 0, 0, .55)';
+            ctx.shadowBlur = 8;
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.clip();
+            ctx.drawImage(BG.logo, cx - r, cy - r, r * 2, r * 2);
+            ctx.restore();
+            ctx.save();
+            ctx.globalAlpha = 1 - h * 0.4;
+            ctx.strokeStyle = '#d9a237'; // qızılı haşiyə
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r + 1, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+        if (!PHOTO_IS_BASE && photoReady()) {
             if (h > 0) {
                 ctx.save();
                 ctx.globalAlpha = h * 0.85;
@@ -1179,6 +1209,7 @@
     try { W = JSON.parse(root.dataset.weather || 'null'); } catch (e) { W = null; }
     const fx = {drops: [], flakes: [], leaves: [], fog: [], stars: [], flash: 0, bolt: null, nextBolt: 4, t: 0};
     let windX = 0; // -1..1: küləyin ekranda istiqaməti və gücü
+    const LEAF_SPEED = [55, 110]; // küləkdə uçan yarpaqların sürəti (px/s, təsadüfi bu aralıqda)
 
     function initWeather() {
         fx.drops = []; fx.flakes = []; fx.leaves = []; fx.fog = []; fx.stars = [];
@@ -1206,7 +1237,7 @@
         const dir = windX < 0 ? -1 : 1;
         return {
             x: any ? rnd(0, LW) : (dir > 0 ? rnd(-60, -10) : rnd(LW + 10, LW + 60)), y: rnd(60, LH - 80),
-            v: rnd(120, 230) * dir, p: rnd(0, 6), rot: rnd(0, 6), vr: rnd(-6, 6), s: rnd(5, 9),
+            v: rnd(LEAF_SPEED[0], LEAF_SPEED[1]) * dir, p: rnd(0, 6), rot: rnd(0, 6), vr: rnd(-3, 3), s: rnd(5, 9),
             c: ['#c9831f', '#a0522d', '#d9a237', '#8b5a2b'][Math.floor(rnd(0, 4))],
         };
     }
@@ -1226,7 +1257,7 @@
         }
         for (const l of fx.leaves) {
             l.x += l.v * dt;
-            l.y += Math.sin(fx.t * 3 + l.p) * 40 * dt;
+            l.y += Math.sin(fx.t * 2 + l.p) * 25 * dt; // yarpaq yavaş-yavaş enib-qalxır
             l.rot += l.vr * dt;
             if (l.x < -80 || l.x > LW + 80) Object.assign(l, newLeaf(false));
         }

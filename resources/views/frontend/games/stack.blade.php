@@ -29,6 +29,7 @@
                      data-prize-left="{{ $prizeLeft ?? '' }}"
                      data-weather='@json($weather)'
                      data-weather-url="{{ route('games.stack.weather') }}"
+                     data-logo="{{ asset('img/games/stack-logo.png') }}"
                      data-cloth="{{ asset('img/games/stack-cloth.webp') }}?v=1"
                      data-bg-photo="{{ asset('img/games/stack-bg.jpg') }}?v=6"
                      data-register-url="{{ auth()->check() ? route('verify.telegram') : route('register') }}"
@@ -100,7 +101,7 @@
                             <li>Yuxarıda stəkan sağa-sola yellənir.</li>
                         <li><b>30-cu stəkandan sonra</b> stəkan daha sürətli yellənir və hər yeni stəkanda daha da sürətlənir. Hər stəkanın sürəti fərqli olur və bəzən yolun ortasında geri dönür. Stəkan titrəyirsə — indi geri dönəcək!</li>
                             <li>Toxunun — stəkan düşüb qüllənin üstünə qonur.</li>
-                            <li>Hər stəkan <b>1 xal</b>, dəqiq üstünə qonsa <b>«Əla!» — 2 xal</b>.</li>
+                            <li>Hər stəkan <b>1 xal</b> verir.</li>
                             @foreach ($prizes as $min => $p)
                                 @if ($loop->last)
                                     <li><b>{{ $min }} xal — Finiş! 🏁</b> <b>{{ $p['label'] }}</b> qazanırsınız və oyun sona çatır.</li>
@@ -118,5 +119,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/stack.js') }}?v=59"></script>
+<script src="{{ asset('js/games/stack.js') }}?v=66"></script>
 @endsection

@@ -42,6 +42,7 @@
 
                     <div id="wheelIntro">
                         <h4>Necə işləyir?</h4>
+                        <div class="rules-note"><i class="fa fa-info-circle me-2"></i>Hədiyyədən istifadə üçün minimal masa hesabı <b>30 AZN</b> olmalıdır.</div>
                         <ul class="rules">
                             <li>Sizin <b>{{ $attempts }} cəhdiniz</b> var.</li>
                             <li>Hər fırlatmadan sonra seçin: <b>Hədiyyəni götür</b> və ya <b>yenidən fırlat</b>.</li>

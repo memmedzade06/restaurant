@@ -243,7 +243,7 @@ class GamesTest extends TestCase
         // Oyun başlamayıb
         $this->actingAs($u)->postJson('/oyunlar/stekan/hediyye', ['score' => 50])->assertStatus(422);
 
-        // Çox tez — 50 xal üçün ən azı 25 stəkan × 0.8 san
+        // Çox tez — 50 xal üçün ən azı 50 stəkan × 0.8 san
         $this->actingAs($u)->postJson('/oyunlar/stekan/basla')->assertOk();
         $this->actingAs($u)->postJson('/oyunlar/stekan/hediyye', ['score' => 50])->assertStatus(422);
         $this->assertSame(0, WheelSpin::where('user_id', $u->id)->count());
@@ -282,20 +282,22 @@ class GamesTest extends TestCase
             ->assertJsonPath('prize.label', 'Qəlyan Hədiyyə');
     }
 
-    public function test_stack_prize_seventy_points_is_half_price_bill(): void
+    public function test_stack_prize_seventy_points_is_30_percent_off(): void
     {
         $u = $this->user();
         $this->actingAs($u)->withSession(['stack_started_at' => microtime(true) - 60])
             ->postJson('/oyunlar/stekan/hediyye', ['score' => 70])->assertOk()
-            ->assertJsonPath('prize.label', 'Hesaba 50% endirim');
+            ->assertJsonPath('prize.label', 'Hesaba 30% endirim');
+        $this->assertSame('stack_discount_30', WheelSpin::where('user_id', $u->id)->latest('id')->value('prize_key'));
     }
 
-    public function test_stack_finish_at_hundred_gives_full_discount(): void
+    public function test_stack_finish_at_hundred_gives_30_azn_coupon(): void
     {
         $u = $this->user();
         $this->actingAs($u)->withSession(['stack_started_at' => microtime(true) - 120])
             ->postJson('/oyunlar/stekan/hediyye', ['score' => 100])->assertOk()
-            ->assertJsonPath('prize.label', 'Hesaba 100% endirim');
+            ->assertJsonPath('prize.label', '30 AZN kupon');
+        $this->assertSame('stack_coupon_30', WheelSpin::where('user_id', $u->id)->latest('id')->value('prize_key'));
     }
 
     public function test_stack_prize_needs_verified_user(): void

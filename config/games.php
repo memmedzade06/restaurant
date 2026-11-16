@@ -22,9 +22,9 @@ return [
             ['key' => 'discount_10',   'label' => '10% endirim', 'color' => '#7E1A1A', 'weight' => 14, 'prize' => true],
             ['key' => 'discount_15',   'label' => '15% endirim', 'color' => '#C9831F', 'weight' => 8,  'prize' => true],
             ['key' => 'discount_10_b', 'label' => '10% endirim', 'color' => '#7E1A1A', 'weight' => 14, 'prize' => true],
-            ['key' => 'discount_15_b', 'label' => '15% endirim', 'color' => '#C9831F', 'weight' => 8,  'prize' => true],
+            ['key' => 'free_tea',      'label' => 'Çaynik çay Hədiyyə', 'color' => '#C9831F', 'weight' => 8,  'prize' => true], // qəlyanla üzbəüz
             ['key' => 'discount_20',   'label' => '20% endirim', 'color' => '#3A0D0D', 'weight' => 4,  'prize' => true],
-            ['key' => 'try_again',     'label' => 'Şansını bir daha sına', 'color' => '#5B6B73', 'weight' => 18, 'prize' => false],
+            ['key' => 'try_again',     'label' => 'Şansını bir daha sına', 'color' => '#5B6B73', 'weight' => 30, 'prize' => false],
             ['key' => 'discount_25',   'label' => '25% endirim', 'color' => '#3A0D0D', 'weight' => 2,  'prize' => true],
             ['key' => 'free_hookah',   'label' => 'Qəlyan Hədiyyə', 'color' => '#E9A23B', 'weight' => 1,  'prize' => true], // ən nadir
         ],
@@ -40,14 +40,14 @@ return [
             $prizes = array_filter([
                 50 => ['key' => 'stack_tea', 'label' => 'Çay Hədiyyə'],
                 60 => ['key' => 'stack_hookah', 'label' => 'Qəlyan Hədiyyə'],
-                70 => ['key' => 'stack_discount_50', 'label' => 'Hesaba 50% endirim'],
+                70 => ['key' => 'stack_discount_30', 'label' => 'Hesaba 30% endirim'],
             ], fn ($min) => $min < $finish, ARRAY_FILTER_USE_KEY);
 
-            return $prizes + [$finish => ['key' => 'stack_discount_100', 'label' => 'Hesaba 100% endirim']];
+            return $prizes + [$finish => ['key' => 'stack_coupon_30', 'label' => '30 AZN kupon']];
         })(),
         'prizes_per_day' => (int) env('STACK_PRIZES_PER_DAY', 1), // istifadəçiyə gündə neçə hədiyyə
         // Saxtakarlığa qarşı: oyun başlayandan bəri ən azı (stəkan sayı × bu qədər) saniyə keçməlidir.
-        // "Əla!" 2 xal verdiyi üçün stəkan sayı = xal / 2 (yuxarı yuvarlaqlaşdırılır).
+        // Hər stəkan 1 xal verdiyi üçün stəkan sayı = xal.
         'min_seconds_per_glass' => 0.8,
     ],
 

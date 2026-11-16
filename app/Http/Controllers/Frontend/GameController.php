@@ -78,7 +78,7 @@ class GameController extends Controller
 
         // Oyun bu sessiyada başlamalı və xala uyğun qədər vaxt çəkməlidir
         $started = $request->session()->pull('stack_started_at');
-        $glasses = (int) ceil($score / 2);
+        $glasses = $score; // hər stəkan 1 xaldır (dəqiq qonuşa bonus yoxdur)
         if (! $started || microtime(true) - $started < $glasses * (float) config('games.stack.min_seconds_per_glass', 0.8)) {
             return response()->json(['message' => 'Oyun təsdiqlənmədi. Yenidən oynayın.'], 422);
         }
