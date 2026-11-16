@@ -49,6 +49,17 @@ class User extends Authenticatable
         'is_admin' => 'boolean',
     ];
 
+    /** Oyunlardan qazandığı hədiyyə kodları */
+    public function prizes(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(WheelSpin::class)->whereNotNull('code');
+    }
+
+    public function gameResults(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(GameResult::class);
+    }
+
     /** Telefon Telegram ilə təsdiqlənibmi */
     public function hasVerifiedPhone(): bool
     {

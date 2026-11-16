@@ -1,0 +1,96 @@
+@extends('frontend.layouts.app')
+@section('title', 'Admin · İstifadəçilər - 50 Qəpik')
+
+@section('content')
+<section class="page-hero page-hero-sm">
+    <div class="container">
+        <span class="eyebrow">Admin panel</span>
+        <h1>İstifadəçilər</h1>
+        <p>Qeydiyyatdan keçmiş bütün istifadəçilər — cəmi {{ $total }}</p>
+    </div>
+</section>
+
+<section class="section pt-4">
+    <div class="container">
+        <div class="admin-nav">
+            <a href="{{ route('admin.prizes') }}"><i class="fa fa-gift me-1"></i>Hədiyyə kodları</a>
+            <a href="{{ route('admin.users') }}" class="active"><i class="fa fa-users me-1"></i>İstifadəçilər</a>
+        </div>
+
+        <div class="side-card">
+            <form method="GET" action="{{ route('admin.users') }}" class="admin-search">
+                <div class="admin-search-input">
+                    <i class="fa fa-search"></i>
+                    <input type="text" name="q" value="{{ $q }}" placeholder="Ad, telefon və ya e-poçt" autocomplete="off">
+                </div>
+                @if ($filter)<input type="hidden" name="filter" value="{{ $filter }}">@endif
+                <button class="btn btn-primary px-4">Axtar</button>
+            </form>
+        </div>
+
+        <div class="side-card">
+            <div class="admin-tabs">
+                <a href="{{ route('admin.users', array_filter(['q' => $q])) }}" class="{{ $filter ? '' : 'active' }}">Hamısı <span>{{ $total }}</span></a>
+                @foreach (\App\Http\Controllers\Admin\UserController::FILTERS as $key => $label)
+                    <a href="{{ route('admin.users', array_filter(['q' => $q, 'filter' => $key])) }}" class="{{ $filter === $key ? 'active' : '' }}">{{ $label }} <span>{{ $counts[$key] }}</span></a>
+                @endforeach
+            </div>
+
+            @if ($users->isEmpty())
+                <p class="text-muted mb-0">İstifadəçi tapılmadı.</p>
+            @else
+                <div class="table-responsive">
+                    <table class="table admin-table align-middle mb-0">
+                        <thead>
+                            <tr><th>Ad</th><th>Telefon</th><th>E-poçt</th><th>Qeydiyyat</th><th>Son aktivlik</th><th>Hədiyyələr</th><th>Oyunlar</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($users as $u)
+                                @php($online = $u->last_seen_at && $u->last_seen_at->gt(now()->subSeconds(\App\Models\User::ONLINE_SECONDS)))
+                                <tr>
+                                    <td>
+                                        <b>{{ $u->name }}</b>
+                                        @if ($u->is_admin)<span class="status-pill status-used ms-1">admin</span>@endif
+                                    </td>
+                                    <td>
+                                        {{ \App\Support\Phone::format($u->phone) ?: '—' }}
+                                        <br><small class="{{ $u->phone_verified_at ? 'text-success' : 'text-muted' }}">
+                                            {{ $u->phone_verified_at ? '✔ Telegram ilə təsdiqlənib' : 'təsdiqlənməyib' }}
+                                        </small>
+                                    </td>
+                                    <td>{{ $u->email ?: '—' }}</td>
+                                    <td>{{ $u->created_at->timezone('Asia/Baku')->format('d.m.Y H:i') }}</td>
+                                    <td>
+                                        @if ($online)
+                                            <span class="online-dot"></span> indi saytda
+                                        @elseif ($u->last_seen_at)
+                                            {{ $u->last_seen_at->timezone('Asia/Baku')->format('d.m.Y H:i') }}
+                                        @else
+                                            <span class="text-muted">—</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if ($u->prizes_count)
+                                            <a href="{{ route('admin.prizes', ['q' => preg_replace('/\D+/', '', (string) $u->phone)]) }}">{{ $u->prizes_count }} kod</a>
+                                            @if ($u->active_prizes_count)<br><small class="text-success">{{ $u->active_prizes_count }} aktiv</small>@endif
+                                        @else
+                                            <span class="text-muted">—</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <small>
+                                            Stəkan rekordu: <b>{{ (int) $u->stack_best }}</b><br>
+                                            Nərd bu gün: <b>{{ (int) $u->nard_today }} xal</b>
+                                        </small>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-3">{{ $users->links() }}</div>
+            @endif
+        </div>
+    </div>
+</section>
+@endsection

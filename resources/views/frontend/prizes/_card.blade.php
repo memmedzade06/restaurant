@@ -6,11 +6,11 @@
         <span class="muted">
             <i class="fa fa-clock"></i> {{ $p->created_at->timezone('Asia/Baku')->format('d.m.Y H:i') }}
             @if ($st === 'active')
-                · {{ $p->expires_at?->timezone('Asia/Baku')->format('d.m.Y') }} tarixinədək
+                · {{ $p->expires_at?->timezone('Asia/Baku')->format('d.m.Y H:i') }} tarixinədək
             @elseif ($st === 'used')
                 · {{ $p->redeemed_at->timezone('Asia/Baku')->format('d.m.Y H:i') }} istifadə olunub
             @else
-                · {{ $p->expires_at?->timezone('Asia/Baku')->format('d.m.Y') }} vaxtı bitib
+                · {{ $p->expires_at?->timezone('Asia/Baku')->format('d.m.Y H:i') }} vaxtı bitib
             @endif
         </span>
     </div>

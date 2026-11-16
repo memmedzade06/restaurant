@@ -188,7 +188,7 @@ class GameController extends Controller
                 'prize_label' => $prize['label'],
                 'code' => $this->newCode(),
                 'spun_on' => $this->today(),
-                'expires_at' => now()->addDays((int) config('games.wheel.code_valid_days', 7)),
+                'expires_at' => now()->addDays((int) config('games.stack.code_valid_days', 1)),
             ]);
 
             return response()->json(['prize' => $this->spinPayload($spin), 'best' => $this->stackBest($user->id)]);
@@ -354,7 +354,8 @@ class GameController extends Controller
                 'prize_label' => $last['label'],
                 'code' => $this->newCode(),
                 'spun_on' => $this->today(),
-                'expires_at' => now()->addDays((int) config('games.wheel.code_valid_days', 7)),
+                // çarx masada oynanılır, endirim həmin masanın cari hesabına — kod yalnız bu ziyarət üçündür
+                'expires_at' => now()->addHours((int) config('games.wheel.code_valid_hours', 3)),
             ]);
 
             $round['last'] = null;
@@ -441,7 +442,7 @@ class GameController extends Controller
             'label' => $spin->prize_label,
             'prize' => (bool) $spin->code,
             'code' => $spin->code,
-            'expires' => $spin->expires_at?->timezone('Asia/Baku')->format('d.m.Y'),
+            'expires' => $spin->expires_at?->timezone('Asia/Baku')->format('d.m.Y H:i'), // kod 1 gün etibarlıdır — saat da lazımdır
             // "Hədiyyəni götür" basılan an (Bakı vaxtı)
             'claimed_at' => $spin->created_at?->timezone('Asia/Baku')->format('d.m.Y H:i'),
         ];

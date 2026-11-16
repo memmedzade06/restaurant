@@ -12,6 +12,11 @@
 
 <section class="section pt-4">
     <div class="container">
+        <div class="admin-nav">
+            <a href="{{ route('admin.prizes') }}" class="active"><i class="fa fa-gift me-1"></i>Hədiyyə kodları</a>
+            <a href="{{ route('admin.users') }}"><i class="fa fa-users me-1"></i>İstifadəçilər</a>
+        </div>
+
         @foreach (['success' => 'success', 'error' => 'danger'] as $key => $cls)
             @if (session($key))
                 <div class="alert alert-{{ $cls }} admin-alert">{{ session($key) }}</div>
@@ -37,7 +42,7 @@
                             <h4>{{ $exact->prize_label }} <small class="text-muted fs-6">· {{ $exact->gameLabel() }}</small></h4>
                             <span class="muted">
                                 {{ $exact->user?->name }} · {{ \App\Support\Phone::format($exact->user?->phone) }}
-                                · {{ $exact->expires_at?->timezone('Asia/Baku')->format('d.m.Y') }} tarixinədək
+                                · {{ $exact->expires_at?->timezone('Asia/Baku')->format('d.m.Y H:i') }} tarixinədək
                             </span>
                         </div>
                         @if ($st === 'active')
@@ -79,7 +84,7 @@
                                     <td>{{ $p->prize_label }}<br><small class="text-muted">{{ $p->gameLabel() }}</small></td>
                                     <td>{{ $p->user?->name }}<br><small class="text-muted">{{ \App\Support\Phone::format($p->user?->phone) }}</small></td>
                                     <td>{{ $p->created_at->timezone('Asia/Baku')->format('d.m.Y H:i') }}</td>
-                                    <td>{{ $p->expires_at?->timezone('Asia/Baku')->format('d.m.Y') }}</td>
+                                    <td>{{ $p->expires_at?->timezone('Asia/Baku')->format('d.m.Y H:i') }}</td>
                                     <td>
                                         <span class="status-pill status-{{ $st }}">{{ $p->statusLabel() }}</span>
                                         @if ($st === 'used')

@@ -89,6 +89,10 @@ class GamesTest extends TestCase
         $this->assertSame(1, WheelSpin::where('user_id', $u->id)->count()); // 2 fırlatma, bazada 1 sətir
         $this->assertNotNull(WheelSpin::where('user_id', $u->id)->first()->code);
 
+        // çarx masada oynanılır — kod yalnız bu ziyarət üçün (3 saat) etibarlıdır
+        $spin = WheelSpin::where('user_id', $u->id)->first();
+        $this->assertEqualsWithDelta(now()->addHours(3)->timestamp, $spin->expires_at->timestamp, 60);
+
         // götürəndən sonra fırlatmaq olmur, ikinci "götür" eyni kodu qaytarır
         $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertStatus(429);
         $this->actingAs($u)->postJson('/oyunlar/bext-carxi/gotur')->assertOk()->assertJson(['state' => ['claimed' => ['code' => $r->json('state.claimed.code')]]]);

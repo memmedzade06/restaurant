@@ -12,7 +12,9 @@
 return [
 
     'wheel' => [
-        'code_valid_days' => 7,   // hədiyyə kodu neçə gün etibarlıdır
+        // Çarx restoranda, masada oynanılır və endirim həmin masanın cari hesabına tətbiq olunur,
+        // ona görə kod yalnız bu ziyarət üçündür: bu qədər saatdan sonra avtomatik qüvvədən düşür.
+        'code_valid_hours' => 3,
         // Hər istifadəçiyə gündə neçə fırlatma cəhdi verilir. Hər fırlatmadan sonra oyunçu
         // ya "Hədiyyəni götür" basır (kod yaranır, raund bitir), ya da yenidən fırladır.
         'attempts_per_day' => (int) env('WHEEL_ATTEMPTS_PER_DAY', 3),
@@ -50,6 +52,7 @@ return [
         // Saxtakarlığa qarşı: oyun başlayandan bəri ən azı (stəkan sayı × bu qədər) saniyə keçməlidir.
         // Hər stəkan 1 xal verdiyi üçün stəkan sayı = xal.
         'min_seconds_per_glass' => 0.8,
+        'code_valid_days' => 1,   // hədiyyə kodu neçə gün etibarlıdır — 24 saatdan sonra avtomatik qüvvədən düşür
         // Botlara qarşı: oyun hər qonan stəkanı [vaxt ms, sapma px] kimi göndərir, server yoxlayır.
         'min_glass_interval_ms' => 300,  // iki stəkan arasında ən az fasilə (stəkanın düşmə vaxtı)
         'max_offset_px' => 26,           // stəkanın aşmadan ala biləcəyi ən böyük sapma
@@ -80,7 +83,7 @@ return [
             2 => ['key' => 'nard_day_hookah', 'label' => 'Qəlyan hədiyyə'],
             3 => ['key' => 'nard_day_tea', 'label' => 'Çaynik çay hədiyyə'],
         ],
-        'prize_valid_days' => 7,  // qalib kodu neçə gün etibarlıdır
+        'prize_valid_days' => 1,  // qalib kodu neçə gün etibarlıdır — verildikdən 24 saat sonra avtomatik qüvvədən düşür
     ],
 
 ];

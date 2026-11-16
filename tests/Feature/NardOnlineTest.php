@@ -234,6 +234,8 @@ class NardOnlineTest extends TestCase
         $this->assertSame(['nard_day_discount_20', 'nard_day_hookah', 'nard_day_tea'], $winners->map(fn ($w) => $w->prize->prize_key)->all());
         $this->assertSame('20% endirim kuponu hədiyyə (1-ci yer)', $winners[0]->prize->prize_label);
         $this->assertTrue($winners[0]->prize->isActive());
+        // hədiyyə 1 gün etibarlıdır, sonra avtomatik qüvvədən düşür
+        $this->assertEqualsWithDelta(now()->addDay()->timestamp, $winners[0]->prize->expires_at->timestamp, 60);
         $this->actingAs($a)->get('/hediyyelerim')->assertOk()->assertSee($winners[0]->prize->code);
 
         // dünənin nəticələri silindi, bu günün nəticəsi qaldı
@@ -246,6 +248,10 @@ class NardOnlineTest extends TestCase
         $this->artisan('nard:finalize-day')->assertSuccessful();
         $this->assertSame($codes, \App\Models\WheelSpin::where('game', 'nard')->count());
         $this->assertSame(3, \App\Models\NardDailyWinner::count());
+
+        $this->travel(25)->hours();
+        $this->assertFalse($winners[0]->prize->fresh()->isActive(), '24 saatdan sonra kod qüvvədən düşür');
+        $this->assertSame(\App\Models\WheelSpin::EXPIRED, $winners[0]->prize->fresh()->status());
     }
 
     public function test_frequent_state_polling_does_not_block_other_requests(): void

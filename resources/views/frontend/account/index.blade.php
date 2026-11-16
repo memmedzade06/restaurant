@@ -33,11 +33,50 @@
                 <li><span>Günün qalibi olub</span><b>{{ $nardWins }} dəfə</b></li>
             </ul>
 
-            @php($stackBest = (int) \App\Models\GameResult::where('user_id', auth()->id())->where('game', 'stack')->max('points'))
+            @php
+                $stackBest = (int) \App\Models\GameResult::where('user_id', auth()->id())->where('game', 'stack')->max('points');
+            @endphp
             <h5 class="account-section-title"><i class="fa fa-layer-group me-2 text-primary"></i>Stəkan qülləsi</h5>
             <ul class="account-list">
                 <li><span>Rekord</span><b>{{ $stackBest }} xal</b></li>
             </ul>
+
+            @if (auth()->user()->is_admin)
+                {{-- Yalnız admin: qeydiyyatdan keçmiş istifadəçilər --}}
+                @php
+                    $usersTotal = \App\Models\User::count();
+                    $usersVerified = \App\Models\User::whereNotNull('phone_verified_at')->count();
+                    $usersToday = \App\Models\User::where('created_at', '>=', now('Asia/Baku')->startOfDay()->setTimezone(config('app.timezone')))->count();
+                    $usersOnline = \App\Models\User::where('last_seen_at', '>=', now()->subSeconds(\App\Models\User::ONLINE_SECONDS))->count();
+                    $latestUsers = \App\Models\User::latest('id')->take(10)->get(['id', 'name', 'phone', 'phone_verified_at', 'created_at', 'last_seen_at']);
+                @endphp
+                <h5 class="account-section-title d-flex align-items-center"><i class="fa fa-users me-2 text-primary"></i>İstifadəçilər
+                    <a href="{{ route('admin.users') }}" class="ms-auto small fw-bold">Hamısına bax <i class="fa fa-arrow-right ms-1"></i></a></h5>
+                <ul class="account-list">
+                    <li><span>Cəmi qeydiyyat</span><b>{{ $usersTotal }}</b></li>
+                    <li><span>Telegram ilə təsdiqlənib</span><b>{{ $usersVerified }}</b></li>
+                    <li><span>Bu gün qeydiyyat</span><b>{{ $usersToday }}</b></li>
+                    <li><span>İndi saytda</span><b>{{ $usersOnline }}</b></li>
+                </ul>
+                <p class="small text-muted mb-2">Son qeydiyyatdan keçənlər:</p>
+                <ul class="account-list account-users mb-4">
+                    @foreach ($latestUsers as $u)
+                        <li>
+                            <span>
+                                {{ $u->name }}
+                                <small class="d-block">{{ \App\Support\Phone::format($u->phone) ?: '—' }} · {{ $u->created_at->timezone('Asia/Baku')->format('d.m.Y H:i') }}</small>
+                            </span>
+                            <b class="{{ $u->phone_verified_at ? 'text-success' : 'text-muted' }}" title="{{ $u->phone_verified_at ? 'Telegram ilə təsdiqlənib' : 'Təsdiqlənməyib' }}">
+                                <i class="fa {{ $u->phone_verified_at ? 'fa-check-circle' : 'fa-clock' }}"></i>
+                            </b>
+                        </li>
+                    @endforeach
+                </ul>
+                <div class="account-admin">
+                    <a href="{{ route('admin.users') }}"><span><i class="fa fa-users me-2"></i>Bütün istifadəçilər</span><i class="fa fa-arrow-right"></i></a>
+                    <a href="{{ route('admin.prizes') }}"><span><i class="fa fa-gift me-2"></i>Hədiyyə kodları</span><i class="fa fa-arrow-right"></i></a>
+                </div>
+            @endif
 
             <h5 class="account-section-title d-flex align-items-center"><i class="fa fa-gift me-2 text-primary"></i>Hədiyyələrim
                 <a href="{{ route('prizes') }}" class="ms-auto small fw-bold">Hamısına bax <i class="fa fa-arrow-right ms-1"></i></a></h5>

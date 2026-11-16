@@ -36,6 +36,32 @@ class PrizeAdminTest extends TestCase
         ]);
     }
 
+    public function test_admin_sees_registered_users(): void
+    {
+        $admin = $this->user(true);
+        $player = $this->user();
+        $player->forceFill(['name' => 'Siyahıdakı Oyunçu', 'last_seen_at' => now()])->save();
+        $new = User::create(['name' => 'Təsdiqsiz Yeni', 'email' => 'n' . uniqid() . '@example.com', 'phone' => '+994517778899', 'password' => 'secret123']);
+        $this->prize($player);
+
+        // adi istifadəçi və qonaq görə bilmir
+        $this->get('/admin/istifadeciler')->assertRedirect();
+        $this->actingAs($player)->get('/admin/istifadeciler')->assertForbidden();
+        $this->actingAs($player)->get('/hesabim')->assertOk()->assertDontSee('Bütün istifadəçilər');
+
+        $this->actingAs($admin)->get('/admin/istifadeciler')->assertOk()
+            ->assertSee('Siyahıdakı Oyunçu')->assertSee('Təsdiqsiz Yeni')->assertSee('1 kod')->assertSee('indi saytda');
+        $this->actingAs($admin)->get('/admin/istifadeciler?filter=unverified')->assertOk()
+            ->assertSee('Təsdiqsiz Yeni')->assertDontSee('Siyahıdakı Oyunçu');
+        $this->actingAs($admin)->get('/admin/istifadeciler?q=7778899')->assertOk()
+            ->assertSee('Təsdiqsiz Yeni')->assertDontSee('Siyahıdakı Oyunçu');
+
+        // "Hesabım" səhifəsində admin üçün istifadəçilər bölməsi
+        $this->actingAs($admin)->get('/hesabim')->assertOk()
+            ->assertSee('Son qeydiyyatdan keçənlər')->assertSee('Təsdiqsiz Yeni')->assertSee('Bütün istifadəçilər');
+        $this->assertNotNull($new);
+    }
+
     public function test_only_admin_can_open_panel(): void
     {
         $this->get('/admin/hediyyeler')->assertRedirect();
