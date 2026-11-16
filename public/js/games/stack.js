@@ -34,7 +34,7 @@
 
     /* ---------- Ölçülər ---------- */
     const LW = 400, LH = 560;          // məntiqi ölçü
-    const GW = 52, GH = 72;            // stəkanın eni və hündürlüyü (nazik, hündür armudu)
+    const GW = 44, GH = 61;            // stəkanın eni və hündürlüyü (nazik, hündür armudu)
     const BASE_Y = LH - 58;            // ilk stəkanın dibi (nəlbəkinin üstü)
     const SWING_GAP = 130;             // yellənən stəkanla qüllə arasındakı məsafə
     // true — fondakı fotoda əldə tutulan stəkan qüllənin dibidir (Qız qalası fotosu kimi);
@@ -660,6 +660,7 @@
     const BG = {photo: new Image(), cloth: new Image()};
     BG.photo.src = root.dataset.bgPhoto;
     if (root.dataset.cloth) BG.cloth.src = root.dataset.cloth;
+    const TABLE_DEPTH = 34;     // masanın üst səthinin görünən dərinliyi (perspektivdə), px
     const BG_DARKEN = 0.35;     // arxa fon şəklinin qaraldılması (0 — olduğu kimi, 1 — tam qara)
     const CLOTH_FOCUS_Y = 0.53; // süfrədə şəklin hansı hündürlüyü görünsün (0 — yuxarı, 1 — aşağı); ortada medalyon
     const PHOTO_RIM = {x: 0.516, y: 0.673};
@@ -830,12 +831,70 @@
     }
 
     /**
+     * Masanın üst səthi — azca yuxarıdan baxırıq (perspektiv): arxa kənar dar və yuxarıda, ön kənar enli.
+     * Süfrə üst səthi örtür və ön tərəfdən aşağı sallanır (drawCloth). Stəkan nəlbəki ilə üst səthin üstündə dayanır.
+     */
+    function drawTableTop(x0, x1, front) {
+        const back = front - TABLE_DEPTH, inset = TABLE_DEPTH * 0.85;
+        const bx0 = x0 + inset, bx1 = x1 - inset;
+        const p = new Path2D();
+        p.moveTo(bx0, back);
+        p.lineTo(bx1, back);
+        p.lineTo(x1, front);
+        p.lineTo(x0, front);
+        p.closePath();
+
+        // masanın altına düşən kölgə — masa havada asılı görünməsin
+        ctx.fillStyle = 'rgba(0, 0, 0, .35)';
+        ctx.beginPath();
+        ctx.ellipse(LW / 2, LH - 4, (x1 - x0) / 2 + 18, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.save();
+        ctx.clip(p);
+        if (BG.cloth.complete && BG.cloth.naturalWidth > 0) {
+            // üst səthdə süfrənin naxışı: perspektivdə sıxılmış görünür
+            const iw = BG.cloth.naturalWidth, ih = iw * 0.22;
+            const iy = BG.cloth.naturalHeight * CLOTH_FOCUS_Y - ih * 1.4;
+            ctx.drawImage(BG.cloth, 0, Math.max(0, iy), iw, ih, x0, back, x1 - x0, TABLE_DEPTH);
+        } else {
+            ctx.fillStyle = '#d42a2a';
+            ctx.fillRect(x0, back, x1 - x0, TABLE_DEPTH);
+        }
+        // işıq yuxarıdan düşür: üst səth ön tərəfdən açıq, arxaya doğru tündləşir
+        const light = ctx.createLinearGradient(0, back, 0, front);
+        light.addColorStop(0, 'rgba(0, 0, 0, .35)');
+        light.addColorStop(0.6, 'rgba(255, 235, 200, .06)');
+        light.addColorStop(1, 'rgba(255, 235, 200, .18)');
+        ctx.fillStyle = light;
+        ctx.fillRect(x0, back, x1 - x0, TABLE_DEPTH);
+        // nəlbəkinin altındakı kölgə
+        ctx.fillStyle = 'rgba(0, 0, 0, .35)';
+        ctx.beginPath();
+        ctx.ellipse(LW / 2 + 3, BASE_Y + 6, GW * 0.95, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // kənarlar: arxa və yan kənarlarda incə qızılı xətt, ön kənar (döngə) parlaq
+        ctx.strokeStyle = 'rgba(217, 162, 55, .55)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x0, front);
+        ctx.lineTo(bx0, back);
+        ctx.lineTo(bx1, back);
+        ctx.lineTo(x1, front);
+        ctx.stroke();
+    }
+
+    /**
      * Masanın üstündə süfrə: yumşaq qırışlarla aşağı sallanır, alt kənarı dalğalıdır.
      * Xalça naxışlı şəkil (data-cloth) yüklənibsə parça onunla örtülür, yoxsa düz qırmızıdır.
      */
     function drawCloth() {
-        const top = BASE_Y + 8, bottom = LH - 8;
+        // ön kənar elə seçilir ki, nəlbəki (BASE_Y + 4) üst səthin tam ortasına düşsün
+        const top = BASE_Y + 4 + TABLE_DEPTH / 2, bottom = LH - 8;
         const x0 = 26, x1 = LW - 26, flare = 10;          // aşağıda bir az genişlənir
+        drawTableTop(x0, x1, top);
         const folds = 9;
         const fw = (x1 - x0 + flare * 2) / folds;
 
@@ -877,6 +936,8 @@
                 folds2.addColorStop(i / (folds * 2), i % 2 ? 'rgba(0, 0, 0, .14)' : 'rgba(255, 255, 255, .06)');
             }
             ctx.fillStyle = folds2;
+            ctx.fillRect(x0 - flare, top, W2, H2);
+            ctx.fillStyle = 'rgba(0, 0, 0, .14)'; // ön tərəf şaquli olduğu üçün üst səthdən tünd görünür
             ctx.fillRect(x0 - flare, top, W2, H2);
         }
 
@@ -986,11 +1047,6 @@
 
         // masa və nəlbəki — yalnız foto yüklənməyibsə (fotoda stəkan və nəlbəki artıq var)
         if (!baseInPhoto()) {
-        const table = ctx.createLinearGradient(0, BASE_Y + 8, 0, BASE_Y + 80);
-        table.addColorStop(0, '#8a5228');
-        table.addColorStop(1, '#4a250f');
-        ctx.fillStyle = table;
-        ctx.fillRect(0, BASE_Y + 8, LW, 400);
         drawCloth();
         // nəlbəki: şəffaf büllur, qızılı haşiyə, mərkəzdən kənara şüalanan zolaqlar
         const scx = LW / 2, scy = BASE_Y + 4, srx = GW * 0.85, sry = 9;
