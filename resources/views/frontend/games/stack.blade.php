@@ -27,6 +27,7 @@
                      data-prizes-url="{{ route('prizes') }}"
                      data-prizes='@json($prizes)'
                      data-prize-left="{{ $prizeLeft ?? '' }}"
+                     data-debug="{{ app()->environment('local') && config('app.debug') ? 1 : 0 }}"
                      data-weather='@json($weather)'
                      data-weather-url="{{ route('games.stack.weather') }}"
                      data-logo="{{ asset('img/games/stack-logo.png') }}"
@@ -66,7 +67,10 @@
                                 <div class="st-score">0</div>
                                 <p class="st-note"></p>
                                 <div class="st-prize" hidden></div>
-                                <button type="button" class="btn btn-primary px-5 st-again">Yenidən oyna</button>
+                                <div class="st-choice">
+                                    <button type="button" class="btn btn-primary st-resume" hidden><i class="fa fa-play me-2"></i>Davam et</button>
+                                    <button type="button" class="btn btn-primary px-5 st-again">Yenidən oyna</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -100,11 +104,11 @@
                         <ul class="rules">
                             <li>Yuxarıda stəkan sağa-sola yellənir.</li>
                         <li><b>30-cu stəkandan sonra</b> stəkan daha sürətli yellənir və hər yeni stəkanda daha da sürətlənir. Hər stəkanın sürəti fərqli olur və bəzən yolun ortasında geri dönür. Stəkan titrəyirsə — indi geri dönəcək!</li>
-                            <li>Toxunun — stəkan düşüb qüllənin üstünə qonur.</li>
+                            <li>Toxunun — stəkan düşüb qüllənin üstünə düşür.</li>
                             <li>Hər stəkan <b>1 xal</b> verir.</li>
                             @foreach ($prizes as $min => $p)
                                 @if ($loop->last)
-                                    <li><b>{{ $min }} xal — Finiş! 🏁</b> <b>{{ $p['label'] }}</b> qazanırsınız və oyun sona çatır.</li>
+                                    <li><b>{{ $min }} xal — Finiş! 🏁</b> <b>{{ $p['label'] }}</b> qazanırsınız. Hədiyyəni götürdükdən sonra rekord üçün oynamağa davam edə bilərsiniz.</li>
                                 @else
                                     <li><b>{{ $min }} xal</b> — <b>{{ $p['label'] }}</b>! «Hədiyyəni götür» seçsəniz, kod verilir və yeni oyun başlayır. Davam etsəniz, xal toplamağa davam edirsiniz və növbəti hədiyyəyə şans qazanırsınız — amma qüllə aşsa, hədiyyə yanır.</li>
                                 @endif
@@ -119,5 +123,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/stack.js') }}?v=66"></script>
+<script src="{{ asset('js/games/stack.js') }}?v=69"></script>
 @endsection

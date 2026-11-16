@@ -33,7 +33,8 @@ return [
     'stack' => [
         // Bu xala çatanda oyunçuya hədiyyə təklif olunur: ya "Hədiyyəni qəbul et" (kod verilir, oyun bitir),
         // ya da davam edir — qüllə aşsa, hədiyyə yanır.
-        // Sonuncu hədəf — finiş: oyun bitir, davam etmək olmur. Test üçün .env-də STACK_FINISH_SCORE=10 yazmaq olar
+        // Sonuncu hədəf — finiş: ən böyük hədiyyə; götürdükdən sonra da rekord üçün oynamağa davam etmək olur.
+        // Test üçün .env-də STACK_FINISH_SCORE=10 yazmaq olar
         // (finişdən yuxarı hədəflər avtomatik çıxarılır).
         'prizes' => (function () {
             $finish = max(1, (int) env('STACK_FINISH_SCORE', 100));
@@ -49,6 +50,12 @@ return [
         // Saxtakarlığa qarşı: oyun başlayandan bəri ən azı (stəkan sayı × bu qədər) saniyə keçməlidir.
         // Hər stəkan 1 xal verdiyi üçün stəkan sayı = xal.
         'min_seconds_per_glass' => 0.8,
+        // Botlara qarşı: oyun hər qonan stəkanı [vaxt ms, sapma px] kimi göndərir, server yoxlayır.
+        'min_glass_interval_ms' => 300,  // iki stəkan arasında ən az fasilə (stəkanın düşmə vaxtı)
+        'max_offset_px' => 26,           // stəkanın aşmadan ala biləcəyi ən böyük sapma
+        'bot_check_from' => 20,          // bu xaldan yuxarı "insan kimi oynayırmı" yoxlanır:
+        'min_rhythm_spread' => 0.05,     //   fasilələrin səpələnməsi bundan azdırsa — maşın ritmi
+        'max_exact_share' => 0.5,        //   stəkanların bu hissəsindən çoxu 0.3 px-dən dəqiqdirsə — bot
     ],
 
     // Stəkan qülləsində Bakının indiki havasına uyğun effektlər (yağış, külək, günəş...).

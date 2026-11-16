@@ -18,6 +18,7 @@
     const overlay = root.querySelector('.st-result');
     const offer = root.querySelector('.st-offer');
     const startHint = root.querySelector('.st-start');
+    const resumeBtn = root.querySelector('.st-resume');
     const cfg = {
         canSave: root.dataset.canSave === '1',
         saveUrl: root.dataset.saveUrl,
@@ -68,6 +69,8 @@
             finish: false,
             offered: {},              // bu oyunda təklif olunmuş hədiyyələr
             claiming: false,
+            t0: 0,                    // oyunun başladığı an (performance.now)
+            log: [],                  // hər qonan stəkan: [başlanğıcdan keçən ms, stəkanın sapması px] — server yoxlayır
             slosh: {a: 0, v: 0},   // yellənən/düşən stəkandakı çayın meyli
         };
         newSwing();
@@ -75,6 +78,7 @@
         offer.hidden = true;
         overlay.querySelector('.st-prize').hidden = true;
         overlay.querySelector('.st-again').textContent = 'Yenidən oyna';
+        resumeBtn.hidden = true;
         startHint.hidden = false;
     }
 
@@ -234,6 +238,7 @@
     function tap() {
         if (g.state === 'ready') {
             g.state = 'swing';
+            g.t0 = performance.now();
             startHint.hidden = true;
             post(cfg.startUrl, {}); // server oyunun başladığı vaxtı yadda saxlayır
             return;
@@ -319,6 +324,7 @@
         // ton həmişə eynidir; «Əla!» bir az ucadır
         sound.clink(1, perfect ? 0.6 : 0.45);
         g.tower = tower;
+        g.log.push([Math.round(performance.now() - g.t0), Math.round(d * 10) / 10]);
         // qonanda çay çalxalanır: kənara qonduqca daha güclü, istiqaməti sapma tərəfinə görə.
         // Zərbə alttakı stəkana da bir az ötürülür.
         const side = d ? Math.sign(d) : (Math.random() < 0.5 ? -1 : 1);
@@ -368,13 +374,8 @@
         const reached = mins.filter(m => g.score >= m && !g.offered[m]);
         if (!reached.length) return;
         reached.forEach(m => { g.offered[m] = true; });
-        // sonuncu hədəf — finiş: oyun burada bitir
+        // sonuncu hədəf — finiş: ən böyük hədiyyə; hədiyyəni götürdükdən sonra da rekord üçün davam etmək olur
         g.finish = g.score >= mins[mins.length - 1];
-        const noPrize = !cfg.canSave || (cfg.prizeLeft !== null && cfg.prizeLeft <= 0);
-        if (g.finish && noPrize) {
-            gameOver(true);
-            return;
-        }
         // bu günün hədiyyəsi artıq götürülüb — oyunu dayandırmırıq, sadəcə xal toplanır
         if (cfg.canSave && cfg.prizeLeft !== null && cfg.prizeLeft <= 0) {
             g.popups.push({text: "Bugünkü hədiyyə artıq götürülüb", x: LW / 2, y: topBottomY() - GH - 40, life: 2.2, warn: true});
@@ -392,8 +393,8 @@
         const cont = offer.querySelector('.st-continue');
         accept.disabled = false;
         accept.querySelector('span').textContent = 'Hədiyyəni götür';
-        cont.querySelector('span').textContent = isLast ? 'Hədiyyəsiz davam et' : 'Davam et';
-        cont.hidden = g.finish; // finişdən sonra davam etmək olmur
+        cont.querySelector('span').textContent = isLast && cfg.canSave ? 'Hədiyyəsiz davam et' : 'Davam et';
+        cont.hidden = false;
 
         if (!cfg.canSave) {
             note.innerHTML = `Hədiyyə kodu almaq üçün <a href="${cfg.registerUrl}">qeydiyyatdan keçin</a> və nömrənizi təsdiqləyin.`;
@@ -401,7 +402,7 @@
         } else {
             accept.hidden = false;
             note.innerHTML = g.finish
-                ? 'Oyunu sona çatdırdınız! Hədiyyəni götürün — kod veriləcək.'
+                ? 'Finişə çatdınız! Hədiyyəni götürün — kod veriləcək, sonra rekord üçün oynamağa davam edə bilərsiniz.'
                 : isLast
                 ? 'Hədiyyəni götürsəniz, kod veriləcək və yeni oyun başlayacaq. Davam etsəniz, sadəcə xal toplayırsınız.'
                 : `Hədiyyəni götürsəniz, kod veriləcək və yeni oyun başlayacaq. Davam etsəniz, növbəti hədəf: <b>${next} xal — ${esc(cfg.prizes[next].label)}</b>! Amma qüllə aşsa, hədiyyə yanır.`;
@@ -423,7 +424,7 @@
         accept.disabled = true;
         accept.querySelector('span').textContent = 'Gözləyin...';
 
-        const r = await post(cfg.prizeUrl, {score: g.score});
+        const r = await post(cfg.prizeUrl, {score: g.score, log: g.log});
         const d = r ? await r.json().catch(() => ({})) : {};
         g.claiming = false;
 
@@ -433,18 +434,16 @@
             accept.querySelector('span').textContent = 'Hədiyyəni götür';
             if (r && r.status === 429) { cfg.prizeLeft = 0; accept.hidden = true; }
             if (r && r.status === 422) accept.hidden = true;
-            if (g.finish && accept.hidden) {
-                const msg = d.message;
-                offer.hidden = true;
-                await gameOver(true);
-                if (msg) overlay.querySelector('.st-note').innerHTML += `<br>${esc(msg)}`;
-            }
+            // hədiyyə alınmadısa, oyunçu "Davam et" ilə oynamağa davam edə bilər
+            offer.querySelector('.st-continue span').textContent = 'Davam et';
             return;
         }
 
         if (cfg.prizeLeft !== null) cfg.prizeLeft--;
         offer.hidden = true;
         g.state = 'over';
+        // finiş hədiyyəsindən sonra eyni qülləni davam etdirmək olar (yeni hədiyyə yoxdur, rekord üçün)
+        resumeBtn.hidden = !g.finish;
         if (d.best !== undefined) {
             best = d.best;
             const el = document.getElementById('stBest');
@@ -461,6 +460,14 @@
         box.hidden = false;
         overlay.querySelector('.st-again').textContent = 'Yeni oyun';
         overlay.hidden = false;
+    }
+
+    /** Finiş hədiyyəsini götürdükdən sonra eyni oyuna qayıdır */
+    function resumeGame() {
+        overlay.hidden = true;
+        resumeBtn.hidden = true;
+        overlay.querySelector('.st-prize').hidden = true;
+        if (g.state === 'over' && g.tower.length) g.state = 'swing';
     }
 
     /* ---------- Sınma: şüşə qırıqları, çay damcıları, masada çay ləkəsi ---------- */
@@ -638,6 +645,7 @@
 
     /* ---------- Çəkmə ---------- */
 
+    const TEA_SURFACE_W = 0.3; // çay səthinin (ellipsin) yarım eni — stəkanın həmin hündürlükdəki eninə uyğun
     const RIM_RY = 3.5; // ağzın yumruluğu (ellipsin şaquli radiusu) — ağıza azca yuxarıdan baxırıq
     const RIM_W = 0.44; // ağzın yarım eni (GW-yə nisbətən)
     function glassPath(w, h) {
@@ -781,12 +789,27 @@
         glow.addColorStop(1, 'rgba(255, 110, 40, 0)');
         ctx.fillStyle = glow;
         ctx.fill(teaPath);
-        ctx.strokeStyle = 'rgba(255, 190, 120, .6)'; // çayın səthi
-        ctx.lineWidth = 2;
+        // çayın səthi: stəkana azca yuxarıdan baxırıq, ona görə səth ellips kimi görünür
+        // (çay çalxalananda ellips də əyilir)
+        ctx.save();
+        ctx.translate(0, sy);
+        ctx.rotate(a);
+        const srx = GW * TEA_SURFACE_W, sry = RIM_RY * 0.85;
+        const surf = ctx.createLinearGradient(0, -sry, 0, sry);
+        surf.addColorStop(0, 'rgba(150, 40, 10, .95)');   // arxa kənar tünd
+        surf.addColorStop(1, 'rgba(215, 105, 45, .95)');  // ön kənar işıqlı
+        ctx.fillStyle = surf;
         ctx.beginPath();
-        ctx.moveTo(-L * cx + nx, sy - L * cy + ny);
-        ctx.lineTo(L * cx + nx, sy + L * cy + ny);
+        ctx.ellipse(0, 0, srx, sry, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 200, 150, .7)';      // səthin parlaq haşiyəsi
+        ctx.lineWidth = 0.8;
         ctx.stroke();
+        ctx.fillStyle = 'rgba(255, 235, 200, .45)';       // səthdə işığın əksi
+        ctx.beginPath();
+        ctx.ellipse(-srx * 0.35, -sry * 0.15, srx * 0.28, sry * 0.35, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
 
         // şüşənin üzərində qızılı naxış (çayın üstündən görünür)
         drawOrnament(0, 1, 1);                    // ön tərəfdə əsas medalyon
@@ -1446,7 +1469,7 @@
                 method: 'POST',
                 headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': cfg.csrf},
                 credentials: 'same-origin',
-                body: JSON.stringify({score}),
+                body: JSON.stringify({score, log: g.log}),
             });
             const d = await r.json();
             if (r.ok && d.saved) {
@@ -1493,14 +1516,18 @@
         requestAnimationFrame(frame);
     }
 
-    canvas.addEventListener('pointerdown', e => { e.preventDefault(); tap(); });
+    // Yalnız real istifadəçi hərəkətləri qəbul olunur: skriptlə yaradılan (dispatchEvent) toxunuş və
+    // düymə hadisələrində isTrusted = false olur — belə "basışlar" oyuna təsir etmir.
+    canvas.addEventListener('pointerdown', e => { e.preventDefault(); if (e.isTrusted) tap(); });
     window.addEventListener('keydown', e => {
+        if (!e.isTrusted || e.repeat) return; // basılı saxlanan düymə də saymır
         if ((e.code === 'Space' || e.code === 'Enter') && !e.target.closest('input, textarea, button, a')) {
             e.preventDefault();
-            if (g.state === 'over') reset(); else tap();
+            if (g.state === 'over') (resumeBtn.hidden ? reset() : resumeGame()); else tap();
         }
     });
     root.querySelector('.st-again').addEventListener('click', reset);
+    resumeBtn.addEventListener('click', resumeGame);
     offer.querySelector('.st-continue').addEventListener('click', continueGame);
     offer.querySelector('.st-accept').addEventListener('click', acceptPrize);
     window.addEventListener('resize', resize);
@@ -1564,7 +1591,9 @@
     reset();
     requestAnimationFrame(frame);
 
-    // Testlər üçün
+    // Testlər üçün — yalnız lokal inkişaf mühitində (data-debug="1"). Canlı saytda yoxdur,
+    // yoxsa brauzer konsolundan oyunu avtomatik oynamaq olardı.
+    if (root.dataset.debug !== '1') return;
     window.__stack = {
         state: () => g, tap, consts: {GW, PERFECT, SUPPORT, BOOST_FROM}, boost, newSwing, stability, checkPrize, continueGame,
         manual: on => { manual = on; },

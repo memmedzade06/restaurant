@@ -53,12 +53,95 @@ class GameController extends Controller
         return response()->json(['weather' => $weather->current()]);
     }
 
-    /** Yeni oyun başladı — vaxtı sessiyada saxlayırıq (hədiyyə tələbini yoxlamaq üçün) */
+    /** Yeni oyun başladı — vaxtı sessiyada saxlayırıq (hədiyyə və nəticəni yoxlamaq üçün) */
     public function stackStart(Request $request): JsonResponse
     {
         $request->session()->put('stack_started_at', microtime(true));
+        $request->session()->forget('stack_prize_claimed');
 
         return response()->json(['ok' => true]);
+    }
+
+    /** Oyunun gedişatı: hər qonan stəkan üçün [başlanğıcdan keçən ms, sapma px] */
+    private const LOG_RULES = [
+        'log' => ['required', 'array', 'max:1000'],
+        'log.*' => ['required', 'array', 'size:2'],
+        'log.*.0' => ['required', 'integer', 'min:0'],
+        'log.*.1' => ['required', 'numeric'],
+    ];
+
+    /**
+     * Botlara qarşı yoxlama. Oyun brauzerdə oynanır, ona görə server hər stəkanın nə vaxt və necə
+     * qonduğunu yoxlayır: insan bunu edə bilməz, bot isə adətən buradan ilişir.
+     * Qaytarır: null — hər şey qaydasındadır, yoxsa rədd səbəbi (loga yazılır, oyunçuya göstərilmir).
+     */
+    private function stackLogProblem(array $log, int $score, ?float $started): ?string
+    {
+        $cfg = config('games.stack');
+        if (! $started) {
+            return 'oyun başlamayıb';
+        }
+        if (count($log) !== $score) {
+            return 'stəkan sayı xala uyğun deyil';
+        }
+        $elapsedMs = (microtime(true) - $started) * 1000;
+        if ($elapsedMs < $score * (float) $cfg['min_seconds_per_glass'] * 1000) {
+            return 'çox tez';
+        }
+        if ($score === 0) {
+            return null;
+        }
+
+        $times = array_map(fn ($e) => (int) $e[0], $log);
+        $offsets = array_map(fn ($e) => (float) $e[1], $log);
+        if (end($times) > $elapsedMs + 3000) {
+            return 'vaxt serverdəkindən uzundur';
+        }
+
+        // stəkanlar arası fasilə: stəkan yuxarıdan düşüb qonana qədər insan da, bot da bundan tez edə bilməz
+        $gaps = [];
+        $prev = 0;
+        foreach ($times as $t) {
+            if ($t - $prev < (int) $cfg['min_glass_interval_ms']) {
+                return 'stəkanlar arası fasilə çox qısadır';
+            }
+            $gaps[] = $t - $prev;
+            $prev = $t;
+        }
+
+        // sapma dayaq sahəsindən böyük ola bilməz — belə stəkan qülləni aşırardı
+        foreach ($offsets as $d) {
+            if (abs($d) > (float) $cfg['max_offset_px']) {
+                return 'mümkünsüz sapma';
+            }
+        }
+
+        // insan kimi oynamayan: çox bərabər ritm və ya millimetrlə dəqiq atışlar
+        if ($score >= (int) $cfg['bot_check_from']) {
+            $mean = array_sum($gaps) / count($gaps);
+            $var = array_sum(array_map(fn ($g) => ($g - $mean) ** 2, $gaps)) / count($gaps);
+            if ($mean > 0 && sqrt($var) / $mean < (float) $cfg['min_rhythm_spread']) {
+                return 'ritm çox bərabərdir';
+            }
+            $exact = count(array_filter($offsets, fn ($d) => abs($d) < 0.3));
+            if ($exact / count($offsets) > (float) $cfg['max_exact_share']) {
+                return 'atışlar insan üçün həddən artıq dəqiqdir';
+            }
+        }
+
+        return null;
+    }
+
+    private function rejectStackGame(Request $request, string $problem): JsonResponse
+    {
+        logger()->warning('Stəkan qülləsi: oyun rədd edildi', [
+            'user_id' => $request->user()?->id,
+            'score' => $request->input('score'),
+            'reason' => $problem,
+            'ip' => $request->ip(),
+        ]);
+
+        return response()->json(['message' => 'Oyun təsdiqlənmədi. Yenidən oynayın.'], 422);
     }
 
     /**
@@ -67,7 +150,7 @@ class GameController extends Controller
      */
     public function stackPrize(Request $request): JsonResponse
     {
-        $data = $request->validate(['score' => ['required', 'integer', 'min:1', 'max:1000']]);
+        $data = $request->validate(['score' => ['required', 'integer', 'min:1', 'max:1000']] + self::LOG_RULES);
         $score = (int) $data['score'];
         $user = $request->user();
 
@@ -76,12 +159,14 @@ class GameController extends Controller
             return response()->json(['message' => 'Bu xal hədiyyə üçün kifayət deyil.'], 422);
         }
 
-        // Oyun bu sessiyada başlamalı və xala uyğun qədər vaxt çəkməlidir
-        $started = $request->session()->pull('stack_started_at');
-        $glasses = $score; // hər stəkan 1 xaldır (dəqiq qonuşa bonus yoxdur)
-        if (! $started || microtime(true) - $started < $glasses * (float) config('games.stack.min_seconds_per_glass', 0.8)) {
-            return response()->json(['message' => 'Oyun təsdiqlənmədi. Yenidən oynayın.'], 422);
+        // Oyun bu sessiyada başlamalı, bu oyunda hədiyyə hələ götürülməməli və gedişat insan oyununa oxşamalıdır
+        if ($request->session()->get('stack_prize_claimed')) {
+            return $this->rejectStackGame($request, 'bu oyunda hədiyyə artıq götürülüb');
         }
+        if ($problem = $this->stackLogProblem($data['log'], $score, $request->session()->get('stack_started_at'))) {
+            return $this->rejectStackGame($request, $problem);
+        }
+        $request->session()->put('stack_prize_claimed', true);
 
         return DB::transaction(function () use ($user, $score, $prize) {
             User::whereKey($user->id)->lockForUpdate()->first();
@@ -125,7 +210,13 @@ class GameController extends Controller
     /** Stəkan qülləsi: oyunun hesabını yazır, ən yaxşı nəticəni qaytarır (yalnız təsdiqlənmiş istifadəçi) */
     public function stackResult(Request $request): JsonResponse
     {
-        $data = $request->validate(['score' => ['required', 'integer', 'min:0', 'max:1000']]);
+        $data = $request->validate(['score' => ['required', 'integer', 'min:0', 'max:1000'], 'log' => ['present', 'array', 'max:1000']] + array_diff_key(self::LOG_RULES, ['log' => 1]));
+
+        // nəticə yalnız bu sessiyada başlamış oyun üçün, bir dəfə və insan oyununa oxşayırsa yazılır
+        $started = $request->session()->pull('stack_started_at');
+        if ($problem = $this->stackLogProblem($data['log'], (int) $data['score'], $started)) {
+            return $this->rejectStackGame($request, $problem);
+        }
 
         $before = $this->stackBest($request->user()->id);
 
