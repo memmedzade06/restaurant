@@ -226,13 +226,13 @@ class NardOnlineTest extends TestCase
 
         // səhifə açılanda dünənə yekun vurulur
         $this->actingAs($a)->get('/oyunlar/nerd')->assertOk()
-            ->assertSee('Dünənin qalibləri')->assertSee($a->short_name)->assertSee('Hesaba 50% endirim')
+            ->assertSee('Dünənin qalibləri')->assertSee($a->short_name)->assertSee('20% endirim kuponu hədiyyə')
             ->assertSee('siz qaliblərdəsiniz', false);
 
         $winners = NardLeaderboard::yesterdayWinners();
         $this->assertSame([$a->id, $b->id, $c->id], $winners->pluck('user_id')->map(fn ($id) => (int) $id)->all());
-        $this->assertSame(['nard_week_50', 'nard_week_25', 'nard_week_10'], $winners->map(fn ($w) => $w->prize->prize_key)->all());
-        $this->assertSame('Hesaba 50% endirim (1-ci yer)', $winners[0]->prize->prize_label);
+        $this->assertSame(['nard_day_discount_20', 'nard_day_hookah', 'nard_day_tea'], $winners->map(fn ($w) => $w->prize->prize_key)->all());
+        $this->assertSame('20% endirim kuponu hədiyyə (1-ci yer)', $winners[0]->prize->prize_label);
         $this->assertTrue($winners[0]->prize->isActive());
         $this->actingAs($a)->get('/hediyyelerim')->assertOk()->assertSee($winners[0]->prize->code);
 

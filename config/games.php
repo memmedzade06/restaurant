@@ -73,12 +73,12 @@ return [
         'points_win' => 1,        // adi qələbə
         'points_mars' => 2,       // mars (rəqib heç daş çıxara bilməyib)
         'pair_daily_limit' => 3,  // eyni iki oyunçu arasında gündə neçə oyun xal verir (iki hesabla xal yığmağın qarşısını alır)
-        // Günün qaliblərinə avtomatik endirim kodu verilir (Hədiyyələrim səhifəsində görünür).
+        // Günün qaliblərinə avtomatik hədiyyə kodu verilir (Hədiyyələrim səhifəsində görünür).
         // Gecə 00:00-da günün nəticələri silinir, qaliblər nard_daily_winners cədvəlində qalır.
         'daily_prizes' => [
-            1 => ['key' => 'nard_week_50', 'label' => 'Hesaba 50% endirim'],
-            2 => ['key' => 'nard_week_25', 'label' => 'Hesaba 25% endirim'],
-            3 => ['key' => 'nard_week_10', 'label' => 'Hesaba 10% endirim'],
+            1 => ['key' => 'nard_day_discount_20', 'label' => '20% endirim kuponu hədiyyə'],
+            2 => ['key' => 'nard_day_hookah', 'label' => 'Qəlyan hədiyyə'],
+            3 => ['key' => 'nard_day_tea', 'label' => 'Çaynik çay hədiyyə'],
         ],
         'prize_valid_days' => 7,  // qalib kodu neçə gün etibarlıdır
     ],

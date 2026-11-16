@@ -126,11 +126,10 @@
                             <li>Bütün daşlar evə (sağ-aşağı) çatanda çıxarmaq olar.</li>
                             <li>Rəqib heç daş çıxarmamış qalib gəlsəniz — <b>mars</b>, ikiqat xal.</li>
                             <li>Xal <b>yalnız dostla oyunda</b> verilir: oyun sona qədər oynanmalıdır, təslim olmaq və ya çıxmaq xal vermir. Eyni oyunçu ilə gündə {{ config('games.nard.pair_daily_limit') }} oyun xal gətirir.</li>
-                            <li>Günün qalibləri endirim qazanır:
+                            <li>Günün qalibləri:
                                 @foreach (config('games.nard.daily_prizes') as $place => $p)
                                     <b>{{ $place }}-{{ $place === 3 ? 'cü' : 'ci' }} yer — {{ $p['label'] }}</b>{{ $loop->last ? '.' : ',' }}
-                                @endforeach
-                                Kod avtomatik verilir və «Hədiyyələrim» səhifəsində görünür.</li>
+                                @endforeach</li>
                             <li>Hər gecə saat 00:00-da (Bakı vaxtı) nəticələr silinir və yeni gün sıfırdan başlayır.</li>
                         </ul>
                     </div>
