@@ -58,7 +58,7 @@ class PrizeAdminTest extends TestCase
 
         // "Hesabım" səhifəsində admin üçün istifadəçilər bölməsi
         $this->actingAs($admin)->get('/hesabim')->assertOk()
-            ->assertSee('Son qeydiyyatdan keçənlər')->assertSee('Təsdiqsiz Yeni')->assertSee('Bütün istifadəçilər');
+            ->assertSee('Cəmi qeydiyyat')->assertDontSee('Son qeydiyyatdan keçənlər')->assertSee('Bütün istifadəçilər');
         $this->assertNotNull($new);
     }
 
