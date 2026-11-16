@@ -489,61 +489,152 @@
                 gold: Math.random() < 0.18, // qızılı haşiyədən qırıq
             });
         }
-        // çay damcıları: bəziləri havada uçarkən arxa fona yapışır
+        // çay damcıları: havaya sıçrayır, süfrənin üstünə və ya ön tərəfinə düşüb ləkə qoyur
         for (let i = 0; i < 14; i++) {
             const a = -Math.PI * (0.15 + Math.random() * 0.7);
             const v = 120 + Math.random() * 260;
             g.shards.push({
                 kind: 'tea', x, y: FLOOR - 6, vx: Math.cos(a) * v, vy: Math.sin(a) * v,
-                size: 2 + Math.random() * 3.5, life: 1, rest: false, age: 0,
-                wallAt: Math.random() < 0.6 ? 0.08 + Math.random() * 0.35 : Infinity,
+                size: 2 + Math.random() * 3.5, life: 1, rest: false,
             });
         }
-        // arxa fona çırpılan çay: böyük ləkə, ətrafında xırda sıçrantılar və aşağı axan izlər
-        splat(x + (Math.random() - 0.5) * 30, FLOOR - 30 - Math.random() * 70, 9 + Math.random() * 7, true);
-        // masada çay ləkəsi
-        g.puddles.push({x, r: 4, max: 20 + Math.random() * 12, a: 0.75});
+        if (!hasTable()) {
+            g.puddles.push({x, r: 4, max: 20 + Math.random() * 12, a: 0.75});
+            return;
+        }
+        // stəkan sındığı yerdə süfrənin üstündə böyük çay ləkəsi, kənardan aşağı axan izlər
+        const T = tableGeom();
+        const [l, r] = topRange(FLOOR);
+        const px = Math.max(l + 14, Math.min(r - 14, x));
+        g.puddles.push({x: px, r: 4, max: 20 + Math.random() * 12, a: 0.75});
+        splat(px + (Math.random() - 0.5) * 16, FLOOR - Math.random() * 5, 8 + Math.random() * 6, true, true);
+        // çay süfrənin ön kənarından aşağı axır
+        const ex = Math.max(T.x0 + 6, Math.min(T.x1 - 6, px + (Math.random() - 0.5) * 24));
+        const edge = {x: ex, y: T.front, r: 3, blobs: [], grow: 0, flat: true, drips: []};
+        for (let i = 0; i < 2 + Math.floor(Math.random() * 2); i++) {
+            edge.drips.push({dx: (Math.random() - 0.5) * 18, w: 1.6 + Math.random() * 2, len: 0, max: 8 + Math.random() * (T.bottom - T.front - 10), speed: 7 + Math.random() * 10});
+        }
+        g.stains.push(edge);
     }
 
-    /** Arxa fonda çay ləkəsi (x, y — mərkəz, r — ölçü) */
-    function splat(x, y, r, big) {
+    /* ---------- Masanın forması (çay ləkələri yalnız süfrənin üstündə qalsın deyə) ---------- */
+    const hasTable = () => !baseInPhoto();
+    function tableGeom() {
+        const front = BASE_Y + 4 + TABLE_DEPTH / 2;
+        return {x0: 26, x1: LW - 26, flare: 10, front, back: front - TABLE_DEPTH, inset: TABLE_DEPTH * 0.85, bottom: LH - 8};
+    }
+    /** Üst səthin verilən hündürlükdəki sol və sağ kənarı (perspektivdə arxaya doğru daralır) */
+    function topRange(y) {
+        const T = tableGeom();
+        const k = Math.max(0, Math.min(1, (T.front - y) / TABLE_DEPTH)) * T.inset;
+        return [T.x0 + k, T.x1 - k];
+    }
+    /** Süfrənin bütün görünən hissəsi: üst səth + ön tərəfdən sallanan parça */
+    function clothArea() {
+        const T = tableGeom();
+        const p = new Path2D();
+        p.moveTo(T.x0 + T.inset, T.back);
+        p.lineTo(T.x1 - T.inset, T.back);
+        p.lineTo(T.x1, T.front);
+        p.lineTo(T.x1 + T.flare, T.bottom + 6);
+        p.lineTo(T.x0 - T.flare, T.bottom + 6);
+        p.lineTo(T.x0, T.front);
+        p.closePath();
+        return p;
+    }
+
+    /**
+     * Çay ləkəsi (x, y — mərkəz, r — ölçü). flat — süfrənin üstündə (perspektivdə yastı görünür).
+     * big — ətrafında xırda sıçrantılar olur.
+     */
+    function splat(x, y, r, big, flat = false) {
         // ləkənin forması bir az qeyri-düzgün olsun
         const blobs = Array.from({length: big ? 6 : 2}, () => ({
             dx: (Math.random() - 0.5) * r, dy: (Math.random() - 0.5) * r, r: r * (0.35 + Math.random() * 0.45),
         }));
-        const stain = {x, y, r, blobs, grow: 0, drips: []};
-        if (big || Math.random() < 0.25) {
+        const stain = {x, y, r, blobs, grow: 0, drips: [], flat};
+        if (!flat && (big || Math.random() < 0.25)) { // şaquli səthdə çay aşağı axır
             const n = big ? 2 + Math.floor(Math.random() * 3) : 1;
             for (let i = 0; i < n; i++) {
-                stain.drips.push({dx: (Math.random() - 0.5) * r * 1.2, w: 1.5 + Math.random() * (big ? 2.5 : 1), len: 0, max: 12 + Math.random() * (big ? 45 : 18), speed: 8 + Math.random() * 14});
+                stain.drips.push({dx: (Math.random() - 0.5) * r * 1.2, w: 1.5 + Math.random() * (big ? 2.5 : 1), len: 0, max: 8 + Math.random() * (big ? 20 : 10), speed: 8 + Math.random() * 14});
             }
         }
         g.stains.push(stain);
         if (big) {
             for (let i = 0; i < 9; i++) { // ətrafdakı xırda sıçrantılar
                 const a = Math.random() * Math.PI * 2, d = r * (1.3 + Math.random() * 2.6);
-                g.stains.push({x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * 0.8, r: 1.2 + Math.random() * 3, blobs: [], grow: 0, drips: []});
+                g.stains.push({x: x + Math.cos(a) * d, y: y + Math.sin(a) * d * (flat ? 0.35 : 0.8), r: 1.2 + Math.random() * 3, blobs: [], grow: 0, drips: [], flat});
             }
         }
+    }
+
+    /** Dağılmış çay: gölməçələr, ləkələr (üst səthdəkilər perspektivdə yastı) və aşağı axan izlər */
+    function drawSpills() {
+        for (const p of g.puddles) {
+            ctx.fillStyle = `rgba(170, 86, 28, ${p.a * 0.62})`;
+            ctx.beginPath();
+            ctx.ellipse(p.x, FLOOR + 3, p.r, p.r * 0.22, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.fillStyle = 'rgba(184, 96, 34, .42)'; // tökülmüş çay: şəffaf kəhrəba
+        for (const st of g.stains) {
+            const k = 0.4 + 0.6 * st.grow;
+            for (const d of st.drips) {
+                ctx.beginPath();
+                ctx.roundRect
+                    ? ctx.roundRect(st.x + d.dx - d.w / 2, st.y, d.w, d.len, d.w / 2)
+                    : ctx.rect(st.x + d.dx - d.w / 2, st.y, d.w, d.len);
+                ctx.fill();
+                ctx.beginPath(); // izin ucundakı damcı
+                ctx.arc(st.x + d.dx, st.y + d.len, d.w * 0.9, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.save();
+            ctx.translate(st.x, st.y);
+            if (st.flat) ctx.scale(1, 0.4);
+            ctx.beginPath();
+            ctx.arc(0, 0, st.r * k, 0, Math.PI * 2);
+            for (const b of st.blobs) {
+                ctx.moveTo(b.dx * k + b.r * k, b.dy * k);
+                ctx.arc(b.dx * k, b.dy * k, b.r * k, 0, Math.PI * 2);
+            }
+            ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    /** Süfrəyə düşən damcı: üst səthə düşsə yastı ləkə, ön tərəfə düşsə aşağı axan ləkə; masadan kənara düşsə ləkə qalmır */
+    function teaLands(s) {
+        const T = tableGeom();
+        const [l, r] = topRange(FLOOR);
+        if (s.x >= l && s.x <= r) {
+            splat(s.x, FLOOR + (Math.random() - 0.5) * 10, s.size * 1.4, false, true);
+            return true;
+        }
+        if (s.x >= T.x0 - T.flare && s.x <= T.x1 + T.flare) { // küncdən sürüşüb ön tərəfə
+            splat(s.x, T.front + 4 + Math.random() * 12, s.size * 1.2, false, false);
+            return true;
+        }
+        return false;
     }
 
     function updateShards(dt) {
         for (const s of g.shards) {
             if (s.rest) { s.life -= dt * 0.35; continue; }
-            if (s.kind === 'tea') {
-                s.age += dt;
-                if (s.age >= s.wallAt) { // arxa fona dəydi — orada ləkə qalır
-                    splat(s.x, s.y, s.size * 1.5, false);
-                    s.life = 0;
-                    continue;
-                }
-            }
             s.vy += 1400 * dt;
             s.x += s.vx * dt;
             s.y += s.vy * dt;
             if (s.rot !== undefined) s.rot += s.vr * dt;
-            if (s.y >= FLOOR && s.vy > 0) {
-                if (s.kind === 'tea') { s.rest = true; s.y = FLOOR; continue; } // damcı masaya hopur
+            if (s.y > LH + 40) { s.life = 0; continue; }        // masadan kənara düşüb ekrandan çıxdı
+            if (s.y >= FLOOR && s.vy > 0 && !s.off) {
+                if (hasTable()) {
+                    const [l, r] = topRange(FLOOR);
+                    if (s.kind === 'tea') {                       // damcı süfrəyə hopur və ya masadan kənara düşür
+                        if (teaLands(s)) s.life = 0; else s.off = true;
+                        continue;
+                    }
+                    if (s.x < l || s.x > r) { s.off = true; continue; } // qırıq masanın kənarından aşağı düşür
+                } else if (s.kind === 'tea') { s.rest = true; s.y = FLOOR; continue; }
                 s.y = FLOOR;
                 s.vy *= -0.32; s.vx *= 0.55; s.vr *= 0.5;          // qırıq sıçrayır
                 if (Math.abs(s.vy) < 40) { s.rest = true; s.vy = 0; }
@@ -645,6 +736,9 @@
 
     /* ---------- Çəkmə ---------- */
 
+    // isti çayın buğu (ağzın üstündə alçaq duman): on — açıq/bağlı, speed — duman ləkələrinin dövrü,
+    // rise — ağızdan nə qədər yuxarı qalxıb itir (px), alpha — ən sıx anındakı görünmə dərəcəsi
+    const STEAM = {on: true, speed: 0.3, rise: 10, alpha: 0.45};
     const TEA_SURFACE_W = 0.3; // çay səthinin (ellipsin) yarım eni — stəkanın həmin hündürlükdəki eninə uyğun
     const RIM_RY = 3.5; // ağzın yumruluğu (ellipsin şaquli radiusu) — ağıza azca yuxarıdan baxırıq
     const RIM_W = 0.44; // ağzın yarım eni (GW-yə nisbətən)
@@ -752,6 +846,43 @@
             }
         }
         ctx.restore();
+    }
+
+    /** Yumşaq kənarlı ağ duman ləkəsi (ellips): mərkəzdə sıx, kənara doğru tamam şəffaf */
+    function mistBlob(cx, cy, rx, ry, alpha) {
+        if (alpha <= 0.01) return;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.scale(1, ry / rx);
+        const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+        gr.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+        gr.addColorStop(0.55, `rgba(245, 245, 250, ${alpha * 0.45})`);
+        gr.addColorStop(1, 'rgba(240, 240, 250, 0)');
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(0, 0, rx, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    /**
+     * Buğ: isti çayın üstündə, stəkanın ağzına yapışıq alçaq, yumşaq duman (x, rimY — ağzın mərkəzi).
+     * Ağzın üstündə sabit zəif duman qatı var; onun üstündə bir neçə duman ləkəsi yavaş yaranır,
+     * azca qalxır (STEAM.rise qədər) və itir — buğ yuxarı uçmur. Külək dumanı azca yana sürüşdürür.
+     */
+    function drawSteam(x, rimY, seed) {
+        if (!STEAM.on) return;
+        const t = g.time;
+        // ağzın üstündəki daimi duman qatı — yavaş "nəfəs alır"
+        mistBlob(x + windX * 2, rimY - 2, GW * 0.62, 7, STEAM.alpha * (0.55 + 0.15 * Math.sin(t * 1.3 + seed * 6)));
+        for (let k = 0; k < 5; k++) {
+            const phase = (t * STEAM.speed + k / 5 + seed) % 1; // 0 — yenicə yaranıb, 1 — itib
+            const a = Math.sin(phase * Math.PI) * STEAM.alpha;
+            const cx = x + (k - 2) * GW * 0.15 + Math.sin(t * 0.9 + k * 1.7 + seed * 5) * 3 + windX * phase * 8;
+            const cy = rimY - 3 - phase * STEAM.rise;
+            const rx = GW * 0.2 * (0.8 + phase * 0.6);   // qalxdıqca yayılır
+            mistBlob(cx, cy, rx, rx * 0.5, a);
+        }
     }
 
     function drawGlass(x, y, rot = 0, alpha = 1, tilt = 0) {
@@ -1075,32 +1206,17 @@
             ctx.fillRect(0, r.y - 1, LW, 81);
         }
 
-        // arxa fona çırpılmış çay ləkələri və aşağı axan izləri
-        for (const st of g.stains) {
-            const k = 0.4 + 0.6 * st.grow;
-            ctx.fillStyle = 'rgba(184, 96, 34, .42)'; // tökülmüş çay: şəffaf kəhrəba
-            for (const d of st.drips) {
-                ctx.beginPath();
-                ctx.roundRect
-                    ? ctx.roundRect(st.x + d.dx - d.w / 2, st.y, d.w, d.len, d.w / 2)
-                    : ctx.rect(st.x + d.dx - d.w / 2, st.y, d.w, d.len);
-                ctx.fill();
-                ctx.beginPath(); // izin ucundakı damcı
-                ctx.arc(st.x + d.dx, st.y + d.len, d.w * 0.9, 0, Math.PI * 2);
-                ctx.fill();
-            }
-            ctx.beginPath();
-            ctx.arc(st.x, st.y, st.r * k, 0, Math.PI * 2);
-            for (const b of st.blobs) {
-                ctx.moveTo(st.x + b.dx * k + b.r * k, st.y + b.dy * k);
-                ctx.arc(st.x + b.dx * k, st.y + b.dy * k, b.r * k, 0, Math.PI * 2);
-            }
-            ctx.fill();
-        }
+        // masa yoxdursa (foto rejimi) çay ləkələri fonda qalır
+        if (!hasTable()) drawSpills();
 
         // masa və nəlbəki — yalnız foto yüklənməyibsə (fotoda stəkan və nəlbəki artıq var)
         if (!baseInPhoto()) {
         drawCloth();
+        // dağılan çay yalnız süfrənin üstündə və ön tərəfində görünür — kənara çıxan hissə kəsilir
+        ctx.save();
+        ctx.clip(clothArea());
+        drawSpills();
+        ctx.restore();
         // nəlbəki: şəffaf büllur, qızılı haşiyə, mərkəzdən kənara şüalanan zolaqlar
         const scx = LW / 2, scy = BASE_Y + 4, srx = GW * 0.85, sry = 9;
         ctx.fillStyle = 'rgba(235, 240, 245, .55)';
@@ -1127,14 +1243,6 @@
         ctx.stroke();
         }
 
-        // masada dağılmış çay ləkələri
-        for (const p of g.puddles) {
-            ctx.fillStyle = `rgba(170, 86, 28, ${p.a * 0.62})`;
-            ctx.beginPath();
-            ctx.ellipse(p.x, FLOOR + 3, p.r, p.r * 0.22, 0, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
         // qüllə
         // ilk stəkan fotodakı stəkandır — foto varsa onu çəkmirik
         g.tower.forEach((t, i) => {
@@ -1159,6 +1267,14 @@
         if ((g.state === 'fall' || g.state === 'over') && g.falling) {
             g.falling.forEach(f => { if (!f.broken) drawGlass(f.x, f.y, f.rot); });
         }
+
+        // isti çayın buxarı — ağzı açıq qalan stəkanlardan qalxır: qüllənin başı və yellənən/düşən stəkan
+        if (g.tower.length && !(g.tower.length === 1 && baseInPhoto())) {
+            const top = g.tower[g.tower.length - 1];
+            drawSteam(top.x, BASE_Y - (g.tower.length - 1) * GH - GH, 0);
+        }
+        if (g.state === 'swing' || g.state === 'ready') drawSteam(g.swing.x, swingY() - GH, 0.5);
+        if (g.state === 'drop') drawSteam(g.drop.x, g.drop.y - GH, 0.5);
 
         // şüşə qırıqları və çay damcıları
         for (const s of g.shards) {
