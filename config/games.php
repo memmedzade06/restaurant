@@ -51,6 +51,15 @@ return [
         'min_seconds_per_glass' => 0.8,
     ],
 
+    // Stəkan qülləsində Bakının indiki havasına uyğun effektlər (yağış, külək, günəş...).
+    // Hava Open-Meteo-dan götürülür; STACK_WEATHER=false ilə söndürmək olar.
+    'weather' => [
+        'enabled' => (bool) env('STACK_WEATHER', true),
+        'lat' => 40.4093,
+        'lon' => 49.8671,
+        'cache_minutes' => 20,
+    ],
+
     'nard' => [
         'points_win' => 1,   // adi qələbə
         'points_mars' => 2,  // mars (rəqib heç daş çıxara bilməyib)

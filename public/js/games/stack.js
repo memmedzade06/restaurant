@@ -37,7 +37,10 @@
     const GW = 52, GH = 72;            // stəkanın eni və hündürlüyü (nazik, hündür armudu)
     const BASE_Y = LH - 58;            // ilk stəkanın dibi (nəlbəkinin üstü)
     const SWING_GAP = 130;             // yellənən stəkanla qüllə arasındakı məsafə
-    const FLOOR = BASE_Y + 8;          // masanın səthi — düşən stəkan burada sınır
+    // true — fondakı fotoda əldə tutulan stəkan qüllənin dibidir (Qız qalası fotosu kimi);
+    // false — foto sadəcə arxa fondur, qüllə masadakı nəlbəkinin üstündə qurulur
+    const PHOTO_IS_BASE = false;
+    const FLOOR = BASE_Y + (PHOTO_IS_BASE ? 40 : 8); // düşən stəkan burada sınır
     const PERFECT = GW * 0.07;         // "Əla!" sayılan sapma
     const SUPPORT = GW * 0.52;         // üstündəki yükün dayaq sahəsi (ağız + bir az ehtiyat ki, oyun çox çətin olmasın)
     const WARN = 0.3;                  // dayaq ehtiyatı bundan az qalanda "qüllə əyilir" xəbərdarlığı
@@ -65,7 +68,9 @@
             finish: false,
             offered: {},              // bu oyunda təklif olunmuş hədiyyələr
             claiming: false,
+            slosh: {a: 0, v: 0},   // yellənən/düşən stəkandakı çayın meyli
         };
+        newSwing();
         overlay.hidden = true;
         offer.hidden = true;
         overlay.querySelector('.st-prize').hidden = true;
@@ -80,8 +85,149 @@
         const fast = Math.max(0, g.score - SPEED_FROM) * SPEED_STEP;
         return Math.min(SPEED_MAX, SPEED_BASE + slow + fast);
     };
+
+    // 30-cu stəkandan sonra yellənmə sürətlənir: bir anda artım, sonra hər yeni stəkanda daha da
+    const BOOST_FROM = 30;           // neçə stəkan qoyulandan sonra başlasın
+    const BOOST = 1.25;              // 30-cu stəkanda sürətə birdəfəlik artım
+    const BOOST_STEP = 0.03;         // sonrakı hər stəkanda əlavə artım (40-cı stəkanda ×1.55, 50-cidə ×1.85)
+    const SPEED_CAP = 650;           // sürətin ən yuxarı həddi — oyun tamam oynanılmaz olmasın
+    const placed = () => g.tower.length - 1; // oyunçunun qoyduğu stəkan sayı
+    const boost = () => placed() < BOOST_FROM ? 1 : BOOST + (placed() - BOOST_FROM) * BOOST_STEP;
+
+    // Sürətlənmə ilə birlikdə (BOOST_FROM-dan sonra) çaşdırıcı, amma ədalətli hiylələr:
+    //  1) hər stəkan öz sürəti ilə gəlir (gah yavaş, gah sürətli), amma bir stəkan ərzində sürət sabitdir;
+    //  2) bəzən stəkan yolun ortasında BİR DƏFƏ geri dönür — dönməzdən əvvəl titrəyib xəbər verir.
+    const TRICK_SPEED = [0.85, 1.3];  // stəkanın sürət çarpanı (təsadüfi, bu aralıqda)
+    const TRICK_FLIP = 0.35;          // stəkanın yolda geri dönmə ehtimalı
+    const TRICK_WARN = 0.35;          // geri dönməzdən neçə saniyə əvvəl titrəsin
+    const rnd = (a, b) => a + Math.random() * (b - a);
+
+    /** Yeni yellənən stəkanın xasiyyəti */
+    function newSwing() {
+        const tricky = placed() >= BOOST_FROM;
+        g.swing.mul = tricky ? rnd(TRICK_SPEED[0], TRICK_SPEED[1]) : 1;
+        g.swing.t = 0;
+        // geri dönmə: bu vaxtdan sonra stəkan ekranın ortasındakı flipX nöqtəsindən keçəndə dönür
+        const flip = tricky && Math.random() < TRICK_FLIP;
+        g.swing.flipAfter = flip ? rnd(0.2, 1.4) : Infinity;
+        g.swing.flipX = rnd(GW + 70, LW - GW - 70);
+        g.swing.warn = false;
+    }
+
     const topBottomY = () => BASE_Y - (g.tower.length - 1) * GH; // ən üst stəkanın dibi
     const swingY = () => topBottomY() - GH - SWING_GAP;           // yellənən stəkanın dibi
+
+    /* ---------- Səs ---------- */
+    // Səslər fayl yükləmədən, Web Audio API ilə yaradılır: stəkan cingiltisi və şüşə sınması.
+    const sound = (() => {
+        let ac = null;
+        let muted = false;
+        try { muted = localStorage.getItem('stackMuted') === '1'; } catch (e) {}
+
+        function ctxOk() {
+            if (muted) return null;
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return null;
+            if (!ac) ac = new AC();
+            if (ac.state === 'suspended') ac.resume();
+            return ac;
+        }
+
+        /** Stəkan cingiltisi: bir neçə yüksək, tez sönən ton (şüşənin qeyri-harmonik obertonları) */
+        function clink(pitch = 1, vol = 0.5) {
+            const a = ctxOk();
+            if (!a) return;
+            const t = a.currentTime;
+            const out = a.createGain();
+            out.gain.value = vol;
+            out.connect(a.destination);
+            const base = 1650 * pitch * (0.97 + Math.random() * 0.06);
+            [[1, 0.5, 0.45], [2.32, 0.3, 0.3], [4.25, 0.16, 0.18], [6.63, 0.08, 0.1]].forEach(([k, amp, dur]) => {
+                const o = a.createOscillator();
+                const gn = a.createGain();
+                o.type = 'sine';
+                o.frequency.value = base * k;
+                gn.gain.setValueAtTime(0, t);
+                gn.gain.linearRampToValueAtTime(amp, t + 0.004);
+                gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+                o.connect(gn).connect(out);
+                o.start(t);
+                o.stop(t + dur + 0.02);
+            });
+            noise(a, out, t, 0.025, 3000, 0.25); // toxunma anının qısa "tıq" səsi
+        }
+
+        /** Süzgəcdən keçmiş ağ küy */
+        function noise(a, out, t, dur, freq, amp) {
+            const len = Math.ceil(a.sampleRate * dur);
+            const buf = a.createBuffer(1, len, a.sampleRate);
+            const d = buf.getChannelData(0);
+            for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+            const src = a.createBufferSource();
+            src.buffer = buf;
+            const f = a.createBiquadFilter();
+            f.type = 'highpass';
+            f.frequency.value = freq;
+            const gn = a.createGain();
+            gn.gain.setValueAtTime(amp, t);
+            gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            src.connect(f).connect(gn).connect(out);
+            src.start(t);
+        }
+
+        /** Şüşə sınması: küy partlayışı + səpələnən xırda cingiltilər */
+        let lastCrash = -Infinity;
+        function crash() {
+            const a = ctxOk();
+            if (!a) return;
+            const t = a.currentTime;
+            const now = performance.now();
+            if (now - lastCrash < 50) return; // eyni anda çox stəkan sınanda səs çox gurlaşmasın
+            lastCrash = now;
+            const out = a.createGain();
+            out.gain.value = 0.45;
+            out.connect(a.destination);
+            noise(a, out, t, 0.35, 1800, 0.7);
+            for (let i = 0; i < 6; i++) {
+                const dt = Math.random() * 0.18;
+                setTimeout(() => clink(1.4 + Math.random() * 1.6, 0.12), dt * 1000);
+            }
+        }
+
+        /** Uzaqdan gələn ildırım gurultusu: alçaq tezlikli, yavaş sönən küy */
+        function thunder() {
+            const a = ctxOk();
+            if (!a) return;
+            const t = a.currentTime, dur = 2.2;
+            const len = Math.ceil(a.sampleRate * dur);
+            const buf = a.createBuffer(1, len, a.sampleRate);
+            const d = buf.getChannelData(0);
+            for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+            const src = a.createBufferSource();
+            src.buffer = buf;
+            const f = a.createBiquadFilter();
+            f.type = 'lowpass';
+            f.frequency.value = 160;
+            const gn = a.createGain();
+            gn.gain.setValueAtTime(0.0001, t);
+            gn.gain.exponentialRampToValueAtTime(0.9, t + 0.15);
+            gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            src.connect(f).connect(gn).connect(a.destination);
+            src.start(t);
+        }
+
+        return {
+            clink, crash, thunder,
+            get muted() { return muted; },
+            // səs artıq oyunçunun toxunuşu ilə açılıbmı (brauzer səsi yalnız toxunuşdan sonra icazə verir)
+            get started() { return !!ac && ac.state === 'running'; },
+            toggle() {
+                muted = !muted;
+                try { localStorage.setItem('stackMuted', muted ? '1' : '0'); } catch (e) {}
+                return muted;
+            },
+        };
+    })();
 
     /* ---------- Hərəkət ---------- */
 
@@ -123,6 +269,8 @@
      * Zəif nöqtədən yuxarıdakılar daha sürətli və uzağa uçur, aşağıdakılar sonra yıxılır.
      */
     function collapse(tower, level, side) {
+        // fotodakı stəkan (ilk stəkan) əldədir — o düşmür
+        const keepBase = baseInPhoto();
         g.falling = tower.map((t, i) => {
             const above = i > level;                 // zəif nöqtədən yuxarıda
             const k = above ? i - level : 0;
@@ -135,7 +283,7 @@
                 vr: side * (above ? 2.2 + k * 0.5 : 1.2 + i * 0.25),
                 delay: above ? 0 : 0.12 + (level - i) * 0.06, // aşağıdakılar bir az gec yıxılır
             };
-        });
+        }).filter((f, i) => !(keepBase && i === 0));
         g.tower = [];
         g.state = 'fall';
         g.fallTime = 0;
@@ -167,7 +315,17 @@
             g.combo = 0;
             g.shake = Math.min(7, ad / 5);
         }
+        // ton həmişə eynidir; «Əla!» bir az ucadır
+        sound.clink(1, perfect ? 0.6 : 0.45);
         g.tower = tower;
+        // qonanda çay çalxalanır: kənara qonduqca daha güclü, istiqaməti sapma tərəfinə görə.
+        // Zərbə alttakı stəkana da bir az ötürülür.
+        const side = d ? Math.sign(d) : (Math.random() < 0.5 ? -1 : 1);
+        const power = LAND_KICK * (0.7 + Math.min(0.6, ad / GW * 2));
+        tower[tower.length - 1].s = {a: g.slosh.a, v: g.slosh.v - side * power};
+        const below = tower[tower.length - 2];
+        if (below.s) below.s.v -= side * power * 0.4; else below.s = {a: 0, v: -side * power * 0.4};
+        g.slosh = {a: 0, v: 0};
         g.score += gain;
         g.margin = st.margin;
         if (text) g.popups.push({text, x, y: topBottomY() - GH - 10, life: 1});
@@ -181,6 +339,10 @@
         g.state = 'swing';
         // növbəti stəkan kənardan başlasın
         g.swing.x = g.swing.dir > 0 ? GW / 2 + 12 : LW - GW / 2 - 12;
+        newSwing();
+        if (placed() === BOOST_FROM) {
+            g.popups.push({text: 'Diqqət! Sürət artdı!', x: LW / 2, y: topBottomY() - GH - 60, life: 2, warn: true});
+        }
 
         checkPrize();
     }
@@ -304,6 +466,7 @@
 
     function shatter(f) {
         f.broken = true;
+        sound.crash();
         const x = Math.max(-20, Math.min(LW + 20, f.x));
         g.shake = Math.max(g.shake, 6);
         // şüşə qırıqları
@@ -386,14 +549,52 @@
         }
     }
 
+    /* ---------- Çayın çalxalanması ---------- */
+    // Stəkan yellənəndə çay düz qalır. Yalnız divara dəyəndə çalxalanır:
+    // divar tərəfə çırpılır, sonra o yan-bu yana yırğalanıb yenə düzəlir (yay / spring modeli).
+    const SLOSH_K = 140, SLOSH_D = 4.5, SLOSH_MAX = 0.55;
+    const SLOSH_KICK = 6.5; // divara dəyəndə çaya verilən təkan — çay o yan-bu yana çalxalanır
+    const LAND_KICK = 4;    // stəkan qüllənin üstünə qonanda çaya verilən təkan
+
+    /** Stəkan divara dəydi: çay hərəkəti davam etdirib divar tərəfə çırpılır, sonra geri qayıdır */
+    function wallHit(dirBefore) {
+        g.slosh.v -= dirBefore * SLOSH_KICK * (0.85 + Math.random() * 0.3);
+    }
+    const clamp = (v, m) => Math.max(-m, Math.min(m, v));
+
+    function springStep(s, target, dt) {
+        s.v += (-SLOSH_K * (s.a - target) - SLOSH_D * s.v) * dt;
+        s.a = clamp(s.a + s.v * dt, SLOSH_MAX);
+    }
+
+    function updateSlosh(dt) {
+        if (!(dt > 0)) return;
+        springStep(g.slosh, 0, dt);
+        for (const t of g.tower) if (t.s) springStep(t.s, 0, dt); // qüllədəki stəkanlar
+    }
+
     function update(dt) {
         g.time += dt;
+        updateSlosh(dt);
 
         if (g.state === 'swing') {
             const min = GW / 2 + 8, max = LW - GW / 2 - 8;
-            g.swing.x += g.swing.dir * speed() * dt;
-            if (g.swing.x > max) { g.swing.x = max; g.swing.dir = -1; }
-            if (g.swing.x < min) { g.swing.x = min; g.swing.dir = 1; }
+            const v = Math.min(SPEED_CAP, speed() * boost() * g.swing.mul);
+            g.swing.t += dt;
+            const ahead = (g.swing.flipX - g.swing.x) * g.swing.dir; // dönmə nöqtəsinə qalan məsafə (qabaqdadırsa > 0)
+            const armed = g.swing.t + TRICK_WARN >= g.swing.flipAfter;
+            g.swing.warn = armed && ahead > 0 && ahead < v * TRICK_WARN; // dönməyə az qalıb — titrəyir
+            const nx = g.swing.x + g.swing.dir * v * dt;
+            if (armed && g.swing.t >= g.swing.flipAfter && ahead >= 0 && (g.swing.flipX - nx) * g.swing.dir <= 0) {
+                g.swing.x = g.swing.flipX;
+                g.swing.dir *= -1;
+                g.swing.flipAfter = Infinity; // bir stəkanda ən çox bir dəfə
+                g.swing.warn = false;
+            } else {
+                g.swing.x = nx;
+            }
+            if (g.swing.x > max) { g.swing.x = max; g.swing.dir = -1; wallHit(1); }
+            if (g.swing.x < min) { g.swing.x = min; g.swing.dir = 1; wallHit(-1); }
         }
 
         if (g.state === 'drop') {
@@ -436,14 +637,16 @@
 
     /* ---------- Çəkmə ---------- */
 
+    const RIM_RY = 3.5; // ağzın yumruluğu (ellipsin şaquli radiusu) — ağıza azca yuxarıdan baxırıq
+    const RIM_W = 0.44; // ağzın yarım eni (GW-yə nisbətən)
     function glassPath(w, h) {
         const p = new Path2D();
         // Armudu forma: dar dib, aşağıda yumru qarın, incə bel, yuxarıda açılan ağız
         const b = 0.26 * w; // dib
         p.moveTo(-b, 0);
         p.bezierCurveTo(-0.46 * w, -0.03 * h, -0.5 * w, -0.36 * h, -0.33 * w, -0.58 * h);  // qarın (nazik)
-        p.bezierCurveTo(-0.28 * w, -0.66 * h, -0.31 * w, -0.86 * h, -0.44 * w, -h);       // bel və ağız
-        p.lineTo(0.44 * w, -h);
+        p.bezierCurveTo(-0.28 * w, -0.66 * h, -0.31 * w, -0.86 * h, -RIM_W * w, -h);      // bel və ağız
+        p.ellipse(0, -h, RIM_W * w, RIM_RY, 0, Math.PI, 0, true);                         // yumru ağzın ön tərəfi
         p.bezierCurveTo(0.31 * w, -0.86 * h, 0.28 * w, -0.66 * h, 0.33 * w, -0.58 * h);
         p.bezierCurveTo(0.5 * w, -0.36 * h, 0.46 * w, -0.03 * h, b, 0);
         p.closePath();
@@ -451,12 +654,95 @@
     }
     const GLASS = glassPath(GW, GH);
 
-    // Arxa fon: 50 Qəpik loqosu
-    const BG = {logo: new Image()};
-    BG.logo.src = root.dataset.bgLogo;
+    // Arxa fon şəkli (data-bg-photo). PHOTO_IS_BASE = true olanda fotodakı stəkan qüllənin ilk stəkanıdır:
+    // oyunçunun stəkanları onun ağzının üstünə düşür. PHOTO_RIM — həmin stəkanın ağzının mərkəzi
+    // (şəklin eninə və hündürlüyünə nisbətən), PHOTO_TOP — şəklin yuxarı kənarı (dünya koordinatında).
+    const BG = {photo: new Image(), cloth: new Image()};
+    BG.photo.src = root.dataset.bgPhoto;
+    if (root.dataset.cloth) BG.cloth.src = root.dataset.cloth;
+    const BG_DARKEN = 0.35;     // arxa fon şəklinin qaraldılması (0 — olduğu kimi, 1 — tam qara)
+    const CLOTH_FOCUS_Y = 0.53; // süfrədə şəklin hansı hündürlüyü görünsün (0 — yuxarı, 1 — aşağı); ortada medalyon
+    const PHOTO_RIM = {x: 0.516, y: 0.673};
+    const PHOTO_TOP = -8;
+    const photoReady = () => BG.photo.complete && BG.photo.naturalWidth > 0;
+    const baseInPhoto = () => PHOTO_IS_BASE && photoReady();
+
+    /** Fotonun dünyadakı yeri: stəkanın ağzı ilk qonacaq stəkanın dibinə (BASE_Y - GH) düşür */
+    function photoRect() {
+        const rimY = BASE_Y - GH;
+        const dh = (rimY - PHOTO_TOP) / PHOTO_RIM.y;
+        const dw = dh * BG.photo.naturalWidth / BG.photo.naturalHeight;
+        return {x: LW / 2 - dw * PHOTO_RIM.x, y: PHOTO_TOP, w: dw, h: dh};
+    }
 
     /** Armudu stəkan: dibi (x, y) nöqtəsindədir */
-    function drawGlass(x, y, rot = 0, alpha = 1) {
+    /**
+     * tilt — çay səthinin stəkana nisbətən meyli (radian, + olanda sol tərəf yuxarı qalxır).
+     * Stəkan fırlananda (rot) çay dünyaya nisbətən üfüqi qalsın deyə tilt-dən rot çıxılır.
+     */
+    /**
+     * Qızılı medalyon naxışı: ogee (soğanvari) çərçivə, içində tor, yuxarıda və aşağıda xırda çiçəklər.
+     * ox — mərkəzin x-i, k — ölçü, a — şəffaflıq. Stəkanın lokal koordinatlarında çəkilir.
+     */
+    function drawOrnament(ox, k, a) {
+        const top = -GH * 0.8, bot = -GH * 0.2, mid = (top + bot) / 2, hw = GW * 0.17 * k;
+        const ogee = (s) => {
+            const p = new Path2D();
+            const t = mid + (top - mid) * s, b = mid + (bot - mid) * s, w = hw * s;
+            p.moveTo(ox, t);
+            p.bezierCurveTo(ox + w * 0.2, t + (mid - t) * 0.25, ox + w * 1.25, t + (mid - t) * 0.45, ox + w, mid);
+            p.bezierCurveTo(ox + w * 1.25, b - (b - mid) * 0.45, ox + w * 0.2, b - (b - mid) * 0.25, ox, b);
+            p.bezierCurveTo(ox - w * 0.2, b - (b - mid) * 0.25, ox - w * 1.25, b - (b - mid) * 0.45, ox - w, mid);
+            p.bezierCurveTo(ox - w * 1.25, t + (mid - t) * 0.45, ox - w * 0.2, t + (mid - t) * 0.25, ox, t);
+            p.closePath();
+            return p;
+        };
+        ctx.save();
+        ctx.globalAlpha *= a;
+        ctx.strokeStyle = '#f2c35a';
+        ctx.fillStyle = '#f2c35a';
+        ctx.lineCap = 'round';
+
+        // çərçivə: qalın xarici və incə daxili xətt
+        ctx.lineWidth = 1.4;
+        ctx.stroke(ogee(1));
+        ctx.lineWidth = 0.7;
+        const inner = ogee(0.62);
+        ctx.stroke(inner);
+
+        // daxildə çəpəki tor
+        ctx.save();
+        ctx.clip(inner);
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        for (let d = -GH; d <= GH; d += 3.2) {
+            ctx.moveTo(ox - GW, mid + d - GW); ctx.lineTo(ox + GW, mid + d + GW);
+            ctx.moveTo(ox - GW, mid + d + GW); ctx.lineTo(ox + GW, mid + d - GW);
+        }
+        ctx.stroke();
+        ctx.restore();
+
+        // yanlarda qıvrımlar
+        ctx.lineWidth = 0.8;
+        for (const sd of [-1, 1]) {
+            ctx.beginPath();
+            ctx.arc(ox + sd * hw * 0.95, mid, hw * 0.28, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // yuxarıda və aşağıda xırda çiçəklər
+        for (const fy of [top - 3.2 * k, bot + 3.2 * k]) {
+            for (let i = 0; i < 5; i++) {
+                const ang = i * Math.PI * 2 / 5 - Math.PI / 2;
+                ctx.beginPath();
+                ctx.arc(ox + Math.cos(ang) * 1.5 * k, fy + Math.sin(ang) * 1.5 * k, 0.9 * k, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        ctx.restore();
+    }
+
+    function drawGlass(x, y, rot = 0, alpha = 1, tilt = 0) {
         ctx.save();
         ctx.globalAlpha = alpha;
         ctx.translate(x, y);
@@ -474,16 +760,34 @@
         tea.addColorStop(0, 'rgba(205, 42, 10, .9)');
         tea.addColorStop(0.55, 'rgba(160, 18, 4, .95)');
         tea.addColorStop(1, 'rgba(98, 6, 2, .98)');
+        // çay səthinin altındakı yarımmüstəvi: səth (0, sy) nöqtəsindən keçir, a bucağı ilə əyilir
+        const a = tilt - rot, sy = -GH * 0.74, L = GH * 2;
+        const cx = Math.cos(a), cy = Math.sin(a), nx = -cy, ny = cx; // nx, ny — səthdən "aşağı" yön
+        const teaPath = new Path2D();
+        teaPath.moveTo(-L * cx, sy - L * cy);
+        teaPath.lineTo(L * cx, sy + L * cy);
+        teaPath.lineTo(L * cx + L * nx, sy + L * cy + L * ny);
+        teaPath.lineTo(-L * cx + L * nx, sy - L * cy + L * ny);
+        teaPath.closePath();
         ctx.fillStyle = tea;
-        ctx.fillRect(-GW, -GH * 0.74, GW * 2, GH * 0.74);
+        ctx.fill(teaPath);
         // işığın çaydan keçməsi — ortada açıq kəhrəba parıltı
         const glow = ctx.createRadialGradient(-GW * 0.08, -GH * 0.3, 2, -GW * 0.08, -GH * 0.3, GW * 0.42);
         glow.addColorStop(0, 'rgba(255, 110, 40, .35)');
         glow.addColorStop(1, 'rgba(255, 110, 40, 0)');
         ctx.fillStyle = glow;
-        ctx.fillRect(-GW, -GH * 0.74, GW * 2, GH * 0.74);
-        ctx.fillStyle = 'rgba(255, 190, 120, .6)'; // çayın səthi
-        ctx.fillRect(-GW, -GH * 0.74, GW * 2, 2);
+        ctx.fill(teaPath);
+        ctx.strokeStyle = 'rgba(255, 190, 120, .6)'; // çayın səthi
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-L * cx + nx, sy - L * cy + ny);
+        ctx.lineTo(L * cx + nx, sy + L * cy + ny);
+        ctx.stroke();
+
+        // şüşənin üzərində qızılı naxış (çayın üstündən görünür)
+        drawOrnament(0, 1, 1);                    // ön tərəfdə əsas medalyon
+        drawOrnament(-GW * 0.4, 0.62, 0.45);      // yanlarda yarımçıq görünən medalyonlar
+        drawOrnament(GW * 0.4, 0.62, 0.45);
         ctx.restore();
 
         // şüşənin kənarı
@@ -491,9 +795,25 @@
         ctx.strokeStyle = 'rgba(255, 255, 255, .95)';
         ctx.stroke(GLASS);
 
-        // qızılı haşiyə və ayaq
+        // yumru ağız: içi azca görünür, arxa kənar incə, ön kənar qalın qızılı haşiyə
+        const rw = GW * RIM_W;
+        ctx.fillStyle = 'rgba(255, 255, 255, .18)';
+        ctx.beginPath();
+        ctx.ellipse(0, -GH, rw, RIM_RY, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(233, 162, 59, .75)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(0, -GH, rw, RIM_RY, 0, Math.PI, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = '#E9A23B';
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.ellipse(0, -GH, rw, RIM_RY, 0, 0, Math.PI);
+        ctx.stroke();
+
+        // qızılı ayaq
         ctx.fillStyle = '#E9A23B';
-        ctx.fillRect(-GW * 0.44, -GH - 1, GW * 0.88, 3.5);
         ctx.beginPath();
         ctx.ellipse(0, 0, GW * 0.28, 4, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -509,7 +829,10 @@
         ctx.restore();
     }
 
-    /** Masanın üstündə süfrə: düz qırmızı parça, yumşaq qırışlarla aşağı sallanır, alt kənarı dalğalıdır */
+    /**
+     * Masanın üstündə süfrə: yumşaq qırışlarla aşağı sallanır, alt kənarı dalğalıdır.
+     * Xalça naxışlı şəkil (data-cloth) yüklənibsə parça onunla örtülür, yoxsa düz qırmızıdır.
+     */
     function drawCloth() {
         const top = BASE_Y + 8, bottom = LH - 8;
         const x0 = 26, x1 = LW - 26, flare = 10;          // aşağıda bir az genişlənir
@@ -541,16 +864,32 @@
         ctx.fill();
         ctx.clip();
 
+        const carpet = BG.cloth.complete && BG.cloth.naturalWidth > 0;
+        if (carpet) {
+            // xalça naxışlı parça: şəklin ortasındakı medalyonun keçdiyi zolaq süfrənin eninə yayılır
+            const W2 = x1 - x0 + flare * 2, H2 = bottom - top + 12;
+            const iw = BG.cloth.naturalWidth, ih = iw * H2 / W2;
+            const iy = Math.max(0, Math.min(BG.cloth.naturalHeight - ih, BG.cloth.naturalHeight * CLOTH_FOCUS_Y - ih / 2));
+            ctx.drawImage(BG.cloth, 0, iy, iw, ih, x0 - flare, top, W2, H2);
+            // qırışlar: açıq-tünd növbələşən zolaqlar parçanı həcmli göstərir
+            const folds2 = ctx.createLinearGradient(x0 - flare, 0, x1 + flare, 0);
+            for (let i = 0; i <= folds * 2; i++) {
+                folds2.addColorStop(i / (folds * 2), i % 2 ? 'rgba(0, 0, 0, .14)' : 'rgba(255, 255, 255, .06)');
+            }
+            ctx.fillStyle = folds2;
+            ctx.fillRect(x0 - flare, top, W2, H2);
+        }
+
         // yuxarıdan aşağı işıq-kölgə: masanın kənarı parlaq, aşağı tünd
         const depth = ctx.createLinearGradient(0, top, 0, bottom + 8);
         depth.addColorStop(0, 'rgba(255, 255, 255, .18)');
         depth.addColorStop(0.15, 'rgba(255, 255, 255, 0)');
-        depth.addColorStop(1, 'rgba(60, 0, 0, .28)');
+        depth.addColorStop(1, carpet ? 'rgba(20, 5, 0, .35)' : 'rgba(60, 0, 0, .28)');
         ctx.fillStyle = depth;
         ctx.fillRect(x0 - flare, top, x1 - x0 + flare * 2, bottom - top + 10);
 
         // qırışların incə xətləri
-        ctx.strokeStyle = 'rgba(110, 10, 10, .22)';
+        ctx.strokeStyle = carpet ? 'rgba(30, 10, 0, .25)' : 'rgba(110, 10, 10, .22)';
         ctx.lineWidth = 1.2;
         for (let i = 1; i < folds; i++) {
             const xb = x0 - flare + i * fw;
@@ -562,117 +901,36 @@
         }
         ctx.restore();
 
-        // masanın üst kənarı — parçanın qatlandığı yer
-        ctx.fillStyle = '#f04a43';
+        // masanın üst kənarı — parçanın qatlandığı yer (xalça naxışlıda qızılı haşiyə)
+        ctx.fillStyle = carpet ? '#d9a237' : '#f04a43';
         ctx.fillRect(x0, top - 1, x1 - x0, 3);
-    }
-
-    /** Bir limon dilimi: sarı qabıq, açıq ət, ağ dilim xətləri. tilt — eninə sıxılma (yanakı görünüş) */
-    function drawLemon(x, y, r, tilt = 1, rot = 0) {
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(rot);
-        ctx.scale(tilt, 1);
-        ctx.fillStyle = '#e8b417';                      // qabıq
-        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#fff6cf';                      // ağ qat
-        ctx.beginPath(); ctx.arc(0, 0, r * 0.86, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#fbe26a';                      // ət
-        ctx.beginPath(); ctx.arc(0, 0, r * 0.76, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 250, 225, .95)';   // dilimlər
-        ctx.lineWidth = 0.9;
-        for (let i = 0; i < 8; i++) {
-            const a = i * Math.PI / 4;
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(Math.cos(a) * r * 0.74, Math.sin(a) * r * 0.74);
-            ctx.stroke();
-        }
-        ctx.fillStyle = '#fffbe8';
-        ctx.beginPath(); ctx.arc(0, 0, r * 0.12, 0, Math.PI * 2); ctx.fill();
-        ctx.restore();
-    }
-
-    /** Ayaqlı büllur qab, içində limon dilimləri. (cx, y) — qabın dibinin ortası */
-    function drawLemonDish(cx, y) {
-        const glass = 'rgba(235, 245, 250, .55)';
-        const edge = 'rgba(150, 175, 190, .9)';
-        const shine = 'rgba(255, 255, 255, .85)';
-        ctx.lineWidth = 1;
-
-        // kölgə
-        ctx.fillStyle = 'rgba(60, 0, 0, .18)';
-        ctx.beginPath(); ctx.ellipse(cx, y + 1, 24, 3.5, 0, 0, Math.PI * 2); ctx.fill();
-
-        // ayaq (oturacaq)
-        ctx.fillStyle = glass; ctx.strokeStyle = edge;
-        ctx.beginPath(); ctx.ellipse(cx, y - 2, 20, 4.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-
-        // gövdə — üzlü büllur
-        const stemTop = y - 17;
-        ctx.beginPath();
-        ctx.moveTo(cx - 13, y - 3);
-        ctx.quadraticCurveTo(cx - 7, y - 9, cx - 6, stemTop);
-        ctx.lineTo(cx + 6, stemTop);
-        ctx.quadraticCurveTo(cx + 7, y - 9, cx + 13, y - 3);
-        ctx.closePath();
-        ctx.fill(); ctx.stroke();
-        ctx.strokeStyle = 'rgba(150, 175, 190, .55)';
-        for (const dx of [-6, -2, 2, 6]) {
-            ctx.beginPath(); ctx.moveTo(cx + dx * 1.6, y - 4); ctx.lineTo(cx + dx * 0.8, stemTop + 1); ctx.stroke();
-        }
-
-        // qabın arxa kənarı
-        const rimY = y - 30, rx = 34;
-        ctx.fillStyle = 'rgba(225, 238, 245, .5)'; ctx.strokeStyle = edge;
-        ctx.beginPath(); ctx.ellipse(cx, rimY, rx, 6, 0, Math.PI, Math.PI * 2); ctx.fill(); ctx.stroke();
-
-        // limon dilimləri — qabda yelpik kimi düzülüb
-        const lemons = [
-            [-22, -5, 10, 0.55, -0.5], [22, -5, 10, 0.55, 0.5],
-            [-13, -9, 11, 0.8, -0.25], [13, -9, 11, 0.8, 0.25],
-            [0, -11, 12, 1, 0], [-6, -3, 10, 0.95, -0.1], [7, -3, 10, 0.95, 0.12],
-        ];
-        for (const [dx, dy, r, t, a] of lemons) drawLemon(cx + dx, rimY + dy, r, t, a);
-
-        // qabın ön tərəfi (limonların alt hissəsini örtür)
-        ctx.fillStyle = glass; ctx.strokeStyle = edge;
-        ctx.beginPath();
-        ctx.moveTo(cx - rx, rimY);
-        ctx.quadraticCurveTo(cx - rx + 6, stemTop + 1, cx - 6, stemTop);
-        ctx.lineTo(cx + 6, stemTop);
-        ctx.quadraticCurveTo(cx + rx - 6, stemTop + 1, cx + rx, rimY);
-        ctx.ellipse(cx, rimY, rx, 6, 0, 0, Math.PI);
-        ctx.closePath();
-        ctx.fill(); ctx.stroke();
-
-        // qızılı haşiyə və parıltı
-        ctx.strokeStyle = '#E9A23B'; ctx.lineWidth = 1.6;
-        ctx.beginPath(); ctx.ellipse(cx, rimY, rx, 6, 0, 0, Math.PI); ctx.stroke();
-        ctx.strokeStyle = shine; ctx.lineWidth = 1.4;
-        ctx.beginPath(); ctx.moveTo(cx - rx + 7, rimY + 4); ctx.quadraticCurveTo(cx - rx + 10, stemTop + 3, cx - 10, stemTop + 2); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(cx - 4, y - 5); ctx.lineTo(cx - 3, stemTop + 2); ctx.stroke();
     }
 
     function drawScene() {
         const cam = g.camY;
         const sx = g.shake ? Math.sin(g.time * 60) * g.shake : 0;
 
-        // fon: hündürlüyə görə rəng dəyişir
+        // səma: fotodakı axşam səmasının rəngi, yuxarı qalxdıqca gecəyə keçir
         const h = Math.min(1, cam / 2500);
         const bg = ctx.createLinearGradient(0, 0, 0, LH);
-        bg.addColorStop(0, mix('#fbe6c8', '#2a1033', h));
-        bg.addColorStop(1, mix('#f6cf9f', '#7e1a1a', h));
+        bg.addColorStop(0, mix('#4b5c7c', '#141028', h));
+        bg.addColorStop(1, mix('#7b8daf', '#2e1838', h));
         ctx.fillStyle = bg;
         ctx.fillRect(0, 0, LW, LH);
 
-        // 50 Qəpik loqosu — arxa planda su nişanı; qüllədən yavaş hərəkət edir (dərinlik effekti)
-        if (BG.logo.complete && BG.logo.naturalWidth) {
-            const s = 230, ly = 150 + cam * 0.3;
-            if (ly < LH) {
+        // adi rejim: şəkil bütün kətanı örtür (cover), qüllə böyüdükcə yavaş aşağı sürüşür,
+        // yuxarı qalxdıqca üstünə gecə rəngi çökür
+        if (!PHOTO_IS_BASE && photoReady()) {
+            const dh = LH * 1.15;
+            const dw = Math.max(LW, dh * BG.photo.naturalWidth / BG.photo.naturalHeight);
+            ctx.drawImage(BG.photo, LW / 2 - dw / 2, LH - dh + Math.min(LH * 0.15, cam * 0.08), dw, dh);
+            ctx.fillStyle = `rgba(0, 0, 0, ${BG_DARKEN})`; // şəkli bir az qaraldırıq ki, stəkanlar önə çıxsın
+            ctx.fillRect(0, 0, LW, LH);
+            if (h > 0) {
                 ctx.save();
-                ctx.globalAlpha = 0.16 * (1 - h * 0.5);
-                ctx.drawImage(BG.logo, LW / 2 - s / 2, ly, s, s);
+                ctx.globalAlpha = h * 0.85;
+                ctx.fillStyle = bg;
+                ctx.fillRect(0, 0, LW, LH);
                 ctx.restore();
             }
         }
@@ -686,8 +944,22 @@
             }
         }
 
+        weatherBack(); // günəş / ay, buludlar, duman — qüllənin arxasında
+
         ctx.save();
         ctx.translate(0, cam);
+
+        // foto qüllə ilə birlikdə hərəkət edir (fotodakı stəkan qüllənin dibidir);
+        // yuxarı kənarı səmaya yumşaq keçir
+        if (baseInPhoto()) {
+            const r = photoRect();
+            ctx.drawImage(BG.photo, r.x, r.y, r.w, r.h);
+            const fade = ctx.createLinearGradient(0, r.y, 0, r.y + 80);
+            fade.addColorStop(0, '#4b5c7c');
+            fade.addColorStop(1, 'rgba(75, 92, 124, 0)');
+            ctx.fillStyle = fade;
+            ctx.fillRect(0, r.y - 1, LW, 81);
+        }
 
         // arxa fona çırpılmış çay ləkələri və aşağı axan izləri
         for (const st of g.stains) {
@@ -712,27 +984,39 @@
             ctx.fill();
         }
 
-        // masa və nəlbəki
+        // masa və nəlbəki — yalnız foto yüklənməyibsə (fotoda stəkan və nəlbəki artıq var)
+        if (!baseInPhoto()) {
         const table = ctx.createLinearGradient(0, BASE_Y + 8, 0, BASE_Y + 80);
         table.addColorStop(0, '#8a5228');
         table.addColorStop(1, '#4a250f');
         ctx.fillStyle = table;
         ctx.fillRect(0, BASE_Y + 8, LW, 400);
         drawCloth();
-        ctx.fillStyle = '#fff';
+        // nəlbəki: şəffaf büllur, qızılı haşiyə, mərkəzdən kənara şüalanan zolaqlar
+        const scx = LW / 2, scy = BASE_Y + 4, srx = GW * 0.85, sry = 9;
+        ctx.fillStyle = 'rgba(235, 240, 245, .55)';
+        ctx.beginPath();
+        ctx.ellipse(scx, scy, srx, sry, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 255, 255, .7)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        for (let i = 0; i < 36; i++) {
+            const ang = i * Math.PI * 2 / 36;
+            ctx.moveTo(scx + Math.cos(ang) * srx * 0.5, scy + Math.sin(ang) * sry * 0.5);
+            ctx.lineTo(scx + Math.cos(ang) * srx * 0.92, scy + Math.sin(ang) * sry * 0.92);
+        }
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(150, 160, 170, .6)';
+        ctx.beginPath();
+        ctx.ellipse(scx, scy, srx * 0.48, sry * 0.48, 0, 0, Math.PI * 2);
+        ctx.stroke();
         ctx.strokeStyle = '#E9A23B';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.ellipse(LW / 2, BASE_Y + 4, GW * 0.8, 9, 0, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.ellipse(scx, scy, srx, sry, 0, 0, Math.PI * 2);
         ctx.stroke();
-
-        // masanın sağında: ayaqlı büllur qabda limon dilimləri
-        ctx.save();
-        ctx.translate(LW - 62, BASE_Y + 9);
-        ctx.scale(0.72, 0.72); // qabın ölçüsü
-        drawLemonDish(0, 0);
-        ctx.restore();
+        }
 
         // masada dağılmış çay ləkələri
         for (const p of g.puddles) {
@@ -743,7 +1027,11 @@
         }
 
         // qüllə
-        g.tower.forEach((t, i) => drawGlass(t.x + sx * (i / Math.max(1, g.tower.length)), BASE_Y - i * GH));
+        // ilk stəkan fotodakı stəkandır — foto varsa onu çəkmirik
+        g.tower.forEach((t, i) => {
+            if (i === 0 && baseInPhoto()) return;
+            drawGlass(t.x + sx * (i / Math.max(1, g.tower.length)), BASE_Y - i * GH, 0, 1, t.s ? t.s.a : 0);
+        });
 
         // yellənən / düşən / aşan stəkan
         if (g.state === 'swing' || g.state === 'ready') {
@@ -755,9 +1043,10 @@
             ctx.lineTo(g.swing.x, topBottomY() - GH);
             ctx.stroke();
             ctx.setLineDash([]);
-            drawGlass(g.swing.x, swingY());
+            const wobble = g.swing.warn ? Math.sin(g.time * 45) * 0.12 : 0; // geri dönəcək — titrəyir
+            drawGlass(g.swing.x, swingY(), wobble, 1, g.slosh.a);
         }
-        if (g.state === 'drop') drawGlass(g.drop.x, g.drop.y);
+        if (g.state === 'drop') drawGlass(g.drop.x, g.drop.y, 0, 1, g.slosh.a);
         if ((g.state === 'fall' || g.state === 'over') && g.falling) {
             g.falling.forEach(f => { if (!f.broken) drawGlass(f.x, f.y, f.rot); });
         }
@@ -793,29 +1082,257 @@
         // "Əla!" yazıları
         g.popups.forEach(p => {
             ctx.globalAlpha = Math.max(0, p.life);
-            ctx.fillStyle = p.warn ? '#c0392b' : '#7E1A1A';
             ctx.font = p.warn ? '900 17px Nunito, sans-serif' : '900 20px Nunito, sans-serif';
             ctx.textAlign = 'center';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = 'rgba(30, 8, 8, .85)'; // tünd fonda da oxunsun deyə kontur
+            ctx.strokeText(p.text, p.x, p.y);
+            ctx.fillStyle = p.warn ? '#ff7a6b' : '#ffd27a';
             ctx.fillText(p.text, p.x, p.y);
             ctx.globalAlpha = 1;
         });
         ctx.restore();
 
+        weatherFront(); // yağış, qar, uçan yarpaqlar, şimşək — qüllənin önündə
+
         // hesab
         ctx.textAlign = 'center';
-        ctx.fillStyle = h > 0.5 ? '#fff' : '#3A0D0D';
+        ctx.save();
+        ctx.shadowColor = 'rgba(0, 0, 0, .6)';  // tünd fonda oxunsun
+        ctx.shadowBlur = 6;
+        ctx.fillStyle = '#fff';
         ctx.font = '900 44px Nunito, sans-serif';
         ctx.fillText(g.score, LW / 2, 58);
         ctx.font = '700 13px Nunito, sans-serif';
         ctx.globalAlpha = 0.7;
         ctx.fillText(`Rekord: ${Math.max(best, g.score)}`, LW / 2, 80);
-        ctx.globalAlpha = 1;
+        ctx.restore();
     }
 
     function mix(a, b, t) {
         const pa = a.match(/\w\w/g).map(x => parseInt(x, 16));
         const pb = b.match(/\w\w/g).map(x => parseInt(x, 16));
         return 'rgb(' + pa.map((v, i) => Math.round(v + (pb[i] - v) * t)).join(',') + ')';
+    }
+
+    /* ---------- Bakının havası ---------- */
+    // Server Bakının indiki havasını verir (data-weather): {kind, wind, windDir, windy, temp, day, label}.
+    // kind: clear | clouds | rain | storm | snow | fog. Effektlər yalnız görünüşdür, oyunun gedişinə təsir etmir.
+    let W = null;
+    try { W = JSON.parse(root.dataset.weather || 'null'); } catch (e) { W = null; }
+    const fx = {drops: [], flakes: [], leaves: [], fog: [], stars: [], flash: 0, bolt: null, nextBolt: 4, t: 0};
+    let windX = 0; // -1..1: küləyin ekranda istiqaməti və gücü
+
+    function initWeather() {
+        fx.drops = []; fx.flakes = []; fx.leaves = []; fx.fog = []; fx.stars = [];
+        fx.flash = 0; fx.bolt = null; fx.nextBolt = rnd(3, 6);
+        if (!W) return;
+        // küləyin gəldiyi tərəf (dərəcə) — şərqdən əsəndə sola, qərbdən əsəndə sağa
+        const s = Math.sin(W.windDir * Math.PI / 180);
+        windX = (Math.abs(s) < 0.3 ? 1 : -Math.sign(s)) * Math.min(1, W.wind / 50);
+        const k = W.kind;
+        const rain = k === 'rain' ? 80 : k === 'storm' ? 130 : 0;
+        for (let i = 0; i < rain; i++) fx.drops.push(newDrop(true));
+        if (k === 'snow') for (let i = 0; i < 70; i++) fx.flakes.push(newFlake(true));
+        if (k === 'fog') for (let i = 0; i < 4; i++) fx.fog.push({x: rnd(0, LW), y: 140 + i * 95, w: rnd(320, 460)});
+        if (W.windy) for (let i = 0; i < 16; i++) fx.leaves.push(newLeaf(true));
+        if (!W.day) for (let i = 0; i < 28; i++) fx.stars.push({x: rnd(0, LW), y: rnd(10, 260), p: rnd(0, 6)});
+    }
+
+    function newDrop(any) {
+        return {x: rnd(-80, LW + 80), y: any ? rnd(-LH, LH) : rnd(-60, -10), len: rnd(10, 17), v: rnd(520, 720)};
+    }
+    function newFlake(any) {
+        return {x: rnd(-40, LW + 40), y: any ? rnd(-LH, LH) : rnd(-30, -5), r: rnd(1, 2.6), v: rnd(28, 62), p: rnd(0, 6)};
+    }
+    function newLeaf(any) {
+        const dir = windX < 0 ? -1 : 1;
+        return {
+            x: any ? rnd(0, LW) : (dir > 0 ? rnd(-60, -10) : rnd(LW + 10, LW + 60)), y: rnd(60, LH - 80),
+            v: rnd(120, 230) * dir, p: rnd(0, 6), rot: rnd(0, 6), vr: rnd(-6, 6), s: rnd(5, 9),
+            c: ['#c9831f', '#a0522d', '#d9a237', '#8b5a2b'][Math.floor(rnd(0, 4))],
+        };
+    }
+
+    function updateWeather(dt) {
+        if (!W || !(dt > 0)) return;
+        fx.t += dt;
+        for (const d of fx.drops) {
+            d.y += d.v * dt;
+            d.x += windX * d.v * 0.45 * dt;
+            if (d.y > LH + 20) Object.assign(d, newDrop(false));
+        }
+        for (const f of fx.flakes) {
+            f.y += f.v * dt;
+            f.x += (windX * 90 + Math.sin(fx.t * 1.6 + f.p) * 18) * dt;
+            if (f.y > LH + 10 || f.x < -60 || f.x > LW + 60) Object.assign(f, newFlake(false));
+        }
+        for (const l of fx.leaves) {
+            l.x += l.v * dt;
+            l.y += Math.sin(fx.t * 3 + l.p) * 40 * dt;
+            l.rot += l.vr * dt;
+            if (l.x < -80 || l.x > LW + 80) Object.assign(l, newLeaf(false));
+        }
+        for (const f of fx.fog) {
+            f.x += (8 + Math.abs(windX) * 20) * dt;
+            if (f.x - f.w / 2 > LW) f.x = -f.w / 2;
+        }
+        // ildırım: təsadüfi fasilələrlə şimşək çaxır, bir az sonra gurultu gəlir
+        if (W.kind === 'storm') {
+            fx.nextBolt -= dt;
+            if (fx.nextBolt <= 0) {
+                fx.flash = 1;
+                fx.nextBolt = rnd(4, 9);
+                const pts = [[rnd(60, LW - 60), 0]];
+                while (pts[pts.length - 1][1] < rnd(220, 330)) {
+                    const [px, py] = pts[pts.length - 1];
+                    pts.push([px + rnd(-22, 22), py + rnd(18, 34)]);
+                }
+                fx.bolt = pts;
+                if (sound.started) setTimeout(() => sound.thunder(), rnd(250, 700));
+            }
+            fx.flash = Math.max(0, fx.flash - dt * 2.8);
+        }
+    }
+
+    function weatherBack() {
+        if (!W) return;
+        const k = W.kind;
+        // ümumi çalar: gecə tündləşir, yağışda boz-mavi, günəşli gündə isti
+        const tint = !W.day ? 'rgba(8, 12, 40, .42)'
+            : k === 'storm' ? 'rgba(20, 26, 40, .38)'
+            : k === 'rain' ? 'rgba(40, 55, 75, .25)'
+            : k === 'fog' ? 'rgba(200, 205, 210, .18)'
+            : k === 'clear' ? 'rgba(255, 196, 110, .08)' : null;
+        if (tint) { ctx.fillStyle = tint; ctx.fillRect(0, 0, LW, LH); }
+
+        if (k === 'clear' && W.day) {
+            // günəş: isti parıltı, yavaş fırlanan şüalar
+            const sx = LW - 78, sy = 150;
+            const glow = ctx.createRadialGradient(sx, sy, 8, sx, sy, 120);
+            glow.addColorStop(0, 'rgba(255, 226, 140, .55)');
+            glow.addColorStop(1, 'rgba(255, 226, 140, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, LW, LH);
+            ctx.save();
+            ctx.translate(sx, sy);
+            ctx.rotate(fx.t * 0.15);
+            ctx.strokeStyle = 'rgba(255, 228, 150, .35)';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            for (let i = 0; i < 12; i++) {
+                const a = i * Math.PI / 6, r1 = 30, r2 = 48 + (i % 2) * 14;
+                ctx.moveTo(Math.cos(a) * r1, Math.sin(a) * r1);
+                ctx.lineTo(Math.cos(a) * r2, Math.sin(a) * r2);
+            }
+            ctx.stroke();
+            ctx.restore();
+            ctx.fillStyle = 'rgba(255, 232, 160, .95)';
+            ctx.beginPath(); ctx.arc(sx, sy, 22, 0, Math.PI * 2); ctx.fill();
+        }
+        if (!W.day) {
+            // gecə: sayrışan ulduzlar və ay
+            for (const s of fx.stars) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${0.35 + 0.4 * Math.abs(Math.sin(fx.t * 1.5 + s.p))})`;
+                ctx.fillRect(s.x, s.y, 2, 2);
+            }
+            if (k === 'clear' || k === 'clouds') {
+                const mx = 70, my = 140;
+                const glow = ctx.createRadialGradient(mx, my, 4, mx, my, 60);
+                glow.addColorStop(0, 'rgba(250, 245, 210, .4)');
+                glow.addColorStop(1, 'rgba(250, 245, 210, 0)');
+                ctx.fillStyle = glow;
+                ctx.fillRect(0, 0, LW, LH);
+                ctx.fillStyle = '#f4f0cf';
+                ctx.beginPath(); ctx.arc(mx, my, 16, 0, Math.PI * 2); ctx.fill();
+            }
+        }
+        for (const f of fx.fog) {
+            const gr = ctx.createLinearGradient(0, f.y - 40, 0, f.y + 40);
+            gr.addColorStop(0, 'rgba(235, 238, 240, 0)');
+            gr.addColorStop(0.5, 'rgba(235, 238, 240, .45)');
+            gr.addColorStop(1, 'rgba(235, 238, 240, 0)');
+            ctx.fillStyle = gr;
+            ctx.fillRect(f.x - f.w / 2, f.y - 40, f.w, 80);
+            ctx.fillRect(f.x - f.w / 2 - LW - 60, f.y - 40, f.w, 80); // ekranın o biri tərəfindən davamı
+        }
+    }
+
+    function weatherFront() {
+        if (!W) return;
+        if (fx.drops.length) {
+            ctx.strokeStyle = 'rgba(205, 222, 255, .55)';
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            for (const d of fx.drops) {
+                ctx.moveTo(d.x, d.y);
+                ctx.lineTo(d.x - windX * d.len * 0.45, d.y - d.len); // külək yağışı maili edir
+            }
+            ctx.stroke();
+        }
+        if (fx.flakes.length) {
+            ctx.fillStyle = 'rgba(255, 255, 255, .9)';
+            ctx.beginPath();
+            for (const f of fx.flakes) {
+                ctx.moveTo(f.x + f.r, f.y);
+                ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+            }
+            ctx.fill();
+        }
+        for (const l of fx.leaves) {
+            ctx.save();
+            ctx.translate(l.x, l.y);
+            ctx.rotate(l.rot);
+            ctx.fillStyle = l.c;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, l.s, l.s * 0.45, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(60, 30, 10, .6)'; // yarpağın orta damarı
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            ctx.moveTo(-l.s, 0);
+            ctx.lineTo(l.s, 0);
+            ctx.stroke();
+            ctx.restore();
+        }
+        if (fx.flash > 0) {
+            ctx.fillStyle = `rgba(235, 240, 255, ${fx.flash * 0.5})`;
+            ctx.fillRect(0, 0, LW, LH);
+            if (fx.bolt && fx.flash > 0.45) {
+                ctx.strokeStyle = `rgba(255, 255, 255, ${fx.flash})`;
+                ctx.lineWidth = 2.5;
+                ctx.shadowColor = 'rgba(180, 200, 255, .9)';
+                ctx.shadowBlur = 12;
+                ctx.beginPath();
+                fx.bolt.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+        }
+        // sol yuxarıda havanın qısa təsviri
+        const icon = {clear: W.day ? '☀️' : '🌙', clouds: '☁️', rain: '🌧️', storm: '⛈️', snow: '❄️', fog: '🌫️'}[W.kind] || '';
+        ctx.save();
+        ctx.textAlign = 'left';
+        ctx.shadowColor = 'rgba(0, 0, 0, .7)';
+        ctx.shadowBlur = 4;
+        ctx.fillStyle = '#fff';
+        ctx.font = '800 13px Nunito, sans-serif';
+        ctx.fillText(`${icon}${W.windy ? ' 💨' : ''} Bakı${W.temp !== null ? ` ${W.temp}°C` : ''}`, 12, 24);
+        ctx.font = '700 11px Nunito, sans-serif';
+        ctx.globalAlpha = 0.85;
+        ctx.fillText(W.label, 12, 40);
+        ctx.restore();
+    }
+
+    initWeather();
+    // baxış rejimi (?hava=...) yoxdursa, canlı havanı səhifə açılandan sonra gətiririk
+    if (!W && root.dataset.weatherUrl) {
+        fetch(root.dataset.weatherUrl, {headers: {'Accept': 'application/json'}, credentials: 'same-origin'})
+            .then(r => (r.ok ? r.json() : null))
+            .then(d => { if (d && d.weather) { W = d.weather; initWeather(); } })
+            .catch(() => { /* hava gəlmədi — oyun effektsiz davam edir */ });
     }
 
     /* ---------- Oyunun sonu ---------- */
@@ -856,8 +1373,19 @@
 
     /* ---------- Döngü və ölçü ---------- */
 
+    const stage = root.querySelector('.st-stage');
+    const fullBtn = root.querySelector('.st-full');
+
     function resize() {
-        const w = root.querySelector('.st-stage').clientWidth;
+        let w;
+        if (root.classList.contains('is-full')) {
+            // böyük ekran: kətan ekrana sığsın, nisbət (400×560) qorunsun
+            w = Math.floor(Math.min(window.innerWidth, window.innerHeight * LW / LH));
+            stage.style.width = w + 'px';
+        } else {
+            stage.style.width = '';
+            w = stage.clientWidth;
+        }
         scale = w / LW;
         dpr = Math.min(2, window.devicePixelRatio || 1);
         canvas.style.width = w + 'px';
@@ -872,6 +1400,7 @@
         const dt = Math.min(0.05, (now - last) / 1000);
         last = now;
         if (!manual && (g.state !== 'over' || g.falling)) update(dt);
+        updateWeather(dt);
         ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
         drawScene();
         requestAnimationFrame(frame);
@@ -889,14 +1418,70 @@
     offer.querySelector('.st-accept').addEventListener('click', acceptPrize);
     window.addEventListener('resize', resize);
 
+    /* ---------- Səs düyməsi ---------- */
+    const soundBtn = root.querySelector('.st-sound');
+    function paintSound() {
+        soundBtn.querySelector('i').className = sound.muted ? 'fa fa-volume-mute' : 'fa fa-volume-up';
+        soundBtn.title = sound.muted ? 'Səsi aç' : 'Səsi bağla';
+        soundBtn.setAttribute('aria-label', soundBtn.title);
+    }
+    soundBtn.addEventListener('click', () => {
+        sound.toggle();
+        paintSound();
+        if (!sound.muted) sound.clink();
+        soundBtn.blur();
+    });
+    paintSound();
+
+    /* ---------- Böyük ekran ---------- */
+    // Fullscreen API olmayan brauzerlərdə (məs. iPhone Safari) oyun CSS ilə ekranı tutur
+    const nativeFull = () => document.fullscreenElement || document.webkitFullscreenElement;
+
+    function setFull(on) {
+        root.classList.toggle('is-full', on);
+        document.body.classList.toggle('st-no-scroll', on);
+        fullBtn.querySelector('i').className = on ? 'fa fa-compress' : 'fa fa-expand';
+        fullBtn.title = on ? 'Kiçik ekran' : 'Böyük ekran';
+        fullBtn.setAttribute('aria-label', fullBtn.title);
+        resize();
+    }
+
+    function toggleFull() {
+        const on = !root.classList.contains('is-full');
+        if (on) {
+            const req = root.requestFullscreen || root.webkitRequestFullscreen;
+            if (req) {
+                const p = req.call(root);
+                if (p && p.catch) p.catch(() => {}); // icazə verilməsə də CSS rejimi işləyir
+            }
+            setFull(true);
+        } else {
+            if (nativeFull()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+            setFull(false);
+        }
+    }
+
+    fullBtn.addEventListener('click', e => {
+        toggleFull();
+        fullBtn.blur(); // fokus düymədə qalmasın ki, Boşluq oyunda işləsin
+    });
+    // istifadəçi Esc ilə brauzerin tam ekranından çıxanda
+    const onFullChange = () => { if (!nativeFull() && root.classList.contains('is-full')) setFull(false); };
+    document.addEventListener('fullscreenchange', onFullChange);
+    document.addEventListener('webkitfullscreenchange', onFullChange);
+    window.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && root.classList.contains('is-full') && !nativeFull()) setFull(false);
+    });
+
     resize();
     reset();
     requestAnimationFrame(frame);
 
     // Testlər üçün
     window.__stack = {
-        state: () => g, tap, consts: {GW, PERFECT, SUPPORT}, stability, checkPrize, continueGame,
+        state: () => g, tap, consts: {GW, PERFECT, SUPPORT, BOOST_FROM}, boost, newSwing, stability, checkPrize, continueGame,
         manual: on => { manual = on; },
+        weather: () => ({W, windX, drops: fx.drops.length, flakes: fx.flakes.length, leaves: fx.leaves.length}),
         step: (dt = 1 / 60) => { if (g.state !== 'over' || g.falling) update(dt); },
     };
 })();

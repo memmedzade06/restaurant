@@ -88,6 +88,7 @@ Route::prefix('oyunlar')->name('games.')->controller(\App\Http\Controllers\Front
     Route::get('/nerd', 'nard')->name('nard');
     Route::post('/nerd/netice', 'nardResult')->middleware(['auth', 'phone.verified', 'throttle:20,1'])->name('nard.result');
     Route::get('/stekan', 'stack')->name('stack');
+    Route::get('/stekan/hava', 'stackWeather')->middleware('throttle:30,1')->name('stack.weather');
     Route::post('/stekan/basla', 'stackStart')->middleware(['auth', 'phone.verified', 'throttle:60,1'])->name('stack.start');
     Route::post('/stekan/hediyye', 'stackPrize')->middleware(['auth', 'phone.verified', 'throttle:10,1'])->name('stack.prize');
     Route::post('/stekan/netice', 'stackResult')->middleware(['auth', 'phone.verified', 'throttle:30,1'])->name('stack.result');

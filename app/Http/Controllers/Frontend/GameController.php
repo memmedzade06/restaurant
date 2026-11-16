@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\Models\WheelSpin;
+use App\Services\BakuWeather;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -40,7 +41,16 @@ class GameController extends Controller
             'best' => $verified ? $this->stackBest($user->id) : null,
             'prizes' => $this->stackPrizes(),
             'prizeLeft' => $verified ? $this->stackPrizesLeft($user->id) : null,
+            // ?hava=rain kimi baxış rejimi; yoxsa canlı hava səhifə açılandan sonra ayrıca sorğu ilə gəlir
+            // (xidmət bir neçə saniyə cavab verə bilər — səhifə bunu gözləməsin)
+            'weather' => BakuWeather::preview($request->query('hava')),
         ]);
+    }
+
+    /** Bakının indiki havası (keşdən) — Stəkan qülləsinin hava effektləri üçün */
+    public function stackWeather(BakuWeather $weather): JsonResponse
+    {
+        return response()->json(['weather' => $weather->current()]);
     }
 
     /** Yeni oyun başladı — vaxtı sessiyada saxlayırıq (hədiyyə tələbini yoxlamaq üçün) */

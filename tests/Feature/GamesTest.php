@@ -5,7 +5,10 @@ namespace Tests\Feature;
 use App\Models\GameResult;
 use App\Models\User;
 use App\Models\WheelSpin;
+use App\Services\BakuWeather;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class GamesTest extends TestCase
@@ -102,6 +105,48 @@ class GamesTest extends TestCase
         $this->actingAs($u)->postJson('/oyunlar/bext-carxi/gotur')->assertStatus(422); // heç fırlatmayıb
         $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertOk();
         $this->actingAs($u)->postJson('/oyunlar/bext-carxi/gotur')->assertStatus(422); // "Şansını bir daha sına"
+    }
+
+    public function test_stack_page_passes_baku_weather(): void
+    {
+        Cache::forget('baku_weather');
+        Http::fake(['api.open-meteo.com/*' => Http::response(['current' => [
+            'temperature_2m' => 11.6, 'weather_code' => 63, 'wind_speed_10m' => 38, 'wind_direction_10m' => 340, 'is_day' => 1,
+        ]])]);
+
+        // səhifə xidməti gözləmir — hava ayrıca sorğu ilə gəlir
+        $this->get('/oyunlar/stekan')->assertOk()->assertSee("data-weather='null'", false)->assertSee('/oyunlar/stekan/hava');
+        Http::assertSentCount(0);
+
+        $this->getJson('/oyunlar/stekan/hava')->assertOk()->assertJson(['weather' => [
+            'kind' => 'rain', 'windy' => true, 'label' => 'Yağışlı, küləkli', 'temp' => 12,
+        ]]);
+
+        // keşdən gəlir — ikinci dəfə xidmətə sorğu getmir
+        $this->getJson('/oyunlar/stekan/hava')->assertOk()->assertJsonPath('weather.kind', 'rain');
+        Http::assertSentCount(1);
+    }
+
+    public function test_stack_weather_fails_quietly_and_has_preview(): void
+    {
+        Cache::forget('baku_weather');
+        Http::fake(['api.open-meteo.com/*' => Http::response('', 500)]);
+
+        $this->getJson('/oyunlar/stekan/hava')->assertOk()->assertExactJson(['weather' => null]);
+        $this->get('/oyunlar/stekan?hava=storm')->assertOk()->assertViewHas('weather', fn ($w) => $w['kind'] === 'storm');
+        $this->get('/oyunlar/stekan?hava=clear-wind')->assertOk()
+            ->assertViewHas('weather', fn ($w) => $w['label'] === 'Günəşli, küləkli' && $w['windy'] === true);
+    }
+
+    public function test_weather_codes_map_to_effects(): void
+    {
+        $this->assertSame('clear', BakuWeather::kindFromCode(0));
+        $this->assertSame('clouds', BakuWeather::kindFromCode(3));
+        $this->assertSame('fog', BakuWeather::kindFromCode(45));
+        $this->assertSame('rain', BakuWeather::kindFromCode(61));
+        $this->assertSame('rain', BakuWeather::kindFromCode(81));
+        $this->assertSame('snow', BakuWeather::kindFromCode(73));
+        $this->assertSame('storm', BakuWeather::kindFromCode(95));
     }
 
     public function test_stack_game_saves_best_score_for_verified_only(): void

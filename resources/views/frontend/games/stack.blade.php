@@ -27,11 +27,17 @@
                      data-prizes-url="{{ route('prizes') }}"
                      data-prizes='@json($prizes)'
                      data-prize-left="{{ $prizeLeft ?? '' }}"
-                     data-bg-logo="{{ asset('img/games/stack-logo.png') }}"
+                     data-weather='@json($weather)'
+                     data-weather-url="{{ route('games.stack.weather') }}"
+                     data-cloth="{{ asset('img/games/stack-cloth.webp') }}?v=1"
+                     data-bg-photo="{{ asset('img/games/stack-bg.jpg') }}?v=6"
                      data-register-url="{{ auth()->check() ? route('verify.telegram') : route('register') }}"
                      data-best="{{ $best ?? 0 }}">
                     <div class="st-stage">
                         <canvas aria-label="Stəkan qülləsi oyunu"></canvas>
+
+                        <button type="button" class="st-sound" title="Səsi bağla" aria-label="Səsi bağla"><i class="fa fa-volume-up"></i></button>
+                        <button type="button" class="st-full" title="Böyük ekran" aria-label="Böyük ekran"><i class="fa fa-expand"></i></button>
 
                         <div class="st-start">
                             <div class="st-start-box">
@@ -92,6 +98,7 @@
                         <div class="rules-note"><i class="fa fa-info-circle me-2"></i>Minimal masa hesabı <b>10 AZN</b> olmalıdır.</div>
                         <ul class="rules">
                             <li>Yuxarıda stəkan sağa-sola yellənir.</li>
+                        <li><b>30-cu stəkandan sonra</b> stəkan daha sürətli yellənir və hər yeni stəkanda daha da sürətlənir. Hər stəkanın sürəti fərqli olur və bəzən yolun ortasında geri dönür. Stəkan titrəyirsə — indi geri dönəcək!</li>
                             <li>Toxunun — stəkan düşüb qüllənin üstünə qonur.</li>
                             <li>Hər stəkan <b>1 xal</b>, dəqiq üstünə qonsa <b>«Əla!» — 2 xal</b>.</li>
                             @foreach ($prizes as $min => $p)
@@ -111,5 +118,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/stack.js') }}?v=26"></script>
+<script src="{{ asset('js/games/stack.js') }}?v=56"></script>
 @endsection
