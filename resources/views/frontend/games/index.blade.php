@@ -173,6 +173,47 @@
                     </div>
                 </a>
             </div>
+            <div class="col-md-6 col-lg-4">
+                <a href="{{ route('games.claw') }}" class="game-card">
+                    <div class="game-art claw-art">
+                        {{-- kiçik kran maşını: zolaqlı tente, şüşədə şirniyyatlar, sağa-sola gedən çəngəl --}}
+                        <svg class="claw-art-svg" viewBox="0 0 160 200" aria-hidden="true">
+                            <rect x="4" y="4" width="152" height="192" rx="14" fill="#7E1A1A"/>
+                            <rect x="14" y="10" width="132" height="26" rx="7" fill="#3A0D0D" stroke="#E9A23B" stroke-width="2"/>
+                            <text x="80" y="28" text-anchor="middle" font-family="Playfair Display, Georgia, serif" font-weight="700" font-size="13" fill="#E9A23B">50 Qəpik</text>
+                            <rect x="12" y="50" width="136" height="110" fill="#3a1512" stroke="#E9A23B" stroke-width="3"/>
+                            @for ($i = 0; $i < 8; $i++)
+                                <path d="M{{ 6 + $i * 18.5 }} 38 h18.5 v8 a9.25 9.25 0 0 1 -18.5 0 Z" fill="{{ $i % 2 ? '#FBF6EF' : '#E9A23B' }}"/>
+                            @endfor
+                            <rect x="12" y="62" width="136" height="3" fill="#C9831F"/>
+                            {{-- şirniyyatlar: konfet, paxlava, şəkərbura, qoğal --}}
+                            <path d="M50 145 l-7 -6 v12 Z M74 145 l7 -6 v12 Z" fill="#c62a2a"/><ellipse cx="62" cy="145" rx="12" ry="9" fill="#c62a2a"/>
+                            <path d="M88 128 l13 14 l-13 14 l-13 -14 Z" fill="#E9A23B" stroke="#9a5c12" stroke-width="1.5"/>
+                            <ellipse cx="118" cy="146" rx="15" ry="11" fill="#f0d8a4"/>
+                            <circle cx="104" cy="124" r="12" fill="#d9973a" stroke="#9c5c1a" stroke-width="1.5"/>
+                            <path d="M66 122 l-6 -5 v10 Z M86 122 l6 -5 v10 Z" fill="#2f7d4f"/><ellipse cx="76" cy="122" rx="10" ry="8" fill="#2f7d4f"/>
+                            <circle cx="132" cy="122" r="11" fill="#E9A23B"/>
+                            <rect x="44" y="118" width="3" height="42" fill="rgba(255,255,255,.3)"/>
+                            {{-- çəngəl --}}
+                            <g class="ca-claw">
+                                <rect x="88" y="58" width="18" height="9" rx="3" fill="#E9A23B"/>
+                                <line x1="97" y1="66" x2="97" y2="88" stroke="#d8c6a8" stroke-width="1.5"/>
+                                <rect x="90" y="86" width="14" height="9" rx="3" fill="#E9A23B"/>
+                                <path d="M93 95 l-7 9 l3 8 M101 95 l7 9 l-3 8" fill="none" stroke="#d9d2c4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </g>
+                            <rect x="12" y="160" width="136" height="3" fill="#E9A23B"/>
+                            <rect x="18" y="168" width="34" height="16" rx="4" fill="#1E0B0B" stroke="#E9A23B" stroke-width="1.5"/>
+                            <circle cx="122" cy="176" r="8" fill="#c62a2a" stroke="#f6cf6b" stroke-width="2"/>
+                            <circle cx="100" cy="176" r="5" fill="#1E0B0B" stroke="#E9A23B" stroke-width="1.5"/>
+                        </svg>
+                    </div>
+                    <div class="game-body">
+                        <h4>Hədiyyə Kranı</h4>
+                        <p>Çəngəli tuşlayın — konfet, şəkərbura, paxlava və qoğal kimi şirniyyatları tutub çıxışa salın!</p>
+                        <span class="game-go">Oyna <i class="fa fa-arrow-right ms-1"></i></span>
+                    </div>
+                </a>
+            </div>
         </div>
 
         <div class="row g-4 mt-1">

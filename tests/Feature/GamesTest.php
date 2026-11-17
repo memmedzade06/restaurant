@@ -35,6 +35,8 @@ class GamesTest extends TestCase
         $this->get('/oyunlar')->assertOk()->assertSee('Uzun nərd')->assertSee('Bəxt çarxı');
         $this->get('/oyunlar/nerd')->assertOk()->assertSee('data-can-save="0"', false);
         $this->get('/oyunlar/bext-carxi')->assertOk()->assertSee('<b>sınaq</b>', false);
+        $this->get('/oyunlar/hediyye-krani')->assertOk()->assertSee('Hədiyyə Kranı')->assertSee('js/games/claw.js', false);
+        $this->get('/oyunlar')->assertSee('Hədiyyə Kranı');
     }
 
     public function test_guest_spin_is_demo_and_not_saved(): void

@@ -263,6 +263,12 @@ class GameController extends Controller
         return response()->json(['saved' => false, 'points' => 0]);
     }
 
+    /** Hədiyyə Kranı: hələlik yalnız əyləncə üçündür — xal yazılmır, hədiyyə verilmir */
+    public function claw(): View
+    {
+        return view('frontend.games.claw');
+    }
+
     public function wheel(Request $request): View
     {
         $user = $request->user();
