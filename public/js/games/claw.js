@@ -1,9 +1,9 @@
 /* =========================================================
    50 Qəpik — Hədiyyə Kranı (3D)
-   Şüşə qutunun eni, hündürlüyü və dərinliyi var: çəngəl sağa-sola
-   və irəli-geri gedir. Şirniyyatlar (konfet, lolipop, lokum, paxlava,
-   Şəki halvası, qızıl sikkə və s.) kürələr kimi fizika ilə qalaqlanır. Ön sol
-   küncdəki çıxışa salanda xal qazanırsınız. Hələlik yalnız əyləncə üçündür.
+   Şüşə qutuda rəngli şarlar: çəngəli sağa-sola və irəli-geri sürüb şar tutursunuz,
+   ön sol küncdəki çıxışa düşən şar açılır və içindən hədiyyə çıxır.
+   Hədiyyəni SERVER seçir (ClawController): gündə 3 cəhd, real kod — Bəxt çarxı kimi.
+   Qonaqlar və təsdiqlənməmiş istifadəçilər sınaq rejimində oynayır (kod verilmir).
    ========================================================= */
 (function () {
     'use strict';
@@ -28,25 +28,15 @@
     var X_MIN = G.l + 24, X_MAX = G.r - 24, Z_MIN = 16, Z_MAX = D - 16;
     var GRAV = 1500;
     var STEP = 1 / 120;
-    var ATTEMPTS = 5, TURN_SECONDS = 15;
+    var TURN_SECONDS = 15;
     var SPEED = 150;
 
-    var TYPES = {
-        // n — qutuda neçə ədəd; az olan nadir və dəyərlidir
-        konfet:    { name: 'Konfet',       r: 15, pts: 1, heavy: 0,   n: 6 },
-        lolipop:   { name: 'Lolipop',      r: 15, pts: 1, heavy: .02, n: 4 },
-        pismaniye: { name: 'Pişmaniye',    r: 17, pts: 1, heavy: 0,   n: 3 },
-        lokum:     { name: 'Rəngli lokum', r: 14, pts: 1, heavy: 0,   n: 5 },
-        sekerbura: { name: 'Şəkərbura',    r: 17, pts: 2, heavy: .06, n: 4 },
-        paxlava:   { name: 'Paxlava',      r: 17, pts: 2, heavy: .08, n: 4 },
-        badambura: { name: 'Badambura',    r: 16, pts: 2, heavy: .04, n: 3 },
-        nabat:     { name: 'Nabat',        r: 15, pts: 2, heavy: .05, n: 3 },
-        mutekke:   { name: 'Mütəkkə',      r: 17, pts: 2, heavy: .07, n: 3 },
-        kete:      { name: 'Kətə',         r: 18, pts: 2, heavy: .08, n: 3 },
-        qogal:     { name: 'Qoğal',        r: 20, pts: 3, heavy: .18, n: 3 },
-        halva:     { name: 'Şəki halvası', r: 18, pts: 4, heavy: .14, n: 2 },
-        sikke:     { name: 'Qızıl sikkə',  r: 13, pts: 5, heavy: .1,  n: 1 }
-    };
+    // Rəngli şarlar: [əsas rəng, açıq çalar]
+    var BALL_COLORS = [
+        ['#e63946', '#ff9a9a'], ['#f4a261', '#ffd8a8'], ['#2a9d8f', '#8ee6da'], ['#3a86ff', '#a8ccff'],
+        ['#8338ec', '#cdaeff'], ['#ff006e', '#ff99c8'], ['#ffbe0b', '#ffe79a'], ['#06d6a0', '#94f4d8']
+    ];
+    var BALL_R = 17, BALL_N = 34;
     var CS = .8;   // çəngəlin miqyası
 
     function sc(z) { return 1 - (1 - SB) * z / D; }
@@ -55,18 +45,29 @@
         return { x: V.x + (x - V.x) * s, y: V.y + (y - V.y) * s, s: s };
     }
 
-    /* ---------- HTML elementləri ---------- */
+    /* ---------- HTML və server ---------- */
     var $ = function (s) { return root.querySelector(s); };
     var el = {
-        start: $('.cl-start'), result: $('.cl-result'), title: $('.cl-title'), score: $('.cl-score'),
-        note: $('.cl-note'), again: $('.cl-again'), attempts: $('.cl-attempts'), points: $('.cl-points'),
-        time: $('.cl-time'), drop: $('.cl-drop'), arrows: root.querySelectorAll('.cl-arrow')
+        start: $('.cl-start'), result: $('.cl-result'), box: $('.cl-result .nb-result-box'),
+        attempts: $('.cl-attempts'), time: $('.cl-time'), drop: $('.cl-drop'), arrows: root.querySelectorAll('.cl-arrow')
     };
-    var bestEl = document.querySelector('.cl-best');
+    var VERIFIED = root.dataset.verified === '1';
+    var URL = { start: root.dataset.startUrl, open: root.dataset.openUrl, claim: root.dataset.claimUrl, register: root.dataset.registerUrl, prizes: root.dataset.prizesUrl };
+    var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+    var server = null;   // təsdiqlənmiş istifadəçinin bu günki vəziyyəti (serverdən)
+    try { server = JSON.parse(root.dataset.state || 'null'); } catch (e) { server = null; }
+    var DEMO_ATTEMPTS = 3;
 
-    function readBest() { try { return parseInt(localStorage.getItem('claw_best'), 10) || 0; } catch (e) { return 0; } }
-    function saveBest(v) { try { localStorage.setItem('claw_best', String(v)); } catch (e) { /* gizli rejim */ } }
-    if (bestEl) bestEl.textContent = readBest();
+    function post(url, body) {
+        return fetch(url, {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
+            body: JSON.stringify(body || {})
+        }).then(function (r) {
+            return r.json().catch(function () { return {}; }).then(function (d) { d._ok = r.ok; d._status = r.status; return d; });
+        });
+    }
+    function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
     /* ---------- vəziyyət ---------- */
     var items = [], pops = [], confetti = [], sparkles = [];
@@ -82,42 +83,36 @@
     }
 
     function makeItems() {
-        var bag = [];
-        Object.keys(TYPES).forEach(function (k) { for (var i = 0; i < TYPES[k].n; i++) bag.push(k); });
-        for (var i = bag.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = bag[i]; bag[i] = bag[j]; bag[j] = t; }
-
-        items = bag.map(function (k, i) {
-            var r = TYPES[k].r;
+        items = [];
+        for (var i = 0; i < BALL_N; i++) {
+            var r = BALL_R;
             var x = CHUTE.r + 6 + r + Math.random() * (G.r - CHUTE.r - 6 - 2 * r);
             var z = r + Math.random() * (D - 2 * r);
             var y = G.t + 40 - i * 22;
-            return { type: k, r: r, x: x, y: y, z: z, px: x, py: y, pz: z, ang: (Math.random() - .5) * .8, v: Math.floor(Math.random() * 4), held: false, gone: false };
-        });
+            items.push({ type: 'ball', r: r, x: x, y: y, z: z, px: x, py: y, pz: z, ang: (Math.random() - .5) * 2, v: i % BALL_COLORS.length, held: false, gone: false });
+        }
         // qalağı əvvəlcədən yerinə oturduruq ki, oyunçu düşməni görməsin
         for (var s = 0; s < 840; s++) physics(STEP, true);
     }
+
+    function attemptsLeft() { return VERIFIED ? (server ? server.attemptsLeft : 0) : game.demoLeft; }
+    function dayClosed() { return VERIFIED && server && (server.claimed || (server.attemptsLeft <= 0 && !server.last)); }
 
     function newGame() {
         resetClaw();
         makeItems();
         pops = []; confetti = [];
-        game = { started: false, over: false, attempts: ATTEMPTS, score: 0, turnLeft: TURN_SECONDS, caught: [] };
+        game = { started: false, over: false, turnLeft: TURN_SECONDS, token: null, busy: false, opened: false, demoLeft: DEMO_ATTEMPTS };
         hud();
     }
 
     function start() {
-        if (game.started) return;
+        if (game.started || game.over) return;
         game.started = true;
         el.start.hidden = true;
         claw.state = 'ready';
         game.turnLeft = TURN_SECONDS;
         hud();
-    }
-
-    function again() {
-        el.result.hidden = true;
-        newGame();
-        start();
     }
 
     /* ---------- fizika: kürələr, Verlet inteqrasiyası ---------- */
@@ -186,12 +181,35 @@
     function gripY() { return claw.y + 36 * CS; }
     function flat(a) { return Math.hypot(a.x - claw.x, a.z - claw.z); }
 
+    /**
+     * Çəngəl düşür. Təsdiqlənmiş istifadəçidə əvvəlcə server cəhdi sayır və şarı açmaq üçün
+     * bir dəfəlik açar (token) verir; qonaqda sınaq açarı verilir.
+     */
     function drop() {
-        if (!game.started || game.over || claw.state !== 'ready') return;
-        game.attempts--;
-        claw.state = 'down';
-        input.target = null;
+        if (!game.started || game.over || game.busy || claw.state !== 'ready') return;
+        if (attemptsLeft() <= 0) { showDayClosed(); return; }
+        game.busy = true;
         hud();
+        post(URL.start).then(function (d) {
+            game.busy = false;
+            if (!d._ok || !d.token) {
+                if (d.state) server = d.state;
+                showMessage('Cəhd alınmadı', d.message || 'Bağlantı xətası. Yenidən cəhd edin.');
+                hud();
+                return;
+            }
+            if (d.state) server = d.state;
+            if (!VERIFIED) game.demoLeft--;
+            game.token = d.token;
+            game.opened = false;
+            claw.state = 'down';
+            input.target = null;
+            hud();
+        }).catch(function () {
+            game.busy = false;
+            showMessage('Bağlantı xətası', 'İnternet bağlantısını yoxlayıb yenidən cəhd edin.');
+            hud();
+        });
     }
 
     function touching() {
@@ -213,14 +231,14 @@
         return best;
     }
 
-    // Tutuşun möhkəmliyi: ortadan tutmaq, yüngül və üstü boş oyuncaq — yaxşı şans
+    // Tutuşun möhkəmliyi: şarın düz ortasından və üstü boş olanda yaxşı tutulur
     function holdChance(a) {
         var off = flat(a) / a.r;
         var buried = 0;
         items.forEach(function (b) {
             if (b !== a && b.y < a.y - a.r * .3 && Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z) < a.r + b.r + 2) buried++;
         });
-        return clamp(.9 - off * .7 - TYPES[a.type].heavy - buried * .18, .05, .9);
+        return clamp(.9 - off * .7 - buried * .18, .05, .9);
     }
 
     function releaseHeld(slipped) {
@@ -238,28 +256,41 @@
         }
     }
 
+    /** Şar çıxışa düşdü: bu cəhdin açarı ilə server şarın içindəkini seçir */
     function caught(a) {
-        var t = TYPES[a.type];
         var p = proj(CHUTE_X, CHUTE.top, 0);
-        game.score += t.pts;
-        game.caught.push(t.name);
-        pops.push({ text: '+' + t.pts + ' ' + t.name, x: Math.max(p.x + 30, 96), y: p.y + 40, t: 0, color: '#E9A23B', big: true });
         flash = 1.6;
-        // konfetti: çıxışdan yuxarı səpilir
-        var colors = ['#E9A23B', '#f6cf6b', '#c62a2a', '#FBF6EF', '#7fae3a'];
+        var col = BALL_COLORS[a.v % BALL_COLORS.length];
         for (var i = 0; i < 34; i++) {
             confetti.push({
                 x: p.x + (Math.random() - .5) * 40, y: p.y + 10,
                 vx: (Math.random() - .3) * 260, vy: -220 - Math.random() * 260,
                 rot: Math.random() * 6, vr: (Math.random() - .5) * 14,
-                c: colors[i % colors.length], t: 0, life: 1.4 + Math.random() * .8
+                c: [col[0], col[1], '#E9A23B', '#FBF6EF'][i % 4], t: 0, life: 1.4 + Math.random() * .8
             });
         }
-        hud();
+        // bir cəhddə yalnız bir şar açılır (təsadüfən ikinci şar da düşsə, sadəcə itir)
+        if (!game.token || game.opened) return;
+        game.opened = true;
+        var token = game.token;
+        game.token = null;
+        pops.push({ text: 'Şar tutuldu! 🎈', x: Math.max(p.x + 30, 96), y: p.y + 40, t: 0, color: '#E9A23B', big: true });
+        post(URL.open, { token: token }).then(function (d) {
+            if (d.state) server = d.state;
+            if (!d._ok) { showMessage('Şar açılmadı', d.message || 'Yenidən cəhd edin.'); hud(); return; }
+            setTimeout(function () { showBall(d, col); }, 700); // şar çıxışa düşüb yerə çatsın
+            hud();
+        }).catch(function () { showMessage('Bağlantı xətası', 'Şar açılmadı. Yenidən cəhd edin.'); });
     }
 
     function nextTurn() {
-        if (game.attempts <= 0) { claw.state = 'wait'; claw.t = 0; return; }
+        game.token = null;
+        if (attemptsLeft() <= 0 || dayClosed()) {
+            claw.state = 'idle';
+            if (!game.over) setTimeout(function () { if (!game.over) showDayClosed(); }, 900);
+            hud();
+            return;
+        }
         claw.state = 'ready';
         game.turnLeft = TURN_SECONDS;
         hud();
@@ -277,6 +308,7 @@
         var oldX = claw.x, oldY = claw.y, oldZ = claw.z;
         switch (claw.state) {
             case 'ready':
+                if (game.over || game.busy) break;
                 var mx = clamp((input.keyR ? 1 : 0) - (input.keyL ? 1 : 0) + input.bx, -1, 1);
                 var mz = clamp((input.keyB ? 1 : 0) - (input.keyF ? 1 : 0) + input.bz, -1, 1);
                 if (mx || mz) {
@@ -287,8 +319,8 @@
                     input.target = null;
                 }
                 game.turnLeft -= dt;
-                // vaxt bitdi: oyun dayanır, "Yenidən başla" təklif olunur
-                if (game.turnLeft <= 0) { game.turnLeft = 0; endGame(true); }
+                // vaxt bitdi: cəhd sayılmır, "Yenidən başla" təklif olunur
+                if (game.turnLeft <= 0) { game.turnLeft = 0; showTimeUp(); }
                 break;
             case 'down':
                 claw.y += 230 * dt;
@@ -308,7 +340,7 @@
                         claw.chance = holdChance(a);
                         a.held = true;
                         claw.held = a;
-                        // tutuş zəifdirsə, oyuncaq yolda bir anda sürüşüb düşəcək
+                        // tutuş zəifdirsə, şar yolda bir anda sürüşüb düşəcək
                         claw.slip = Math.random() > claw.chance ? .15 + Math.random() * 1.7 : -1;
                     }
                     claw.state = 'up';
@@ -325,11 +357,10 @@
                 claw.t += dt;
                 claw.open = Math.min(1, claw.open + dt / .3);
                 if (claw.t > .12) releaseHeld(false);
-                if (claw.t > 1.1) nextTurn();
-                break;
-            case 'wait':
-                claw.t += dt;
-                if (claw.t > 1.4) endGame();
+                if (claw.t > 1.1) {
+                    if (game.opened) claw.state = 'wait';      // şar açılır — pəncərəni gözləyirik
+                    else { pops.push({ text: 'Boş qayıtdı', x: proj(CHUTE_X, CHUTE.top, 0).x + 40, y: proj(CHUTE_X, CHUTE.top, 0).y + 40, t: 0, color: '#fbf6ef' }); nextTurn(); }
+                }
                 break;
         }
         if (claw.state !== 'close' && claw.state !== 'release' && !claw.held) claw.open += (1 - claw.open) * Math.min(1, dt * 8);
@@ -338,7 +369,7 @@
         claw.vy = (claw.y - oldY) / dt;
         claw.vz = (claw.z - oldZ) / dt;
 
-        // tutulan oyuncaq çəngəllə gedir
+        // tutulan şar çəngəllə gedir
         var h = claw.held;
         if (h) {
             var k = Math.min(1, dt * 14);
@@ -346,7 +377,7 @@
             h.y += (gripY() - h.y) * k;
             h.z += (claw.z - h.z) * k;
             h.px = h.x; h.py = h.y; h.pz = h.z;
-            h.ang = Math.sin(clock * 9) * (claw.slip >= 0 ? .2 : .07);
+            h.ang += dt * (claw.slip >= 0 ? 3 : 1);
             if (claw.slip >= 0) {
                 claw.slip -= dt;
                 if (claw.slip <= 0) releaseHeld(true);
@@ -354,42 +385,125 @@
         }
     }
 
-    // timeUp — cəhdin vaxtı bitdi (çəngəl salınmadı)
-    function endGame(timeUp) {
+    /* ---------- pəncərələr ---------- */
+    function dialog(html, actions) {
         game.over = true;
-        claw.state = 'idle';
+        claw.state = claw.state === 'ready' ? 'idle' : claw.state;
         input.target = null;
-        var best = readBest();
-        var record = game.score > best;
-        if (record) { saveBest(game.score); if (bestEl) bestEl.textContent = game.score; }
-
-        var caught = game.caught.length ? 'Tutduqlarınız: ' + game.caught.join(', ') + '.' : '';
-        if (timeUp) {
-            el.title.textContent = 'Vaxt bitdi! ⏰';
-            el.note.textContent = 'Çəngəli ' + TURN_SECONDS + ' saniyə ərzində salmadınız. ' + (caught || 'Yenidən başlayıb sınayın!');
-            el.again.textContent = 'Yenidən başla';
-        } else {
-            el.title.textContent = game.score === 0 ? 'Bu dəfə alınmadı' : record ? 'Yeni rekord! 🎉' : 'Əla oyun!';
-            el.note.textContent = caught || 'Halqaya baxın: çəngəl şirniyyatın düz üstündə olanda tutun — yenə sınayın!';
-            el.again.textContent = 'Yenidən oyna';
-        }
-        el.score.textContent = game.score;
+        el.box.innerHTML = html + '<div class="st-choice cl-choice"></div>';
+        var bar = el.box.querySelector('.cl-choice');
+        actions.forEach(function (a) {
+            var b = document.createElement(a.href ? 'a' : 'button');
+            b.className = 'btn ' + (a.primary ? 'btn-primary' : 'btn-ghost-dark');
+            b.innerHTML = a.label;
+            if (a.href) b.href = a.href; else { b.type = 'button'; b.addEventListener('click', a.fn); }
+            bar.appendChild(b);
+        });
         el.result.hidden = false;
         hud();
+    }
+    function closeDialog() { el.result.hidden = true; game.over = false; }
+
+    function playAgain() {
+        closeDialog();
+        if (dayClosed() || attemptsLeft() <= 0) { showDayClosed(); return; }
+        claw.state = 'ready';
+        game.turnLeft = TURN_SECONDS;
+        hud();
+    }
+
+    function leftText() {
+        var n = attemptsLeft();
+        return n > 0 ? 'Yenidən oyna <small>(' + n + ' cəhd)</small>' : '';
+    }
+
+    /** Şar açıldı: içindəki hədiyyə */
+    function showBall(d, col) {
+        var ball = '<div class="cl-ball-open" style="--c1:' + col[0] + ';--c2:' + col[1] + '"><span></span><span></span></div>';
+        var note, actions = [];
+        if (d.demo) {
+            note = d.prize
+                ? '<p class="cl-note">Bu <b>sınaq</b> idi — real hədiyyə və kod üçün qeydiyyatdan keçin və nömrənizi Telegram ilə təsdiqləyin.</p>'
+                : '<p class="cl-note">Bu <b>sınaq</b> idi.</p>';
+            actions.push({ label: 'Qeydiyyat', href: URL.register, primary: true });
+            if (game.demoLeft > 0) actions.push({ label: 'Yenidən oyna <small>(' + game.demoLeft + ')</small>', fn: playAgain });
+            else actions.push({ label: 'Yenidən başla', fn: restartDemo });
+        } else if (d.prize) {
+            note = '<p class="cl-note">Hədiyyəni götürsəniz, kod yaranır və bu günün oyunu bitir. Yenidən oynasanız, bu hədiyyə itir.</p>';
+            actions.push({ label: '<i class="fa fa-gift me-2"></i>Hədiyyəni götür', fn: claimPrize, primary: true });
+            if (attemptsLeft() > 0) actions.push({ label: leftText(), fn: playAgain });
+        } else {
+            note = attemptsLeft() > 0 ? '<p class="cl-note">Növbəti şarda şansınızı sınayın!</p>' : '<p class="cl-note">Bu günün cəhdləri bitdi. Sabah yenə gəlin!</p>';
+            if (attemptsLeft() > 0) actions.push({ label: leftText(), fn: playAgain, primary: true });
+            else actions.push({ label: 'Bağla', fn: closeDialog, primary: true });
+        }
+        dialog(ball + '<span class="eyebrow">' + (d.prize ? 'Şarın içindən çıxdı 🎉' : 'Şar boş çıxdı') + '</span>'
+            + '<h3 class="cl-prize">' + esc(d.label) + '</h3>' + note, actions);
+    }
+
+    function claimPrize() {
+        var btn = el.box.querySelector('.btn-primary');
+        if (btn) btn.disabled = true;
+        post(URL.claim).then(function (d) {
+            if (d.state) server = d.state;
+            if (!d._ok || !server || !server.claimed) { showMessage('Hədiyyə götürülmədi', d.message || 'Yenidən cəhd edin.'); return; }
+            showClaimed();
+        }).catch(function () { if (btn) btn.disabled = false; });
+    }
+
+    /** Götürülmüş hədiyyə: kod və etibarlılıq müddəti */
+    function showClaimed() {
+        var c = server.claimed;
+        var body = '<span class="eyebrow">Hədiyyəniz 🎉</span><h3 class="cl-prize">' + esc(c.label) + '</h3>';
+        if (c.expired) {
+            body += '<p class="cl-note">Kodun vaxtı <b>' + esc(c.expires) + '</b>-də bitib. Sabah yenə oynayın!</p>';
+        } else {
+            body += '<div class="prize-code">' + esc(c.code) + '</div>'
+                + '<p class="claimed-at"><i class="fa fa-clock me-1"></i>Götürülüb: <b>' + esc(c.claimed_at) + '</b></p>'
+                + '<p class="cl-note">Kodu ofisianta göstərin. <b>' + esc(c.expires) + '</b>-dək etibarlıdır. Kod <a href="' + URL.prizes + '">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>';
+        }
+        dialog(body, [{ label: 'Bağla', fn: function () { el.result.hidden = true; }, primary: true }]);
+    }
+
+    function showDayClosed() {
+        if (server && server.claimed) { showClaimed(); return; }
+        if (server && server.last) { showBall({ label: server.last.label, prize: server.last.prize, demo: false }, BALL_COLORS[0]); return; }
+        if (!VERIFIED) { restartDemoDialog(); return; }
+        dialog('<span class="eyebrow">Bu gün üçün</span><h3>Cəhdlər bitdi</h3><p class="cl-note">Sabah yenə 3 cəhdiniz olacaq. Gəlin şansınızı yenidən sınayın!</p>',
+            [{ label: 'Bağla', fn: function () { el.result.hidden = true; }, primary: true }]);
+    }
+
+    function showTimeUp() {
+        dialog('<h3>Vaxt bitdi! ⏰</h3><p class="cl-note">Çəngəli ' + TURN_SECONDS + ' saniyə ərzində salmadınız. Cəhd sayılmadı — yenidən başlayın.</p>',
+            [{ label: 'Yenidən başla', fn: playAgain, primary: true }]);
+    }
+
+    function showMessage(title, text) {
+        dialog('<h3>' + esc(title) + '</h3><p class="cl-note">' + esc(text) + '</p>', [{ label: 'Bağla', fn: playAgain, primary: true }]);
+    }
+
+    function restartDemo() {
+        closeDialog();
+        newGame();
+        start();
+    }
+    function restartDemoDialog() {
+        dialog('<span class="eyebrow">Sınaq</span><h3>Sınaq cəhdləri bitdi</h3><p class="cl-note">Real hədiyyə üçün qeydiyyatdan keçin — gündə 3 cəhd.</p>',
+            [{ label: 'Qeydiyyat', href: URL.register, primary: true }, { label: 'Yenidən başla', fn: restartDemo }]);
     }
 
     /* ---------- HUD ---------- */
     var lastHud = '';
     function hud() {
-        var t = claw.state === 'ready' ? String(Math.ceil(game.turnLeft)) : '–';
-        var key = game.attempts + '|' + game.score + '|' + t + '|' + claw.state;
+        var t = claw.state === 'ready' && !game.over ? String(Math.ceil(game.turnLeft)) : '–';
+        var left = attemptsLeft();
+        var key = left + '|' + t + '|' + claw.state + '|' + game.busy + '|' + game.over;
         if (key === lastHud) return;
         lastHud = key;
-        el.attempts.textContent = game.attempts;
-        el.points.textContent = game.score;
+        el.attempts.textContent = left;
         el.time.textContent = t;
         el.time.parentNode.classList.toggle('is-low', claw.state === 'ready' && game.turnLeft <= 5);
-        el.drop.disabled = game.started && claw.state !== 'ready';
+        el.drop.disabled = game.busy || game.over || (game.started && claw.state !== 'ready') || left <= 0;
     }
 
     /* =========================================================
@@ -645,417 +759,59 @@
         });
     }
 
-    /* ---------- şirniyyatlar: real görünüş ----------
-       Hər növün 4 variantı bir dəfə ayrıca kətana (sprite) çəkilir — detallar təsadüfi olduğu üçün
-       eyni növ şirniyyatlar bir-birinin surəti kimi görünmür. İşıq hər yerdə yuxarı-soldan düşür. */
+    /* ---------- şarlar ----------
+       Hər rəngdəki şar bir dəfə ayrıca kətana (sprite) çəkilir, sonra hazır şəkil kimi qoyulur. */
     var SS = 3, spriteCache = {};
 
-    function rnd(a, b) { return a + Math.random() * (b - a); }
-
-    // işıq-kölgə: yuxarı-solda parıltı, aşağı-sağda kölgə (əvvəlcədən clip edilmiş formanın üstünə)
-    function light(c, r, k) {
-        k = k || 1;
-        var g = c.createRadialGradient(-r * .45, -r * .5, r * .05, -r * .05, -r * .05, r * 1.35);
-        g.addColorStop(0, 'rgba(255,255,255,' + (.42 * k) + ')');
-        g.addColorStop(.38, 'rgba(255,255,255,0)');
-        g.addColorStop(.75, 'rgba(60,25,0,' + (.12 * k) + ')');
-        g.addColorStop(1, 'rgba(40,12,0,' + (.5 * k) + ')');
-        c.fillStyle = g; c.fillRect(-r * 2, -r * 2, r * 4, r * 4);
-    }
-    // xəmir teksturası: xırda açıq və tünd ləkələr
-    function crumb(c, r, n, dark, lite) {
-        for (var i = 0; i < n; i++) {
-            c.fillStyle = Math.random() < .5 ? dark : lite;
-            c.globalAlpha = rnd(.15, .45);
-            dot(c, rnd(-r, r), rnd(-r, r), rnd(.15, .6));
-        }
-        c.globalAlpha = 1;
-    }
-    // kənarlara doğru qızartı
-    function bake(c, r, color) {
-        var g = c.createRadialGradient(0, 0, r * .35, 0, 0, r * 1.15);
-        g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, color);
-        c.fillStyle = g; c.fillRect(-r * 2, -r * 2, r * 4, r * 4);
-    }
-    // şəkər tozu
-    function powder(c, r, n, x0, y0, x1, y1) {
-        for (var i = 0; i < n; i++) {
-            c.fillStyle = 'rgba(255,255,255,' + rnd(.35, .95) + ')';
-            dot(c, rnd(x0, x1) * r, rnd(y0, y1) * r, rnd(.2, .55));
-        }
-    }
-
     var DRAW = {
-        // bükülü konfet: parlaq folqa, burulmuş uclar, qırışlar
-        konfet: function (c, r, v) {
-            var C = [['#9e0f1c', '#e8404b'], ['#b97a08', '#f8d56b'], ['#14583a', '#3fae74'], ['#4b1f73', '#a06ad0']][v];
-            [-1, 1].forEach(function (s) {
-                var g = c.createLinearGradient(0, -r * .55, 0, r * .55);
-                g.addColorStop(0, C[1]); g.addColorStop(.45, C[0]); g.addColorStop(1, '#1e0303');
-                c.fillStyle = g;
-                c.beginPath();
-                c.moveTo(s * r * .56, -r * .16); c.lineTo(s * r * 1.16, -r * .56);
-                c.quadraticCurveTo(s * r * .98, 0, s * r * 1.16, r * .56); c.lineTo(s * r * .56, r * .16); c.closePath(); c.fill();
-                for (var k = -3; k <= 3; k++) {
-                    c.strokeStyle = 'rgba(255,255,255,.4)'; c.lineWidth = .6;
-                    c.beginPath(); c.moveTo(s * r * .6, k * r * .035); c.lineTo(s * r * 1.1, k * r * .16 + rnd(-.5, .5)); c.stroke();
-                    c.strokeStyle = 'rgba(0,0,0,.3)';
-                    c.beginPath(); c.moveTo(s * r * .6, k * r * .035 + .8); c.lineTo(s * r * 1.08, k * r * .16 + 1.4); c.stroke();
-                }
-                var kn = c.createLinearGradient(0, -r * .2, 0, r * .2);
-                kn.addColorStop(0, C[1]); kn.addColorStop(1, '#2a0505');
-                c.fillStyle = kn; c.beginPath(); c.ellipse(s * r * .6, 0, r * .09, r * .2, 0, 0, Math.PI * 2); c.fill();
-            });
-            c.save();
-            c.beginPath(); c.ellipse(0, 0, r * .66, r * .55, 0, 0, Math.PI * 2);
-            c.fillStyle = C[0]; c.fill(); c.clip();
-            var sh = c.createLinearGradient(0, -r * .55, 0, r * .55);
-            sh.addColorStop(0, 'rgba(255,255,255,.15)'); sh.addColorStop(.22, 'rgba(255,255,255,.55)'); sh.addColorStop(.4, 'rgba(255,255,255,0)');
-            sh.addColorStop(.85, 'rgba(0,0,0,.35)'); sh.addColorStop(1, 'rgba(0,0,0,.55)');
-            c.fillStyle = sh; c.fillRect(-r, -r, r * 2, r * 2);
-            // folqa qırışları
-            for (var i = 0; i < 26; i++) {
-                var x = rnd(-.6, .6) * r, y = rnd(-.5, .5) * r, l = rnd(1.5, 4), t = rnd(0, Math.PI);
-                c.strokeStyle = Math.random() < .5 ? 'rgba(255,255,255,.45)' : 'rgba(0,0,0,.25)'; c.lineWidth = .5;
-                c.beginPath(); c.moveTo(x, y); c.lineTo(x + Math.cos(t) * l, y + Math.sin(t) * l); c.stroke();
-            }
-            c.fillStyle = 'rgba(255,255,255,.75)';
-            c.beginPath(); c.ellipse(-r * .18, -r * .3, r * .32, r * .06, -.12, 0, Math.PI * 2); c.fill();
-            c.restore();
-        },
-        // lolipop: şüşə kimi parlaq spiral konfet, kağız çubuq
-        lolipop: function (c, r, v) {
-            var C = [['#d4142a', '#ffffff'], ['#f08a0c', '#ffe9a8'], ['#1f9a57', '#f4ffe8'], ['#e04c94', '#fff0f7']][v];
-            var sg = c.createLinearGradient(-r * .08, 0, r * .08, 0);
-            sg.addColorStop(0, '#d8cfbe'); sg.addColorStop(.4, '#ffffff'); sg.addColorStop(1, '#bfb5a2');
-            c.fillStyle = sg; c.fillRect(-r * .075, r * .45, r * .15, r * 1.15);
-            c.fillStyle = 'rgba(0,0,0,.25)'; c.fillRect(-r * .075, r * .45, r * .15, r * .25);
-            c.save();
-            c.beginPath(); c.arc(0, 0, r * .9, 0, Math.PI * 2); c.fillStyle = C[1]; c.fill(); c.clip();
-            c.rotate(rnd(0, 6));
-            // fırıldaq kimi əyri zolaqlar
-            for (var i = 0; i < 6; i++) {
-                c.save(); c.rotate(i / 6 * Math.PI * 2);
-                c.fillStyle = C[0];
-                c.beginPath(); c.moveTo(0, 0);
-                c.bezierCurveTo(r * .5, -r * .1, r * .8, r * .3, r * .95, r * .7);
-                c.lineTo(r * .95, r * 1.1);
-                c.bezierCurveTo(r * .55, r * .5, r * .35, r * .15, 0, 0);
-                c.fill();
-                c.restore();
-            }
-            var rim = c.createRadialGradient(0, 0, r * .55, 0, 0, r * .92);
-            rim.addColorStop(0, 'rgba(0,0,0,0)'); rim.addColorStop(1, 'rgba(0,0,0,.35)');
-            c.fillStyle = rim; c.fillRect(-r, -r, r * 2, r * 2);
-            c.restore();
-            c.fillStyle = 'rgba(255,255,255,.8)';
-            c.beginPath(); c.ellipse(-r * .38, -r * .42, r * .26, r * .11, -.7, 0, Math.PI * 2); c.fill();
-            c.fillStyle = 'rgba(255,255,255,.5)'; dot(c, r * .45, r * .38, r * .07);
-            c.strokeStyle = 'rgba(255,255,255,.45)'; c.lineWidth = .8;
-            c.beginPath(); c.arc(0, 0, r * .86, Math.PI * 1.05, Math.PI * 1.6); c.stroke();
-        },
-        // pişmaniye: nazik şəkər liflərindən yumşaq çəhrayı topa
-        pismaniye: function (c, r, v) {
-            var base = ['#f6b3c6', '#f9c9d6', '#f3a8be', '#fbd7e1'][v];
-            var g = c.createRadialGradient(-r * .2, -r * .25, r * .1, 0, 0, r);
-            g.addColorStop(0, '#fff0f4'); g.addColorStop(.6, base); g.addColorStop(1, 'rgba(230,140,170,.0)');
+        /**
+         * Rəngli hədiyyə şarı: yarışəffaf parlaq kürə, ortada kapsul tikişi, içində hədiyyə qutusunun
+         * siluetı, kənarlarda kölgə, yuxarı-solda işıq əksi.
+         */
+        ball: function (c, r, v) {
+            var C = BALL_COLORS[v % BALL_COLORS.length];
+            // gövdə
+            var g = c.createRadialGradient(-r * .35, -r * .4, r * .08, 0, 0, r);
+            g.addColorStop(0, C[1]);
+            g.addColorStop(.55, C[0]);
+            g.addColorStop(1, C[0]);
             c.fillStyle = g;
-            for (var p = 0; p < 9; p++) dot(c, rnd(-.45, .45) * r, rnd(-.35, .35) * r, rnd(.45, .7) * r);
-            for (var i = 0; i < 260; i++) {
-                var a = rnd(0, Math.PI * 2), d = Math.sqrt(Math.random()) * r * .92;
-                var x = Math.cos(a) * d, y = Math.sin(a) * d * .85;
-                var t = rnd(0, Math.PI * 2), l = rnd(2, 6);
-                c.strokeStyle = Math.random() < .55 ? 'rgba(255,245,248,.75)' : 'rgba(214,110,145,.45)';
-                c.lineWidth = rnd(.25, .55);
-                c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + Math.cos(t + 1) * l * .6, y + Math.sin(t + 1) * l * .6, x + Math.cos(t) * l, y + Math.sin(t) * l); c.stroke();
-            }
-        },
-        // rəngli lokum: yumşaq jele kub, üstü şəkər tozlu
-        lokum: function (c, r, v) {
-            var C = [['#e86d93', '#f7b3c8'], ['#5fae5a', '#a8dba0'], ['#efe6d6', '#ffffff'], ['#ee8f3a', '#f9c48c']][v];
-            var k = r * .8;
-            // sağ yan
-            c.fillStyle = C[0];
-            c.beginPath(); c.moveTo(k * .95, -k * .45); c.lineTo(k * 1.25, -k * .9); c.lineTo(k * 1.25, k * .55); c.lineTo(k * .95, k * .95); c.closePath(); c.fill();
-            c.fillStyle = 'rgba(0,0,0,.28)'; c.fill();
-            // üst
-            c.fillStyle = C[1];
-            c.beginPath(); c.moveTo(-k, -k * .45); c.lineTo(-k * .65, -k * .95); c.lineTo(k * 1.25, -k * .95); c.lineTo(k * .95, -k * .45); c.closePath(); c.fill();
-            // ön üz: jele kimi ortası işıqlı
+            dot(c, 0, 0, r);
             c.save();
-            rr(c, -k, -k * .5, k * 1.95, k * 1.48, k * .22);
-            var g = c.createRadialGradient(-k * .2, k * .1, k * .1, 0, 0, k * 1.3);
-            g.addColorStop(0, C[1]); g.addColorStop(.7, C[0]); g.addColorStop(1, C[0]);
-            c.fillStyle = g; c.fill(); c.clip();
-            light(c, k, .6);
-            powder(c, k, 70, -1, -.5, .95, .98);
-            c.restore();
-            c.save();
-            c.beginPath(); c.moveTo(-k, -k * .45); c.lineTo(-k * .65, -k * .95); c.lineTo(k * 1.25, -k * .95); c.lineTo(k * .95, -k * .45); c.closePath(); c.clip();
-            powder(c, k, 160, -1, -1, 1.3, -.4);
-            c.restore();
-            powder(c, k, 30, .95, -.9, 1.25, .9);
-        },
-        // şəkərbura: yarımdairəvi, kənarı dişli, üstü maşa ilə çimdiklənmiş sünbül naxışı
-        sekerbura: function (c, r, v) {
-            c.save();
-            c.beginPath(); c.ellipse(0, 0, r, r * .72, 0, 0, Math.PI * 2);
-            var g = c.createRadialGradient(-r * .2, -r * .2, r * .1, 0, 0, r);
-            g.addColorStop(0, '#f8e3b0'); g.addColorStop(.75, '#ecc77e'); g.addColorStop(1, '#c98a3c');
-            c.fillStyle = g; c.fill(); c.clip();
-            crumb(c, r, 220, '#b07a32', '#fff6dc');
-            bake(c, r, 'rgba(150,80,20,.55)');
-            // sünbül naxışı: 3 sıra qoşa çimdik
-            for (var row = -1; row <= 1; row++) {
-                for (var i = -4; i <= 4; i++) {
-                    var x = i * r * .19, y = row * r * .26;
-                    if (x * x / (r * r * .72) + y * y / (r * r * .3) > 1) continue;
-                    [-1, 1].forEach(function (s) {
-                        c.strokeStyle = 'rgba(120,62,12,.75)'; c.lineWidth = 1;
-                        c.beginPath(); c.moveTo(x, y); c.lineTo(x + r * .1, y + s * r * .1); c.stroke();
-                        c.strokeStyle = 'rgba(255,248,225,.8)'; c.lineWidth = .7;
-                        c.beginPath(); c.moveTo(x + .6, y - .6); c.lineTo(x + r * .1 + .6, y + s * r * .1 - .6); c.stroke();
-                    });
-                }
-            }
-            light(c, r, .8);
-            c.restore();
-            // dişli kənar
-            for (var t = 0; t < 30; t++) {
-                var a = t / 30 * Math.PI * 2, x0 = Math.cos(a) * r * .97, y0 = Math.sin(a) * r * .7;
-                c.strokeStyle = 'rgba(140,76,20,.55)'; c.lineWidth = .9;
-                c.beginPath(); c.moveTo(x0 * .9, y0 * .9); c.lineTo(x0, y0); c.stroke();
-            }
-            c.strokeStyle = 'rgba(140,76,20,.6)'; c.lineWidth = 1;
-            c.beginPath(); c.ellipse(0, 0, r, r * .72, 0, 0, Math.PI * 2); c.stroke();
-        },
-        // paxlava: laylı romb, şərbətli parlaq üst, ortada doğranmış püstə
-        paxlava: function (c, r, v) {
-            var top = function () { c.beginPath(); c.moveTo(0, -r * .95); c.lineTo(r, -r * .1); c.lineTo(0, r * .75); c.lineTo(-r, -r * .1); c.closePath(); };
-            // yan (qalınlıq): nazik xəmir layları
-            c.save();
-            c.beginPath(); c.moveTo(-r, -r * .1); c.lineTo(0, r * .75); c.lineTo(r, -r * .1); c.lineTo(r, r * .15); c.lineTo(0, r * 1.0); c.lineTo(-r, r * .15); c.closePath();
-            c.fillStyle = '#b8742a'; c.fill(); c.clip();
-            for (var y = -r * .1; y < r * 1.05; y += 1.1) {
-                c.strokeStyle = Math.round(y) % 2 ? 'rgba(255,225,160,.55)' : 'rgba(110,55,10,.5)'; c.lineWidth = .5;
-                c.beginPath(); c.moveTo(-r, y); c.lineTo(0, y + r * .85); c.lineTo(r, y); c.stroke();
-            }
-            c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(0, -r, r, r * 2.2);
-            c.restore();
-            c.save();
-            top();
-            var g = c.createLinearGradient(-r, -r, r, r);
-            g.addColorStop(0, '#f2bf5e'); g.addColorStop(.6, '#d08c2c'); g.addColorStop(1, '#9c5a16');
-            c.fillStyle = g; c.fill(); c.clip();
-            crumb(c, r, 160, '#8a4a10', '#ffe1a0');
-            for (var k = 0; k < 7; k++) {
-                c.strokeStyle = 'rgba(120,60,10,.3)'; c.lineWidth = .6;
-                c.beginPath(); c.moveTo(-r + k * r * .3, -r); c.lineTo(-r + k * r * .3 + r * .4, r); c.stroke();
-            }
-            // şərbət parıltısı
-            c.fillStyle = 'rgba(255,240,200,.45)';
-            c.beginPath(); c.ellipse(-r * .3, -r * .35, r * .35, r * .1, -.65, 0, Math.PI * 2); c.fill();
-            light(c, r, .7);
-            c.restore();
-            // püstə
-            for (var i = 0; i < 46; i++) {
-                var a = rnd(0, Math.PI * 2), d = Math.sqrt(Math.random()) * r * .26;
-                c.fillStyle = ['#4f7f1f', '#77a83a', '#9dc95a', '#3d6316'][i % 4];
-                c.beginPath(); c.ellipse(Math.cos(a) * d, -r * .1 + Math.sin(a) * d * .8, rnd(.6, 1.4), rnd(.4, 1), rnd(0, 3), 0, Math.PI * 2); c.fill();
-            }
-            c.strokeStyle = 'rgba(110,55,10,.6)'; c.lineWidth = .8; top(); c.stroke();
-        },
-        // badambura: uzunsov bükülmüş xəmir, ucunda laylar görünür, şəkər tozu
-        badambura: function (c, r, v) {
-            var shape = function () { rr(c, -r * 1.12, -r * .55, r * 2.24, r * 1.1, r * .55); };
-            c.save();
-            shape();
-            var g = c.createLinearGradient(0, -r * .55, 0, r * .55);
-            g.addColorStop(0, '#f7d690'); g.addColorStop(.5, '#e2a856'); g.addColorStop(1, '#a8661f');
-            c.fillStyle = g; c.fill(); c.clip();
-            crumb(c, r * 1.1, 200, '#93541a', '#fff0c8');
-            for (var k = -5; k <= 5; k++) {
-                var x = k * r * .21;
-                c.strokeStyle = 'rgba(120,60,10,.5)'; c.lineWidth = 1;
-                c.beginPath(); c.moveTo(x - r * .12, -r * .55); c.quadraticCurveTo(x, 0, x + r * .12, r * .55); c.stroke();
-                c.strokeStyle = 'rgba(255,240,200,.5)'; c.lineWidth = .6;
-                c.beginPath(); c.moveTo(x - r * .1, -r * .55); c.quadraticCurveTo(x + 1, 0, x + r * .14, r * .55); c.stroke();
-            }
-            powder(c, r, 90, -1.05, -.55, 1.05, -.05);
-            light(c, r * 1.1, .7);
-            c.restore();
-            // sol ucda laylar (spiral)
-            c.strokeStyle = 'rgba(140,76,20,.7)'; c.lineWidth = .7;
-            for (var i = 1; i <= 3; i++) { c.beginPath(); c.ellipse(-r * .92, 0, r * .07 * i, r * .14 * i, 0, Math.PI * .5, Math.PI * 1.5); c.stroke(); }
-        },
-        // nabat: çubuğa yığılmış kəhrəba rəngli kristal şəkər
-        nabat: function (c, r, v) {
-            var wg = c.createLinearGradient(-r * .08, 0, r * .08, 0);
-            wg.addColorStop(0, '#6b3a14'); wg.addColorStop(.5, '#b47a3c'); wg.addColorStop(1, '#5a2e0e');
-            c.fillStyle = wg; c.fillRect(-r * .07, -r * 1.35, r * .14, r * 2.6);
-            var n = 16;
-            for (var i = 0; i < n; i++) {
-                var x = rnd(-.6, .6) * r, y = rnd(-.85, .85) * r, q = rnd(.22, .38) * r, t = rnd(0, Math.PI);
-                c.save(); c.translate(x, y); c.rotate(t);
-                var g = c.createLinearGradient(-q, -q, q, q);
-                g.addColorStop(0, '#fff3c0'); g.addColorStop(.35, '#f7c84a'); g.addColorStop(1, '#c97a08');
-                c.globalAlpha = .92;
-                c.fillStyle = g;
-                c.beginPath(); c.moveTo(0, -q); c.lineTo(q * .85, -q * .25); c.lineTo(q * .55, q * .8); c.lineTo(-q * .55, q * .75); c.lineTo(-q * .9, -q * .2); c.closePath(); c.fill();
-                c.globalAlpha = 1;
-                c.strokeStyle = 'rgba(150,80,0,.5)'; c.lineWidth = .5; c.stroke();
-                c.fillStyle = 'rgba(255,255,255,.65)';
-                c.beginPath(); c.moveTo(0, -q); c.lineTo(q * .85, -q * .25); c.lineTo(q * .1, -q * .05); c.closePath(); c.fill();
-                c.restore();
-            }
-            star(c, r * .45, -r * .6, r * .18, '#ffffff');
-            star(c, -r * .35, r * .35, r * .12, '#ffffff');
-        },
-        // mütəkkə: yarımay çörək, yumurta ilə parlaq üst, çatlardan qoz görünür
-        mutekke: function (c, r, v) {
-            var shape = function () {
-                c.beginPath();
-                c.arc(0, -r * .15, r * 1.05, Math.PI * -.06, Math.PI * 1.06, false);
-                c.arc(0, -r * .75, r * .92, Math.PI * .96, Math.PI * .04, true);
-                c.closePath();
-            };
-            c.save();
-            shape();
-            var g = c.createLinearGradient(0, -r * .2, 0, r * .95);
-            g.addColorStop(0, '#f0bb62'); g.addColorStop(.6, '#c27a2a'); g.addColorStop(1, '#7e4513');
-            c.fillStyle = g; c.fill(); c.clip();
-            crumb(c, r, 180, '#6e3a0e', '#ffe2a6');
-            // çatlar və qoz
-            for (var i = 0; i < 5; i++) {
-                var a = Math.PI * (.15 + i * .17), x = Math.cos(a) * r * .72, y = -r * .15 + Math.sin(a) * r * .72;
-                c.fillStyle = '#5a3212';
-                c.beginPath(); c.ellipse(x, y, r * .12, r * .05, a, 0, Math.PI * 2); c.fill();
-                c.fillStyle = 'rgba(210,170,110,.8)'; dot(c, x + .5, y - .3, r * .03);
-            }
-            c.fillStyle = 'rgba(255,240,200,.45)';
-            c.beginPath(); c.ellipse(-r * .4, r * .25, r * .3, r * .07, .5, 0, Math.PI * 2); c.fill();
-            light(c, r, .6);
-            c.restore();
-            c.strokeStyle = 'rgba(100,50,10,.6)'; c.lineWidth = .9; shape(); c.stroke();
-        },
-        // kətə: yastı, qalın kənarlı, üstü çəngəllə naxışlanmış qızartılı
-        kete: function (c, r, v) {
-            c.fillStyle = '#8a4e16';
-            c.beginPath(); c.ellipse(0, r * .14, r, r * .74, 0, 0, Math.PI * 2); c.fill();
-            c.save();
-            c.beginPath(); c.ellipse(0, 0, r, r * .74, 0, 0, Math.PI * 2);
-            var g = c.createRadialGradient(-r * .2, -r * .2, r * .1, 0, 0, r);
-            g.addColorStop(0, '#f3c46e'); g.addColorStop(.7, '#d39340'); g.addColorStop(1, '#9c5a1a');
-            c.fillStyle = g; c.fill(); c.clip();
-            crumb(c, r, 200, '#7e4513', '#ffe6b0');
-            // çəngəl izləri: iki halqa nöqtə və ortada ulduz naxışı
-            [.78, .52].forEach(function (k) {
-                for (var i = 0; i < 22; i++) {
-                    var t = i / 22 * Math.PI * 2;
-                    c.fillStyle = 'rgba(90,45,8,.7)'; dot(c, Math.cos(t) * r * k, Math.sin(t) * r * k * .74, .55);
-                    c.fillStyle = 'rgba(255,235,190,.6)'; dot(c, Math.cos(t) * r * k - .4, Math.sin(t) * r * k * .74 - .4, .35);
-                }
-            });
-            for (var j = 0; j < 8; j++) {
-                var u = j / 8 * Math.PI * 2;
-                c.strokeStyle = 'rgba(90,45,8,.55)'; c.lineWidth = .8;
-                c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(u) * r * .32, Math.sin(u) * r * .24); c.stroke();
-            }
-            bake(c, r, 'rgba(110,50,10,.5)');
-            light(c, r, .7);
-            c.restore();
-        },
-        // qoğal: laylı, yumru, üstü parlaq, çörəkotu dənələri
-        qogal: function (c, r, v) {
-            c.save();
+            c.beginPath(); c.arc(0, 0, r, 0, Math.PI * 2); c.clip();
+            // içində hədiyyə qutusu (yarışəffaf şardan görünür)
+            c.fillStyle = 'rgba(255,255,255,.22)';
+            rr(c, -r * .42, -r * .18, r * .84, r * .62, r * .08); c.fill();
+            c.fillStyle = 'rgba(255,255,255,.3)';
+            c.fillRect(-r * .48, -r * .3, r * .96, r * .16);
+            c.fillRect(-r * .07, -r * .3, r * .14, r * .74);
+            c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = r * .07;
             c.beginPath();
-            for (var i = 0; i <= 40; i++) {
-                var a = i / 40 * Math.PI * 2, rr2 = r * (1 + Math.sin(a * 7 + v) * .025 + rnd(-.015, .015));
-                if (i) c.lineTo(Math.cos(a) * rr2, Math.sin(a) * rr2 * .9); else c.moveTo(Math.cos(a) * rr2, Math.sin(a) * rr2 * .9);
-            }
-            c.closePath();
-            var g = c.createRadialGradient(-r * .25, -r * .3, r * .1, 0, 0, r);
-            g.addColorStop(0, '#f6cd76'); g.addColorStop(.6, '#d08a35'); g.addColorStop(1, '#8a4a14');
-            c.fillStyle = g; c.fill(); c.clip();
-            crumb(c, r, 200, '#6e3a0e', '#ffe6b0');
-            // laylar
-            for (var t = 0; t < Math.PI * 5; t += .08) {
-                var rad = r * (.1 + t / (Math.PI * 5) * .85);
-                var x = Math.cos(t) * rad, y = Math.sin(t) * rad * .9;
-                c.fillStyle = 'rgba(110,55,10,.35)'; dot(c, x, y, .8);
-                c.fillStyle = 'rgba(255,235,180,.4)'; dot(c, x - .7, y - .7, .5);
-            }
-            // çörəkotu
-            for (var s = 0; s < 22; s++) {
-                c.fillStyle = '#1a120c';
-                c.beginPath(); c.ellipse(rnd(-.7, .7) * r, rnd(-.65, .65) * r, rnd(.6, .9), rnd(.3, .45), rnd(0, 3), 0, Math.PI * 2); c.fill();
-            }
-            c.fillStyle = 'rgba(255,245,210,.5)';
-            c.beginPath(); c.ellipse(-r * .38, -r * .45, r * .3, r * .1, -.6, 0, Math.PI * 2); c.fill();
-            light(c, r, .8);
+            c.ellipse(-r * .16, -r * .38, r * .15, r * .09, -.5, 0, Math.PI * 2);
+            c.ellipse(r * .16, -r * .38, r * .15, r * .09, .5, 0, Math.PI * 2);
+            c.stroke();
+            // kapsulun iki yarısı: aşağı yarı bir az tünd
+            c.fillStyle = 'rgba(0,0,0,.12)';
+            c.fillRect(-r, r * .05, r * 2, r);
+            // kənar kölgəsi
+            var rim = c.createRadialGradient(0, 0, r * .6, 0, 0, r);
+            rim.addColorStop(0, 'rgba(0,0,0,0)');
+            rim.addColorStop(1, 'rgba(0,0,0,.35)');
+            c.fillStyle = rim;
+            c.fillRect(-r, -r, r * 2, r * 2);
             c.restore();
-        },
-        // Şəki halvası: düyü unundan nazik tor (rişte), qırmızımtıl şərbət, altında qoz-fındıq qatı
-        halva: function (c, r, v) {
-            var top = function () { c.beginPath(); c.moveTo(0, -r * .95); c.lineTo(r * 1.05, -r * .1); c.lineTo(0, r * .72); c.lineTo(-r * 1.05, -r * .1); c.closePath(); };
-            // yan: fındıq qatı
-            c.save();
-            c.beginPath(); c.moveTo(-r * 1.05, -r * .1); c.lineTo(0, r * .72); c.lineTo(r * 1.05, -r * .1); c.lineTo(r * 1.05, r * .2); c.lineTo(0, r * 1.02); c.lineTo(-r * 1.05, r * .2); c.closePath();
-            c.fillStyle = '#c99a62'; c.fill(); c.clip();
-            for (var i = 0; i < 40; i++) { c.fillStyle = ['#8a5a2a', '#e8cfa0', '#6b3a14'][i % 3]; dot(c, rnd(-1, 1) * r, rnd(-.1, 1) * r, rnd(.6, 1.3)); }
-            c.fillStyle = 'rgba(80,20,10,.5)'; c.fillRect(-r * 1.1, -r * .2, r * 2.2, r * .25);
-            c.fillStyle = 'rgba(0,0,0,.2)'; c.fillRect(0, -r, r * 1.2, r * 2.2);
-            c.restore();
-            c.save();
-            top();
-            var g = c.createLinearGradient(-r, -r, r, r);
-            g.addColorStop(0, '#d0452e'); g.addColorStop(.6, '#a52618'); g.addColorStop(1, '#6e130c');
-            c.fillStyle = g; c.fill(); c.clip();
-            // rişte toru: sıx çarpaz nazik xətlər
-            for (var k = -14; k <= 14; k++) {
-                c.lineWidth = .55;
-                c.strokeStyle = 'rgba(255,200,150,.55)';
-                c.beginPath(); c.moveTo(k * r * .1 - r, -r); c.lineTo(k * r * .1 + r, r); c.stroke();
-                c.strokeStyle = 'rgba(255,215,170,.45)';
-                c.beginPath(); c.moveTo(k * r * .1 + r, -r); c.lineTo(k * r * .1 - r, r); c.stroke();
-            }
-            for (var d = 0; d < 60; d++) { c.fillStyle = 'rgba(90,10,5,.35)'; dot(c, rnd(-1, 1) * r, rnd(-1, 1) * r, rnd(.4, 1)); }
-            c.fillStyle = 'rgba(255,220,190,.4)';
-            c.beginPath(); c.ellipse(-r * .3, -r * .38, r * .38, r * .09, -.65, 0, Math.PI * 2); c.fill();
-            light(c, r, .7);
-            c.restore();
-            c.strokeStyle = 'rgba(70,10,5,.6)'; c.lineWidth = .8; top(); c.stroke();
-        },
-        // qızıl "50 Qəpik" sikkəsi: metal parıltı, dişli kənar, qabarıq yazı
-        sikke: function (c, r, v) {
-            c.fillStyle = '#7a4d06'; dot(c, r * .05, r * .08, r * 1.02);
-            var g = c.createRadialGradient(-r * .35, -r * .4, r * .05, 0, 0, r * 1.05);
-            g.addColorStop(0, '#fff6c8'); g.addColorStop(.35, '#f5cd4c'); g.addColorStop(.75, '#d39a17'); g.addColorStop(1, '#8f5f07');
-            c.fillStyle = g; dot(c, 0, 0, r);
-            // dişli kənar
-            for (var i = 0; i < 60; i++) {
-                var t = i / 60 * Math.PI * 2;
-                c.strokeStyle = i % 2 ? 'rgba(120,75,0,.55)' : 'rgba(255,240,180,.5)'; c.lineWidth = .6;
-                c.beginPath(); c.moveTo(Math.cos(t) * r * .9, Math.sin(t) * r * .9); c.lineTo(Math.cos(t) * r, Math.sin(t) * r); c.stroke();
-            }
-            // qabarıq iç halqa
-            c.lineWidth = 1.2;
-            c.strokeStyle = 'rgba(255,250,215,.85)'; c.beginPath(); c.arc(0, 0, r * .8, Math.PI * .75, Math.PI * 1.75); c.stroke();
-            c.strokeStyle = 'rgba(110,70,0,.75)'; c.beginPath(); c.arc(0, 0, r * .8, Math.PI * 1.75, Math.PI * 2.75); c.stroke();
-            c.textAlign = 'center'; c.textBaseline = 'middle';
-            var emboss = function (txt, y, size) {
-                c.font = '900 ' + size + 'px Nunito, sans-serif';
-                c.fillStyle = 'rgba(255,250,215,.9)'; c.fillText(txt, -.5, y - .5);
-                c.fillStyle = 'rgba(100,60,0,.8)'; c.fillText(txt, .6, y + .6);
-                c.fillStyle = '#e2ad2c'; c.fillText(txt, 0, y);
-            };
-            emboss('50', -r * .1, Math.round(r * .9));
-            emboss('QƏPİK', r * .48, Math.round(r * .3));
-            c.save(); c.beginPath(); c.arc(0, 0, r, 0, Math.PI * 2); c.clip();
-            var sh = c.createLinearGradient(-r, -r, r, r);
-            sh.addColorStop(.3, 'rgba(255,255,255,0)'); sh.addColorStop(.42, 'rgba(255,255,255,.45)'); sh.addColorStop(.5, 'rgba(255,255,255,0)');
-            c.fillStyle = sh; c.fillRect(-r, -r, r * 2, r * 2);
-            c.restore();
+            // ortadakı tikiş (kapsul açılan yer)
+            c.strokeStyle = 'rgba(255,255,255,.75)'; c.lineWidth = 1.2;
+            c.beginPath(); c.ellipse(0, r * .05, r * .98, r * .26, 0, 0, Math.PI); c.stroke();
+            c.strokeStyle = 'rgba(0,0,0,.2)'; c.lineWidth = .8;
+            c.beginPath(); c.ellipse(0, r * .08, r * .98, r * .26, 0, 0, Math.PI); c.stroke();
+            // işıq əksləri
+            c.fillStyle = 'rgba(255,255,255,.85)';
+            c.beginPath(); c.ellipse(-r * .38, -r * .48, r * .28, r * .14, -.6, 0, Math.PI * 2); c.fill();
+            c.fillStyle = 'rgba(255,255,255,.6)';
+            dot(c, r * .1, -r * .62, r * .07);
+            c.strokeStyle = 'rgba(255,255,255,.35)'; c.lineWidth = 1.2;
+            c.beginPath(); c.arc(0, 0, r * .86, Math.PI * .15, Math.PI * .55); c.stroke();
         }
     };
 
@@ -1091,13 +847,6 @@
         c.rotate(a.ang);
         c.drawImage(sp.cv, -sp.half, -sp.half, sp.half * 2, sp.half * 2);
         c.restore();
-        // qızıl sikkə parıldayır
-        if (a.type === 'sikke') {
-            var k = (Math.sin(clock * 4 + a.x) + 1) / 2;
-            c.globalAlpha = .4 + k * .6;
-            star(c, p.x + a.r * .55 * s, p.y - a.r * .55 * s, a.r * (.3 + k * .35) * s, '#ffffff');
-            c.globalAlpha = 1;
-        }
     }
 
     /* ---------- çəngəl rəsmi ---------- */
@@ -1295,7 +1044,7 @@
                 hud(); render();
             },
             aim: function (x, z) { input.target = { x: clamp(x, X_MIN, X_MAX), z: clamp(z, Z_MIN, Z_MAX) }; },
-            state: function () { return { claw: claw.state, x: Math.round(claw.x), z: Math.round(claw.z), held: claw.held && claw.held.type, chance: claw.chance, items: items.length, game: game }; },
+            state: function () { return { claw: claw.state, x: Math.round(claw.x), z: Math.round(claw.z), held: !!claw.held, chance: claw.chance, items: items.length, game: game, server: server }; },
             items: function () { return items.map(function (a) { return [a.type, Math.round(a.x), Math.round(a.y), Math.round(a.z)]; }); }
         };
     }
@@ -1331,7 +1080,6 @@
     });
 
     el.drop.addEventListener('click', function () { if (!game.started) start(); else drop(); });
-    el.again.addEventListener('click', again);
 
     // Şüşəyə toxunanda çəngəl həmin yerə gedir: ekran nöqtəsini qalağın təxmini
     // hündürlüyündəki üfüqi müstəviyə geri proyeksiya edirik
@@ -1354,6 +1102,12 @@
 
     /* ---------- başla ---------- */
     newGame();
+    // bu gün artıq hədiyyə götürülüb, cəhdlər bitib və ya açılmış şar gözləyir — dərhal göstəririk
+    if (VERIFIED && server && (server.claimed || server.last || server.attemptsLeft <= 0)) {
+        el.start.hidden = true;
+        game.started = true;
+        showDayClosed();
+    }
     drawBack();
     drawFront();
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { spriteCache = {}; drawBack(); drawFront(); });

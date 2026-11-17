@@ -32,6 +32,7 @@ class WheelSpin extends Model
         'wheel' => 'Bəxt çarxı',
         'stack' => 'Stəkan qülləsi',
         'nard' => 'Nərd — günün qalibi',
+        'claw' => 'Hədiyyə Kranı',
     ];
 
     /**

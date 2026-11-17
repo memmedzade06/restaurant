@@ -186,13 +186,12 @@
                                 <path d="M{{ 6 + $i * 18.5 }} 38 h18.5 v8 a9.25 9.25 0 0 1 -18.5 0 Z" fill="{{ $i % 2 ? '#FBF6EF' : '#E9A23B' }}"/>
                             @endfor
                             <rect x="12" y="62" width="136" height="3" fill="#C9831F"/>
-                            {{-- şirniyyatlar: konfet, paxlava, şəkərbura, qoğal --}}
-                            <path d="M50 145 l-7 -6 v12 Z M74 145 l7 -6 v12 Z" fill="#c62a2a"/><ellipse cx="62" cy="145" rx="12" ry="9" fill="#c62a2a"/>
-                            <path d="M88 128 l13 14 l-13 14 l-13 -14 Z" fill="#E9A23B" stroke="#9a5c12" stroke-width="1.5"/>
-                            <ellipse cx="118" cy="146" rx="15" ry="11" fill="#f0d8a4"/>
-                            <circle cx="104" cy="124" r="12" fill="#d9973a" stroke="#9c5c1a" stroke-width="1.5"/>
-                            <path d="M66 122 l-6 -5 v10 Z M86 122 l6 -5 v10 Z" fill="#2f7d4f"/><ellipse cx="76" cy="122" rx="10" ry="8" fill="#2f7d4f"/>
-                            <circle cx="132" cy="122" r="11" fill="#E9A23B"/>
+                            {{-- rəngli hədiyyə şarları --}}
+                            @foreach ([[62, 147, '#e63946'], [88, 148, '#3a86ff'], [114, 147, '#ffbe0b'], [138, 146, '#06d6a0'], [75, 126, '#8338ec'], [101, 126, '#ff006e'], [126, 125, '#2a9d8f']] as [$bx, $by, $bc])
+                                <circle cx="{{ $bx }}" cy="{{ $by }}" r="11.5" fill="{{ $bc }}"/>
+                                <path d="M{{ $bx - 11 }} {{ $by + 1 }} a11 3.5 0 0 0 22 0" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="1"/>
+                                <ellipse cx="{{ $bx - 4 }}" cy="{{ $by - 5 }}" rx="4" ry="2" fill="rgba(255,255,255,.8)" transform="rotate(-30 {{ $bx - 4 }} {{ $by - 5 }})"/>
+                            @endforeach
                             <rect x="44" y="118" width="3" height="42" fill="rgba(255,255,255,.3)"/>
                             {{-- çəngəl --}}
                             <g class="ca-claw">
@@ -209,7 +208,7 @@
                     </div>
                     <div class="game-body">
                         <h4>Hədiyyə Kranı</h4>
-                        <p>Çəngəli tuşlayın — konfet, şəkərbura, paxlava və qoğal kimi şirniyyatları tutub çıxışa salın!</p>
+                        <p>Rəngli şarı tutub çıxışa salın — içindən endirim, çay və ya qəlyan çıxsın! Gündə 3 cəhd.</p>
                         <span class="game-go">Oyna <i class="fa fa-arrow-right ms-1"></i></span>
                     </div>
                 </a>

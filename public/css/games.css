@@ -486,3 +486,18 @@ body.st-no-scroll { overflow: hidden; }
 .cw-art-svg .ca-pop { animation: caPop 2.8s ease-in-out infinite; opacity: 0; }
 @keyframes caPop { 0%, 15% { opacity: 0; } 25%, 85% { opacity: 1; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .cw-art-svg .ca-pop { animation: none; opacity: 1; } }
+
+/* Hədiyyə Kranı: şar açılır, içindən hədiyyə çıxır */
+.cl-result .nb-result-box { max-width: 360px; }
+.cl-prize { font-size: 26px; margin: 4px 0 10px; color: var(--wine); }
+.cl-note { color: var(--muted); font-size: 14px; }
+.cl-choice { margin-top: 6px; }
+.cl-choice .btn small { opacity: .8; font-weight: 700; }
+.cl-ball-open { position: relative; width: 74px; height: 74px; margin: 0 auto 10px; }
+.cl-ball-open span { position: absolute; left: 0; width: 74px; height: 37px; background: radial-gradient(circle at 35% 70%, var(--c2), var(--c1) 70%); box-shadow: inset 0 -4px 8px rgba(0, 0, 0, .18); }
+.cl-ball-open span:first-child { top: 0; border-radius: 37px 37px 0 0; animation: clOpenTop .7s .15s cubic-bezier(.3, 1.6, .5, 1) both; transform-origin: 10% 100%; }
+.cl-ball-open span:last-child { bottom: 0; border-radius: 0 0 37px 37px; filter: brightness(.88); }
+.cl-ball-open::after { content: '🎁'; position: absolute; left: 50%; top: 50%; font-size: 30px; transform: translate(-50%, -30%) scale(0); animation: clGift .5s .55s cubic-bezier(.3, 1.8, .5, 1) both; }
+@keyframes clOpenTop { to { transform: rotate(-38deg) translate(-4px, -6px); } }
+@keyframes clGift { to { transform: translate(-50%, -95%) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .cl-ball-open span:first-child, .cl-ball-open::after { animation-duration: .01s; } }

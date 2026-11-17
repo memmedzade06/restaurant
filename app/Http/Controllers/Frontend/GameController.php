@@ -293,12 +293,6 @@ class GameController extends Controller
         return response()->json(['saved' => false, 'points' => 0]);
     }
 
-    /** Hədiyyə Kranı: hələlik yalnız əyləncə üçündür — xal yazılmır, hədiyyə verilmir */
-    public function claw(): View
-    {
-        return view('frontend.games.claw');
-    }
-
     /**
      * Krossvord: hər gün hamı üçün eyni (tarixdən qurulur); ?n=<rəqəm> — məşq üçün başqa krossvord.
      * Hələlik yalnız əyləncə üçündür — xal yazılmır, hədiyyə verilmir.
