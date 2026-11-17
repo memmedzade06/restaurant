@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\WheelSpin;
 use App\Services\BakuWeather;
 use App\Services\NardLeaderboard;
+use App\Services\StackRecordNotifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -152,7 +153,7 @@ class GameController extends Controller
      * "Hədiyyəni qəbul et": oyunçunun xalına uyğun hədiyyə üçün kod yaradır, oyunun nəticəsini yazır.
      * Hər oyunda bir dəfə, gündə config('games.stack.prizes_per_day') dəfə.
      */
-    public function stackPrize(Request $request): JsonResponse
+    public function stackPrize(Request $request, StackRecordNotifier $notifier): JsonResponse
     {
         $data = $request->validate(['score' => ['required', 'integer', 'min:1', 'max:1000']] + self::LOG_RULES);
         $score = (int) $data['score'];
@@ -172,14 +173,18 @@ class GameController extends Controller
         }
         $request->session()->put('stack_prize_claimed', true);
 
-        return DB::transaction(function () use ($user, $score, $prize) {
+        return DB::transaction(function () use ($user, $score, $prize, $notifier) {
             User::whereKey($user->id)->lockForUpdate()->first();
 
             if ($this->stackPrizesLeft($user->id) <= 0) {
                 return response()->json(['message' => 'Bu günün hədiyyəsini artıq götürmüsünüz. Sabah yenə gəlin!'], 429);
             }
 
+            $overtaken = $notifier->overtaken($user, $score); // yazmazdan əvvəl: kimisə birincilikdən salırmı
             GameResult::create(['user_id' => $user->id, 'game' => 'stack', 'won' => true, 'points' => $score]);
+            if ($overtaken) {
+                $notifier->notify($overtaken[0], $overtaken[1], $user, $score, $prize['label']);
+            }
 
             $spin = WheelSpin::create([
                 'user_id' => $user->id,
@@ -212,7 +217,7 @@ class GameController extends Controller
     }
 
     /** Stəkan qülləsi: oyunun hesabını yazır, ən yaxşı nəticəni qaytarır (yalnız təsdiqlənmiş istifadəçi) */
-    public function stackResult(Request $request): JsonResponse
+    public function stackResult(Request $request, StackRecordNotifier $notifier): JsonResponse
     {
         $data = $request->validate(['score' => ['required', 'integer', 'min:0', 'max:1000'], 'log' => ['present', 'array', 'max:1000']] + array_diff_key(self::LOG_RULES, ['log' => 1]));
 
@@ -223,6 +228,7 @@ class GameController extends Controller
         }
 
         $before = $this->stackBest($request->user()->id);
+        $overtaken = $notifier->overtaken($request->user(), (int) $data['score']); // yazmazdan əvvəl yoxlanılır
 
         GameResult::create([
             'user_id' => $request->user()->id,
@@ -230,6 +236,14 @@ class GameController extends Controller
             'won' => false,
             'points' => $data['score'],
         ]);
+
+        if ($overtaken) {
+            // bu oyunda götürülmüş hədiyyə (finişdən sonra rekord üçün davam edəndə olur)
+            $prize = WheelSpin::where('game', 'stack')->where('user_id', $request->user()->id)
+                ->where('created_at', '>=', now()->setTimestamp((int) $started))
+                ->latest('id')->value('prize_label');
+            $notifier->notify($overtaken[0], $overtaken[1], $request->user(), (int) $data['score'], $prize);
+        }
 
         return response()->json([
             'saved' => true,
