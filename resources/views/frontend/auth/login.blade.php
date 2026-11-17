@@ -13,6 +13,10 @@
 <section class="section pt-4">
     <div class="container">
         <div class="auth-card">
+            @if (session('status'))
+                <div class="alert-ok"><i class="fa fa-check-circle me-2"></i>{{ session('status') }}</div>
+            @endif
+
             <form method="POST" action="{{ route('login') }}" novalidate>
                 @csrf
 
@@ -23,7 +27,10 @@
                 </div>
 
                 <div class="field">
-                    <label for="password">Şifrə</label>
+                    <div class="label-row">
+                        <label for="password">Şifrə</label>
+                        <a href="{{ route('password.request') }}" class="forgot-link">Şifrəmi unutdum</a>
+                    </div>
                     <input id="password" name="password" type="password" autocomplete="current-password" required>
                 </div>
 

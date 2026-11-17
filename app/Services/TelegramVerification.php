@@ -11,12 +11,13 @@ use Illuminate\Support\Str;
  *  1) sayt bir dəfəlik kod yaradır, istifadəçi t.me/<bot>?start=<kod> linkini açır;
  *  2) bot "/start <kod>" alır, hesabı bu Telegram söhbətinə bağlayır və nömrə istəyir;
  *  3) istifadəçi öz kontaktını paylaşır — nömrə formadakı nömrə ilə eynidirsə, təsdiqlənir.
+ * "/start r_<kod>" — şifrə bərpasıdır, TelegramPasswordReset-ə ötürülür.
  */
 class TelegramVerification
 {
     public const TOKEN_TTL_MINUTES = 30;
 
-    public function __construct(private readonly TelegramBot $bot)
+    public function __construct(private readonly TelegramBot $bot, private readonly TelegramPasswordReset $reset)
     {
     }
 
@@ -44,13 +45,21 @@ class TelegramVerification
         $chatId = (string) $message['chat']['id'];
 
         if (isset($message['contact'])) {
-            $this->handleContact($chatId, $message);
+            // əvvəlcə bu söhbətdə gözləyən şifrə bərpası varmı
+            if (! $this->reset->handleContact($chatId, $message)) {
+                $this->handleContact($chatId, $message);
+            }
             return;
         }
 
         $text = trim($message['text'] ?? '');
         if (str_starts_with($text, '/start')) {
-            $this->handleStart($chatId, trim(substr($text, 6)));
+            $arg = trim(substr($text, 6));
+            if (str_starts_with($arg, TelegramPasswordReset::PREFIX)) {
+                $this->reset->handleStart($chatId, substr($arg, strlen(TelegramPasswordReset::PREFIX)));
+            } else {
+                $this->handleStart($chatId, $arg);
+            }
             return;
         }
 

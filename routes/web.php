@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\Frontend\MenuController;
 use App\Http\Controllers\Frontend\ContactController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\TelegramVerifyController;
@@ -58,6 +59,16 @@ Route::middleware('guest')->group(function () {
     Route::post('/qeydiyyat', [RegisterController::class, 'store'])->middleware('throttle:6,1');
     Route::get('/giris', [LoginController::class, 'show'])->name('login');
     Route::post('/giris', [LoginController::class, 'store'])->middleware('throttle:10,1');
+
+    // Şifrəmi unutdum: nömrə → Telegram ilə təsdiq → yeni şifrə
+    Route::controller(ForgotPasswordController::class)->prefix('sifremi-unutdum')->name('password.')->group(function () {
+        Route::get('/', 'show')->name('request');
+        Route::post('/', 'store')->middleware('throttle:6,1');
+        Route::get('/telegram', 'telegram')->name('telegram');
+        Route::get('/status', 'status')->middleware('throttle:60,1')->name('status');
+        Route::get('/yeni', 'edit')->name('reset');
+        Route::post('/yeni', 'update')->middleware('throttle:10,1')->name('update');
+    });
 });
 
 Route::middleware('auth')->group(function () {
