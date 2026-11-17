@@ -78,16 +78,18 @@ class PrizeAdminTest extends TestCase
         $this->actingAs($admin)->get('/admin/hediyyeler?q=' . strtolower(substr($p->code, 3)))
             ->assertOk()->assertSee($p->code)->assertSee('İstifadə olundu');
 
-        $this->actingAs($admin)->post("/admin/hediyyeler/{$p->id}/istifade")->assertSessionHas('success');
-        $p->refresh();
-        $this->assertNotNull($p->redeemed_at);
-        $this->assertSame($admin->id, $p->redeemed_by);
-        $this->assertSame(WheelSpin::USED, $p->status());
+        // İstifadə olunan kod bazadan dərhal silinir — bazada yalnız aktiv kuponlar qalır
+        $this->actingAs($admin)->post("/admin/hediyyeler/{$p->id}/istifade")
+            ->assertSessionHas('success', fn ($m) => str_contains($m, $p->code) && str_contains($m, 'silindi'));
+        $this->assertNull($p->fresh());
 
-        // İkinci dəfə istifadə etmək olmur
-        $first = $p->redeemed_at;
-        $this->actingAs($admin)->post("/admin/hediyyeler/{$p->id}/istifade")->assertSessionHas('error');
-        $this->assertEquals($first, $p->fresh()->redeemed_at);
+        // İkinci dəfə istifadə etmək olmur — 404 yox, aydın mesaj
+        $this->actingAs($admin)->post("/admin/hediyyeler/{$p->id}/istifade")
+            ->assertSessionHas('error', fn ($m) => str_contains($m, 'tapılmadı'));
+
+        // Admin paneldə boş "İstifadə olunub" / "Vaxtı keçib" sekmələri görünmür
+        $this->actingAs($admin)->get('/admin/hediyyeler')->assertOk()
+            ->assertSee('Aktiv')->assertDontSee('status=used', false)->assertDontSee('status=expired', false);
     }
 
     public function test_expired_code_cannot_be_redeemed(): void
@@ -108,18 +110,21 @@ class PrizeAdminTest extends TestCase
         $this->assertNull($p->fresh()->redeemed_at);
     }
 
-    public function test_player_sees_active_and_used_prizes(): void
+    public function test_player_sees_only_own_active_prizes(): void
     {
         $u = $this->user();
         $active = $this->prize($u);
-        $used = $this->prize($u, ['prize_label' => '20% endirim', 'redeemed_at' => now()]);
+        $used = $this->prize($u, ['prize_label' => '20% endirim', 'redeemed_at' => now()]); // köhnə qayda ilə qalmış
         $other = $this->prize($this->user());
 
         $this->actingAs($u)->get('/hediyyelerim')->assertOk()
             ->assertSee($active->code)
-            ->assertSee($used->code)
-            ->assertSee('Qüvvədən düşüb')
             ->assertDontSee($other->code);
+
+        // köhnə istifadə olunmuş qeyd də avtomatik təmizlənir, aktiv qalır
+        \App\Models\WheelSpin::pruneExpired();
+        $this->assertNull($used->fresh());
+        $this->assertNotNull($active->fresh());
     }
 
     public function test_make_admin_command(): void

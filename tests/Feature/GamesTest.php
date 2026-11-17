@@ -134,7 +134,7 @@ class GamesTest extends TestCase
         $this->assertSame(0, WheelSpin::where('user_id', $u->id)->count()); // yeni kod yaranmayıb
     }
 
-    public function test_prune_deletes_only_expired_unused_coupons(): void
+    public function test_prune_deletes_all_expired_coupons(): void
     {
         $u = $this->user();
         $make = fn (string $key, $expires, $redeemed = null) => WheelSpin::create([
@@ -144,12 +144,15 @@ class GamesTest extends TestCase
         ]);
         $expired = $make('expired', now()->subMinute());
         $active = $make('active', now()->addMinutes(5));
-        $used = $make('used', now()->subDay(), now()->subDay()->addMinute()); // istifadə olunub — tarixçədə qalır
+        $usedExpired = $make('used', now()->subDay(), now()->subDay()->addMinute());   // istifadə olunub, müddəti bitib — silinir
+        $usedActive = $make('used2', now()->addMinutes(5), now());                     // istifadə olunub — silinir
 
-        $this->assertSame(1, WheelSpin::pruneExpired());
+        // bazada yalnız aktiv kupon qalır
+        $this->assertSame(3, WheelSpin::pruneExpired());
         $this->assertNull($expired->fresh());
+        $this->assertNull($usedExpired->fresh());
+        $this->assertNull($usedActive->fresh());
         $this->assertNotNull($active->fresh());
-        $this->assertNotNull($used->fresh());
 
         // sayt açılanda da silinir (cron olmasa belə), dəqiqədə ən çox bir dəfə
         $again = $make('expired2', now()->subMinute());
@@ -394,6 +397,10 @@ class GamesTest extends TestCase
         $this->assertSame(50, (int) GameResult::where('user_id', $u->id)->where('game', 'stack')->max('points'));
 
         // Gündə bir hədiyyə (yeni oyunda)
+        $this->stackPost($u, 'hediyye', 55, null, $this->playedFor(55) + ['stack_prize_claimed' => false])->assertStatus(429);
+
+        // kod restoranda istifadə olunub bazadan silinsə də, bu gün yeni hədiyyə verilmir
+        $spin->delete();
         $this->stackPost($u, 'hediyye', 55, null, $this->playedFor(55) + ['stack_prize_claimed' => false])->assertStatus(429);
 
         // Stəkan hədiyyəsi bəxt çarxını bloklamır

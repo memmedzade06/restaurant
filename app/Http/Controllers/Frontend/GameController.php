@@ -195,6 +195,7 @@ class GameController extends Controller
                 'spun_on' => $this->today(),
                 'expires_at' => now()->addDays((int) config('games.stack.code_valid_days', 1)),
             ]);
+            $this->countStackPrize($user->id);
 
             return response()->json(['prize' => $this->spinPayload($spin), 'best' => $this->stackBest($user->id)]);
         });
@@ -211,9 +212,23 @@ class GameController extends Controller
 
     private function stackPrizesLeft(int $userId): int
     {
-        $taken = WheelSpin::where('game', 'stack')->where('user_id', $userId)->whereDate('spun_on', $this->today())->count();
+        $inDb = WheelSpin::where('game', 'stack')->where('user_id', $userId)->whereDate('spun_on', $this->today())->count();
+        // istifadə olunan kupon bazadan silinir — bu günün sayı keşdə də saxlanılır ki, limit sıfırlanmasın
+        $taken = max($inDb, (int) Cache::get($this->stackTakenKey($userId), 0));
 
         return max(0, (int) config('games.stack.prizes_per_day', 1) - $taken);
+    }
+
+    private function stackTakenKey(int $userId): string
+    {
+        return "stack_prizes_taken:{$userId}:" . $this->today();
+    }
+
+    /** Bu gün götürülən Stəkan qülləsi hədiyyələrinin sayını artırır (Bakı vaxtı ilə gün bitəndə silinir) */
+    private function countStackPrize(int $userId): void
+    {
+        $key = $this->stackTakenKey($userId);
+        Cache::put($key, (int) Cache::get($key, 0) + 1, now('Asia/Baku')->endOfDay());
     }
 
     /** Stəkan qülləsi: oyunun hesabını yazır, ən yaxşı nəticəni qaytarır (yalnız təsdiqlənmiş istifadəçi) */

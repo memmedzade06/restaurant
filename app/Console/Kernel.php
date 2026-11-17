@@ -14,7 +14,7 @@ class Kernel extends ConsoleKernel
     {
         // Nərd: gün bitəndə qaliblərə endirim kodu və nəticələrin silinməsi (səhifə açılanda da işləyir)
         $schedule->command('nard:finalize-day')->dailyAt('00:01')->timezone('Asia/Baku');
-        // Vaxtı keçmiş, istifadə olunmamış hədiyyə kuponlarının silinməsi (sayt açılanda da işləyir)
+        // Müddəti bitmiş bütün hədiyyə kuponlarının silinməsi (sayt açılanda da işləyir)
         $schedule->command('prizes:prune')->everyMinute()->withoutOverlapping();
     }
 

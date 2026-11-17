@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
- * Admin: oyunçuların hədiyyə kodlarını yoxlayır və "istifadə olundu" kimi qeyd edir.
- * İstifadə olunmuş kod bir daha istifadə oluna bilməz.
+ * Admin: oyunçuların hədiyyə kodlarını yoxlayır və istifadə edir.
+ * İstifadə olunan kod bazadan silinir — bir daha istifadə oluna bilməz.
  */
 class PrizeController extends Controller
 {
@@ -49,12 +49,18 @@ class PrizeController extends Controller
         ]);
     }
 
-    /** Kodu "istifadə olundu" kimi qeyd edir */
-    public function redeem(Request $request, WheelSpin $prize): RedirectResponse
+    /**
+     * Kodu istifadə edir: yoxlanılır və bazadan dərhal silinir (bazada yalnız aktiv kuponlar qalır).
+     * $id — model bağlaması yoxdur ki, artıq silinmiş kod 404 yox, aydın mesaj versin.
+     */
+    public function redeem(Request $request, string $prize): RedirectResponse
     {
-        $result = DB::transaction(function () use ($request, $prize) {
-            $prize = WheelSpin::whereKey($prize->id)->lockForUpdate()->first(); // iki admin eyni anda bassa belə bir dəfə
+        $result = DB::transaction(function () use ($prize) {
+            $prize = WheelSpin::whereKey($prize)->lockForUpdate()->first(); // iki admin eyni anda bassa belə bir dəfə
 
+            if (! $prize) {
+                return ['error', 'Kod tapılmadı — artıq istifadə olunub və ya vaxtı keçib.'];
+            }
             if (! $prize->code) {
                 return ['error', 'Bu qeydin hədiyyə kodu yoxdur.'];
             }
@@ -65,9 +71,9 @@ class PrizeController extends Controller
                 return ['error', "{$prize->code} kodunun vaxtı keçib — istifadə etmək olmaz."];
             }
 
-            $prize->forceFill(['redeemed_at' => now(), 'redeemed_by' => $request->user()->id])->save();
+            $prize->delete();
 
-            return ['success', "{$prize->code} — «{$prize->prize_label}» istifadə olundu. Kod artıq qüvvədən düşüb."];
+            return ['success', "{$prize->code} — «{$prize->prize_label}» istifadə olundu. Kod qüvvədən düşdü və silindi."];
         });
 
         return back()->with($result[0], $result[1]);

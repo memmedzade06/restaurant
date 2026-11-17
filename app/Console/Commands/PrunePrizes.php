@@ -6,14 +6,14 @@ use App\Models\WheelSpin;
 use Illuminate\Console\Command;
 
 /**
- * Vaxtı keçmiş, istifadə olunmamış hədiyyə kuponlarını bazadan silir.
+ * Müddəti bitmiş bütün hədiyyə kuponlarını (istifadə olunmuşlar da) bazadan silir.
  * Cədvəldə hər dəqiqə işləyir; cron olmasa da sayt özü (PruneExpiredPrizes) dəqiqədə bir dəfə silir.
  */
 class PrunePrizes extends Command
 {
     protected $signature = 'prizes:prune';
 
-    protected $description = 'Vaxtı keçmiş, istifadə olunmamış hədiyyə kuponlarını silir';
+    protected $description = 'Müddəti bitmiş bütün hədiyyə kuponlarını silir (istifadə olunmuşlar da)';
 
     public function handle(): int
     {

@@ -64,6 +64,8 @@
             <div class="admin-tabs">
                 <a href="{{ route('admin.prizes', array_filter(['q' => $q])) }}" class="{{ $status ? '' : 'active' }}">Hamısı</a>
                 @foreach (\App\Models\WheelSpin::STATUS_LABELS as $key => $label)
+                    {{-- istifadə olunmuş və vaxtı keçmiş kuponlar bazadan silinir — boş sekmələri göstərmirik --}}
+                    @continue($key !== \App\Models\WheelSpin::ACTIVE && ! $counts[$key] && $status !== $key)
                     <a href="{{ route('admin.prizes', array_filter(['q' => $q, 'status' => $key])) }}" class="{{ $status === $key ? 'active' : '' }}">{{ $label }} <span>{{ $counts[$key] }}</span></a>
                 @endforeach
             </div>

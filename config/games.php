@@ -14,7 +14,7 @@ return [
     'wheel' => [
         // Çarx restoranda, masada oynanılır və endirim həmin masanın cari hesabına tətbiq olunur,
         // ona görə kod yalnız bu ziyarət üçündür: bu qədər dəqiqədən sonra avtomatik qüvvədən düşür
-        // (vaxtı keçmiş, istifadə olunmamış kuponlar bazadan avtomatik silinir — WheelSpin::pruneExpired).
+        // (müddəti bitmiş kuponlar — istifadə olunmuşlar da — bazadan avtomatik silinir — WheelSpin::pruneExpired).
         'code_valid_minutes' => 10,
         // Hər istifadəçiyə gündə neçə fırlatma cəhdi verilir. Hər fırlatmadan sonra oyunçu
         // ya "Hədiyyəni götür" basır (kod yaranır, raund bitir), ya da yenidən fırladır.
