@@ -34,6 +34,21 @@ class WheelSpin extends Model
         'nard' => 'Nərd — günün qalibi',
     ];
 
+    /**
+     * Vaxtı keçmiş, istifadə olunmamış kuponları bazadan silir. İstifadə olunmuş kuponlar
+     * (redeemed_at dolu) tarixçə kimi qalır. Nərd qaliblərinin kupona bağlantısı özü boşalır (nullOnDelete).
+     * Qaytarır: silinən kuponların sayı.
+     */
+    public static function pruneExpired(): int
+    {
+        return static::query()
+            ->whereNotNull('code')
+            ->whereNull('redeemed_at')
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<=', now())
+            ->delete();
+    }
+
     /** Unikal hədiyyə kodu: QP-XXXXXX */
     public static function newCode(): string
     {

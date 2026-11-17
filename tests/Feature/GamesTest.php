@@ -39,6 +39,19 @@ class GamesTest extends TestCase
         $this->get('/oyunlar')->assertSee('Hədiyyə Kranı');
     }
 
+    public function test_wheel_has_rare_fifty_percent_discount(): void
+    {
+        $segments = collect(config('games.wheel.segments'));
+        $fifty = $segments->firstWhere('key', 'discount_50');
+
+        $this->assertNotNull($fifty);
+        $this->assertTrue($fifty['prize']);
+        // ən nadir sektor: hamısından az, ümumi şansı 0.5%-dən az
+        $this->assertSame($fifty['weight'], $segments->min('weight'));
+        $this->assertLessThan(0.005, $fifty['weight'] / $segments->sum('weight'));
+        $this->get('/oyunlar/bext-carxi')->assertOk()->assertSee('50% endirim');
+    }
+
     public function test_guest_spin_is_demo_and_not_saved(): void
     {
         $before = WheelSpin::count();
@@ -91,15 +104,58 @@ class GamesTest extends TestCase
         $this->assertSame(1, WheelSpin::where('user_id', $u->id)->count()); // 2 fırlatma, bazada 1 sətir
         $this->assertNotNull(WheelSpin::where('user_id', $u->id)->first()->code);
 
-        // çarx masada oynanılır — kod yalnız bu ziyarət üçün (3 saat) etibarlıdır
+        // çarx masada oynanılır — kod yalnız bu ziyarət üçün (10 dəqiqə) etibarlıdır
         $spin = WheelSpin::where('user_id', $u->id)->first();
-        $this->assertEqualsWithDelta(now()->addHours(3)->timestamp, $spin->expires_at->timestamp, 60);
+        $this->assertEqualsWithDelta(now()->addMinutes(10)->timestamp, $spin->expires_at->timestamp, 60);
 
         // götürəndən sonra fırlatmaq olmur, ikinci "götür" eyni kodu qaytarır
         $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertStatus(429);
         $this->actingAs($u)->postJson('/oyunlar/bext-carxi/gotur')->assertOk()->assertJson(['state' => ['claimed' => ['code' => $r->json('state.claimed.code')]]]);
 
         $this->actingAs($u)->get('/hesabim')->assertSee($r->json('state.claimed.code'));
+    }
+
+    public function test_expired_wheel_code_is_deleted_but_day_stays_closed(): void
+    {
+        $this->onlySegment(true);
+        $u = $this->user();
+        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertOk();
+        $code = $this->actingAs($u)->postJson('/oyunlar/bext-carxi/gotur')->assertOk()->json('state.claimed.code');
+
+        // 11 dəqiqə sonra kodun vaxtı bitib və bazadan silinir
+        $this->travel(11)->minutes();
+        $this->artisan('prizes:prune')->assertSuccessful();
+        $this->assertNull(WheelSpin::where('code', $code)->first());
+
+        // amma bu gün yenidən fırlatmaq olmur — "götürülüb" qeydi gün sonunadək qalır
+        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertStatus(429)
+            ->assertJson(['state' => ['attemptsLeft' => 0, 'claimed' => ['code' => $code, 'expired' => true]]]);
+        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/gotur')->assertOk()->assertJson(['state' => ['claimed' => ['expired' => true]]]);
+        $this->assertSame(0, WheelSpin::where('user_id', $u->id)->count()); // yeni kod yaranmayıb
+    }
+
+    public function test_prune_deletes_only_expired_unused_coupons(): void
+    {
+        $u = $this->user();
+        $make = fn (string $key, $expires, $redeemed = null) => WheelSpin::create([
+            'user_id' => $u->id, 'game' => 'wheel', 'prize_key' => $key, 'prize_label' => $key,
+            'code' => WheelSpin::newCode(), 'spun_on' => now()->toDateString(),
+            'expires_at' => $expires, 'redeemed_at' => $redeemed,
+        ]);
+        $expired = $make('expired', now()->subMinute());
+        $active = $make('active', now()->addMinutes(5));
+        $used = $make('used', now()->subDay(), now()->subDay()->addMinute()); // istifadə olunub — tarixçədə qalır
+
+        $this->assertSame(1, WheelSpin::pruneExpired());
+        $this->assertNull($expired->fresh());
+        $this->assertNotNull($active->fresh());
+        $this->assertNotNull($used->fresh());
+
+        // sayt açılanda da silinir (cron olmasa belə), dəqiqədə ən çox bir dəfə
+        $again = $make('expired2', now()->subMinute());
+        \Illuminate\Support\Facades\Cache::forget('prizes:pruned');
+        $this->get('/oyunlar')->assertOk();
+        $this->assertNull($again->fresh());
     }
 
     public function test_cannot_claim_try_again_or_as_guest(): void

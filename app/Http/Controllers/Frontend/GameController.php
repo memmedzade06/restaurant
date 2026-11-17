@@ -367,7 +367,7 @@ class GameController extends Controller
             }
 
             // Bazaya yalnız götürülən hədiyyə yazılır
-            WheelSpin::create([
+            $spin = WheelSpin::create([
                 'user_id' => $user->id,
                 'game' => 'wheel',
                 'prize_key' => $last['key'],
@@ -375,10 +375,12 @@ class GameController extends Controller
                 'code' => $this->newCode(),
                 'spun_on' => $this->today(),
                 // çarx masada oynanılır, endirim həmin masanın cari hesabına — kod yalnız bu ziyarət üçündür
-                'expires_at' => now()->addHours((int) config('games.wheel.code_valid_hours', 3)),
+                'expires_at' => now()->addMinutes((int) config('games.wheel.code_valid_minutes', 10)),
             ]);
 
             $round['last'] = null;
+            // vaxtı keçmiş kupon bazadan silinir — "bu gün götürülüb" qeydi gün sonunadək raundda qalır
+            $round['claimed'] = $this->spinPayload($spin);
             $this->saveRound($user->id, $round);
 
             return response()->json(['state' => $this->wheelState($user->id)]);
@@ -390,22 +392,28 @@ class GameController extends Controller
      */
     private function wheelState(int $userId): array
     {
-        $claimed = WheelSpin::where('game', 'wheel')->where('user_id', $userId)->whereDate('spun_on', $this->today())->whereNotNull('code')->latest('id')->first();
+        $spin = WheelSpin::where('game', 'wheel')->where('user_id', $userId)->whereDate('spun_on', $this->today())->whereNotNull('code')->latest('id')->first();
         $round = $this->round($userId);
         $last = $round['last'];
+
+        // Kupon bazadadırsa ondan, vaxtı keçib silinibsə raunddakı surətdən — gün ərzində təkrar fırlatmaq olmur
+        $claimed = $spin ? $this->spinPayload($spin) : ($round['claimed'] ?? null);
+        if ($claimed && ! $spin) {
+            $claimed['expired'] = true;
+        }
 
         return [
             'attempts' => $this->attempts(),
             'attemptsLeft' => $claimed ? 0 : max(0, $this->attempts() - $round['count']),
             'last' => $last && ! $claimed ? ['label' => $last['label'], 'prize' => $this->isPrize($last['key'])] : null,
-            'claimed' => $claimed ? $this->spinPayload($claimed) : null,
+            'claimed' => $claimed,
         ];
     }
 
     /** Bu günün raundu (keşdə): ['count' => fırlatma sayı, 'last' => son nəticə və ya null] */
     private function round(int $userId): array
     {
-        return Cache::get($this->roundKey($userId), ['count' => 0, 'last' => null]);
+        return Cache::get($this->roundKey($userId), ['count' => 0, 'last' => null, 'claimed' => null]);
     }
 
     private function saveRound(int $userId, array $round): void
@@ -465,6 +473,7 @@ class GameController extends Controller
             'expires' => $spin->expires_at?->timezone('Asia/Baku')->format('d.m.Y H:i'), // kod 1 gün etibarlıdır — saat da lazımdır
             // "Hədiyyəni götür" basılan an (Bakı vaxtı)
             'claimed_at' => $spin->created_at?->timezone('Asia/Baku')->format('d.m.Y H:i'),
+            'expired' => $spin->status() === WheelSpin::EXPIRED,
         ];
     }
 

@@ -37,6 +37,7 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\TrackLastSeen::class,
+            \App\Http\Middleware\PruneExpiredPrizes::class, // vaxtı keçmiş kuponları silir (cavabdan sonra)
         ],
 
         'api' => [

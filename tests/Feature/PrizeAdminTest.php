@@ -95,7 +95,9 @@ class PrizeAdminTest extends TestCase
         $p = $this->prize($this->user(), ['expires_at' => now()->subDay()]);
 
         $this->actingAs($this->user(true))->post("/admin/hediyyeler/{$p->id}/istifade")->assertSessionHas('error');
-        $this->assertNull($p->fresh()->redeemed_at);
+        // istifadə olunmayıb; vaxtı keçmiş kupon sorğudan sonra bazadan avtomatik silinir
+        $this->assertNull($p->fresh()?->redeemed_at);
+        $this->assertNull($p->fresh());
     }
 
     public function test_non_admin_cannot_redeem(): void

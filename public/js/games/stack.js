@@ -14,7 +14,7 @@
     if (!root) return;
 
     const canvas = root.querySelector('canvas');
-    const ctx = canvas.getContext('2d');
+    let ctx = canvas.getContext('2d'); // let: stəkanın hazır şəkli (sprite) çəkiləndə müvəqqəti başqa kətana yönəlir
     const overlay = root.querySelector('.st-result');
     const offer = root.querySelector('.st-offer');
     const startHint = root.querySelector('.st-start');
@@ -66,6 +66,7 @@
             shake: 0,
             popups: [],
             time: 0,
+            steam: {px: null, drift: 0}, // hərəkət edən stəkanın buğu: əvvəlki x və gecikən sürüşmə (px)
             finish: false,
             offered: {},              // bu oyunda təklif olunmuş hədiyyələr
             claiming: false,
@@ -472,21 +473,42 @@
 
     /* ---------- Sınma: şüşə qırıqları, çay damcıları, masada çay ləkəsi ---------- */
 
+    /**
+     * Qırığın forması: nizamsız iti çoxbucaqlı; bəziləri uzun nazik qəlpədir,
+     * bəzilərinin bir kənarı əyridir (armudu stəkanın divarından qopub).
+     */
+    function shardShape(size, tiny) {
+        const n = tiny ? 3 : 3 + Math.floor(Math.random() * 3);
+        const sliver = !tiny && Math.random() < 0.35;
+        const pts = [];
+        for (let i = 0; i < n; i++) {
+            const a = i / n * Math.PI * 2 + (Math.random() - 0.5) * 0.7;
+            const r = size * (0.4 + Math.random() * 0.65);
+            pts.push([Math.cos(a) * r * (sliver ? 1.7 : 1), Math.sin(a) * r * (sliver ? 0.4 : 1)]);
+        }
+        return {pts, curve: !tiny && Math.random() < 0.5 ? Math.floor(Math.random() * n) : -1};
+    }
+
     function shatter(f) {
         f.broken = true;
         sound.crash();
         const x = Math.max(-20, Math.min(LW + 20, f.x));
         g.shake = Math.max(g.shake, 6);
-        // şüşə qırıqları
-        for (let i = 0; i < 14; i++) {
+        // şüşə qırıqları: 16 iri-orta qırıq + 12 xırda qəlpə (toz kimi parıldayır)
+        for (let i = 0; i < 28; i++) {
+            const tiny = i >= 16;
             const a = -Math.PI * (0.1 + Math.random() * 0.8); // yuxarı-yana
-            const v = 160 + Math.random() * 260;
+            const v = (tiny ? 120 : 160) + Math.random() * 260;
+            const size = tiny ? 1.4 + Math.random() * 1.8 : 4 + Math.random() * 8;
             g.shards.push({
                 kind: 'glass', x: x + (Math.random() - 0.5) * GW * 0.6, y: FLOOR - 4,
                 vx: Math.cos(a) * v + f.vx * 0.3, vy: Math.sin(a) * v,
-                rot: Math.random() * 6, vr: (Math.random() - 0.5) * 18,
-                size: 4 + Math.random() * 7, life: 1, rest: false,
-                gold: Math.random() < 0.18, // qızılı haşiyədən qırıq
+                rot: Math.random() * 6, vr: (Math.random() - 0.5) * (tiny ? 30 : 18),
+                size, life: 1, rest: false, ...shardShape(size, tiny),
+                gold: !tiny && Math.random() < 0.18,          // qızılı haşiyədən qopmuş qırıq
+                tea: !tiny && Math.random() < 0.35,           // içində çay olan hissədən — çay rəngli
+                seed: Math.random() * 10,
+                depth: (Math.random() - 0.5) * TABLE_DEPTH * 0.75, // masaya düşəndə önə-arxaya səpələnir
             });
         }
         // çay damcıları: havaya sıçrayır, süfrənin üstünə və ya ön tərəfinə düşüb ləkə qoyur
@@ -620,7 +642,8 @@
 
     function updateShards(dt) {
         for (const s of g.shards) {
-            if (s.rest) { s.life -= dt * 0.35; continue; }
+            // masaya düşmüş şüşə qırıqları yeni oyuna qədər qalır (reset() siyahını təmizləyir); çay damcıları hopub yox olur
+            if (s.rest) { if (s.kind !== 'glass') s.life -= dt * 0.35; continue; }
             s.vy += 1400 * dt;
             s.x += s.vx * dt;
             s.y += s.vy * dt;
@@ -672,6 +695,23 @@
         for (const t of g.tower) if (t.s) springStep(t.s, 0, dt); // qüllədəki stəkanlar
     }
 
+    /**
+     * Buğ hərəkətdən geri qalır: stəkan sağa gedəndə buğ sola, sola gedəndə sağa əyilir.
+     * Sürüşmə yumşaq dəyişir (ətalət) — stəkan dönəndə buğ da bir anda yox, yavaş-yavaş o biri tərəfə keçir.
+     */
+    function updateSteamDrift(dt) {
+        const s = g.steam;
+        const mx = g.state === 'swing' || g.state === 'ready' ? g.swing.x : g.state === 'drop' ? g.drop.x : null;
+        let target = 0;
+        if (mx !== null && s.px !== null && dt > 0) {
+            const vx = (mx - s.px) / dt;
+            // yeni stəkan kənardan başlayanda x sıçrayır — bu "sürət" sayılmır
+            if (Math.abs(vx) < 2000) target = Math.max(-STEAM.maxDrift, Math.min(STEAM.maxDrift, -vx * STEAM.lag));
+        }
+        s.px = mx;
+        s.drift += (target - s.drift) * Math.min(1, dt * STEAM.follow);
+    }
+
     function update(dt) {
         g.time += dt;
         updateSlosh(dt);
@@ -701,6 +741,7 @@
             g.drop.y += g.drop.vy * dt;
             if (g.drop.y >= topBottomY() - GH) land();
         }
+        updateSteamDrift(dt);
 
         if (g.state === 'fall') {
             g.fallTime += dt;
@@ -738,7 +779,8 @@
 
     // isti çayın buğu (ağzın üstündə alçaq duman): on — açıq/bağlı, speed — duman ləkələrinin dövrü,
     // rise — ağızdan nə qədər yuxarı qalxıb itir (px), alpha — ən sıx anındakı görünmə dərəcəsi
-    const STEAM = {on: true, speed: 0.3, rise: 10, alpha: 0.45};
+    // lag — sürətin nə qədəri buğu geri sürüşdürür, maxDrift — ən çox neçə px, follow — nə tez çatır (ətalət)
+    const STEAM = {on: true, speed: 0.3, rise: 10, alpha: 0.45, lag: 0.06, maxDrift: 14, follow: 4};
     const TEA_SURFACE_W = 0.3; // çay səthinin (ellipsin) yarım eni — stəkanın həmin hündürlükdəki eninə uyğun
     const RIM_RY = 3.5; // ağzın yumruluğu (ellipsin şaquli radiusu) — ağıza azca yuxarıdan baxırıq
     const RIM_W = 0.44; // ağzın yarım eni (GW-yə nisbətən)
@@ -870,22 +912,132 @@
      * Ağzın üstündə sabit zəif duman qatı var; onun üstündə bir neçə duman ləkəsi yavaş yaranır,
      * azca qalxır (STEAM.rise qədər) və itir — buğ yuxarı uçmur. Külək dumanı azca yana sürüşdürür.
      */
-    function drawSteam(x, rimY, seed) {
+    // drift — hərəkətdən geri qalma (px): yuxarıdakı, daha köhnə buğ ləkələri daha çox geri qalır
+    function drawSteam(x, rimY, seed, drift = 0) {
         if (!STEAM.on) return;
         const t = g.time;
+        const spread = 1 + Math.abs(drift) / 28;       // hərəkətdə buğ bir az yayılır
         // ağzın üstündəki daimi duman qatı — yavaş "nəfəs alır"
-        mistBlob(x + windX * 2, rimY - 2, GW * 0.62, 7, STEAM.alpha * (0.55 + 0.15 * Math.sin(t * 1.3 + seed * 6)));
+        mistBlob(x + windX * 2 + drift * 0.35, rimY - 2, GW * 0.62 * spread, 7, STEAM.alpha * (0.55 + 0.15 * Math.sin(t * 1.3 + seed * 6)));
         for (let k = 0; k < 5; k++) {
             const phase = (t * STEAM.speed + k / 5 + seed) % 1; // 0 — yenicə yaranıb, 1 — itib
             const a = Math.sin(phase * Math.PI) * STEAM.alpha;
-            const cx = x + (k - 2) * GW * 0.15 + Math.sin(t * 0.9 + k * 1.7 + seed * 5) * 3 + windX * phase * 8;
+            const cx = x + (k - 2) * GW * 0.15 + Math.sin(t * 0.9 + k * 1.7 + seed * 5) * 3 + windX * phase * 8
+                + drift * (0.5 + phase * 1.1);
             const cy = rimY - 3 - phase * STEAM.rise;
-            const rx = GW * 0.2 * (0.8 + phase * 0.6);   // qalxdıqca yayılır
+            const rx = GW * 0.2 * (0.8 + phase * 0.6) * spread;   // qalxdıqca yayılır
             mistBlob(cx, cy, rx, rx * 0.5, a);
         }
     }
 
+    /**
+     * Armudu stəkanın dibi: qalın, şəffaf şüşə disk (çay onun üstündədir). Dibdən çayın rəngi
+     * sınaraq açıq kəhrəba kimi görünür, kənarları işıqlı, ön kənarı parlaq, ətrafında incə qızılı haşiyə,
+     * altında dayandığı yerə düşən yumşaq kölgə. Stəkanın lokal koordinatlarında: dib (0, 0)-dadır.
+     */
+    function drawGlassBase() {
+        const rx = GW * 0.27, ry = 2.6, T = 5;             // yarım en, ellipsin yumruluğu, qalınlıq
+        // dayandığı yerə düşən kölgə
+        const sh = ctx.createRadialGradient(0, 1, 1, 0, 1, rx * 1.25);
+        sh.addColorStop(0, 'rgba(0, 0, 0, .35)');
+        sh.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.save();
+        ctx.scale(1, 0.22);
+        ctx.fillStyle = sh;
+        ctx.beginPath(); ctx.arc(0, 1 / 0.22, rx * 1.25, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+
+        // şüşə disk: yan tərəf (silindr) + alt ellipsin ön yarısı
+        const side = new Path2D();
+        side.moveTo(-rx, -T);
+        side.lineTo(-rx, 0);
+        side.ellipse(0, 0, rx, ry, 0, Math.PI, 0, true);
+        side.lineTo(rx, -T);
+        side.ellipse(0, -T, rx, ry, 0, 0, Math.PI, false);
+        side.closePath();
+        // içindən çay sınaraq görünür: ortada kəhrəba, kənarlarda şüşənin öz açıq çaları
+        const body = ctx.createLinearGradient(-rx, 0, rx, 0);
+        body.addColorStop(0, 'rgba(235, 245, 248, .55)');
+        body.addColorStop(0.22, 'rgba(200, 95, 45, .55)');
+        body.addColorStop(0.5, 'rgba(230, 120, 55, .5)');
+        body.addColorStop(0.78, 'rgba(150, 40, 12, .6)');
+        body.addColorStop(1, 'rgba(200, 220, 228, .5)');
+        ctx.fillStyle = body;
+        ctx.fill(side);
+        // qalınlıq hissi: yuxarıdan aşağı açıq → tünd
+        const depth = ctx.createLinearGradient(0, -T - ry, 0, ry);
+        depth.addColorStop(0, 'rgba(255, 255, 255, .25)');
+        depth.addColorStop(1, 'rgba(40, 10, 0, .25)');
+        ctx.fillStyle = depth;
+        ctx.fill(side);
+
+        // dibin üst səthi (çayın altı) — incə açıq xətt
+        ctx.strokeStyle = 'rgba(255, 225, 190, .55)';
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.ellipse(0, -T, rx, ry, 0, 0, Math.PI);
+        ctx.stroke();
+        // yan kənarlar: sol işıqlı, sağ tünd
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(255, 255, 255, .85)';
+        ctx.beginPath(); ctx.moveTo(-rx + 0.5, -T); ctx.lineTo(-rx + 0.5, 0); ctx.stroke();
+        ctx.strokeStyle = 'rgba(90, 40, 20, .5)';
+        ctx.beginPath(); ctx.moveTo(rx - 0.5, -T); ctx.lineTo(rx - 0.5, 0); ctx.stroke();
+        // incə qızılı haşiyə dibin ortasında
+        ctx.strokeStyle = '#E9A23B';
+        ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.ellipse(0, -T * 0.45, rx, ry, 0, 0, Math.PI);
+        ctx.stroke();
+        // alt kənar: şüşənin ən parlaq yeri (işıq qalın kənardan sınır)
+        ctx.strokeStyle = 'rgba(255, 255, 255, .9)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, rx, ry, 0, Math.PI * 0.15, Math.PI * 0.85);
+        ctx.stroke();
+        // kiçik parıltı ləkəsi
+        ctx.fillStyle = 'rgba(255, 255, 255, .8)';
+        ctx.beginPath();
+        ctx.ellipse(-rx * 0.55, -T * 0.55, 1.4, 0.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    /*
+     * Sürət üçün: düz dayanan stəkan (fırlanmır, çayı çalxalanmır) hər kadrda naxışları ilə yenidən
+     * çəkilmir — bir dəfə ayrıca kətana çəkilir və hazır şəkil kimi qoyulur. Kətanın ölçüsü dəyişəndə
+     * (böyük ekran, pəncərənin eni) yenidən yaradılır ki, bulanıq olmasın.
+     */
+    const SPRITE_PAD = {l: GW * 0.75, r: GW * 0.75, t: GH + 22, b: 8};
+    const glassSprite = {cv: null, res: 0};
+    function getGlassSprite() {
+        const res = dpr * scale;
+        if (glassSprite.cv && glassSprite.res === res) return glassSprite.cv;
+        const cv = document.createElement('canvas');
+        cv.width = Math.ceil((SPRITE_PAD.l + SPRITE_PAD.r) * res);
+        cv.height = Math.ceil((SPRITE_PAD.t + SPRITE_PAD.b) * res);
+        const main = ctx;
+        ctx = cv.getContext('2d');
+        ctx.setTransform(res, 0, 0, res, 0, 0);
+        try {
+            drawGlassFull(SPRITE_PAD.l, SPRITE_PAD.t, 0, 1, 0);
+        } finally {
+            ctx = main;
+        }
+        glassSprite.cv = cv;
+        glassSprite.res = res;
+        return cv;
+    }
+
     function drawGlass(x, y, rot = 0, alpha = 1, tilt = 0) {
+        if (rot || Math.abs(tilt) > 0.004) return drawGlassFull(x, y, rot, alpha, tilt);
+        const cv = getGlassSprite();
+        const a = ctx.globalAlpha;
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(cv, x - SPRITE_PAD.l, y - SPRITE_PAD.t, SPRITE_PAD.l + SPRITE_PAD.r, SPRITE_PAD.t + SPRITE_PAD.b);
+        ctx.globalAlpha = a;
+    }
+
+    function drawGlassFull(x, y, rot = 0, alpha = 1, tilt = 0) {
         ctx.save();
         ctx.globalAlpha = alpha;
         ctx.translate(x, y);
@@ -970,11 +1122,7 @@
         ctx.ellipse(0, -GH, rw, RIM_RY, 0, 0, Math.PI);
         ctx.stroke();
 
-        // qızılı ayaq
-        ctx.fillStyle = '#E9A23B';
-        ctx.beginPath();
-        ctx.ellipse(0, 0, GW * 0.28, 4, 0, 0, Math.PI * 2);
-        ctx.fill();
+        drawGlassBase();
 
         // parıltı
         ctx.strokeStyle = 'rgba(255, 255, 255, .7)';
@@ -1122,6 +1270,172 @@
         // masanın üst kənarı — parçanın qatlandığı yer (xalça naxışlıda qızılı haşiyə)
         ctx.fillStyle = carpet ? '#d9a237' : '#f04a43';
         ctx.fillRect(x0, top - 1, x1 - x0, 3);
+
+        drawGlassTop(x0, x1, top);
+    }
+
+    /**
+     * Süfrənin üstündə şüşə lövhə: masadan bir az enli, açıq yaşılımtıl çalar, çəp parıltı zolaqları,
+     * arxa kənarda işıq əksi və ön tərəfdə görünən qalınlıq (işıq sınan yaşılımtıl kənar).
+     */
+    function drawGlassTop(x0, x1, front) {
+        const back = front - TABLE_DEPTH - 1, inset = TABLE_DEPTH * 0.85, o = 3;  // o — şüşə masadan nə qədər çıxır
+        const gx0 = x0 - o, gx1 = x1 + o, bx0 = x0 + inset - o * 0.6, bx1 = x1 - inset + o * 0.6;
+        const p = new Path2D();
+        p.moveTo(bx0, back);
+        p.lineTo(bx1, back);
+        p.lineTo(gx1, front);
+        p.lineTo(gx0, front);
+        p.closePath();
+
+        ctx.save();
+        ctx.clip(p);
+        // şüşənin öz çaları: arxada bir az daha görünür (işıq şüşədən çəp keçir)
+        const tint = ctx.createLinearGradient(0, back, 0, front);
+        tint.addColorStop(0, 'rgba(190, 228, 236, .2)');
+        tint.addColorStop(1, 'rgba(215, 240, 245, .07)');
+        ctx.fillStyle = tint;
+        ctx.fillRect(gx0, back, gx1 - gx0, front - back);
+        // çəp parıltı zolaqları
+        const W = gx1 - gx0;
+        const streak = (x, w, a) => {
+            ctx.fillStyle = `rgba(255, 255, 255, ${a})`;
+            ctx.beginPath();
+            ctx.moveTo(x, back);
+            ctx.lineTo(x + w, back);
+            ctx.lineTo(x + w - 30, front);
+            ctx.lineTo(x - 30, front);
+            ctx.closePath();
+            ctx.fill();
+        };
+        streak(gx0 + W * 0.16, 30, 0.1);
+        streak(gx0 + W * 0.16 + 38, 7, 0.16);
+        streak(gx0 + W * 0.72, 46, 0.06);
+        streak(gx0 + W * 0.72 + 52, 5, 0.12);
+        // arxa kənarda işıq əksi
+        const sheen = ctx.createLinearGradient(0, back, 0, back + 12);
+        sheen.addColorStop(0, 'rgba(255, 255, 255, .28)');
+        sheen.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = sheen;
+        ctx.fillRect(gx0, back, W, 12);
+        ctx.restore();
+
+        // arxa və yan kənarlar: incə parlaq xətt
+        ctx.strokeStyle = 'rgba(235, 250, 255, .6)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(gx0, front);
+        ctx.lineTo(bx0, back);
+        ctx.lineTo(bx1, back);
+        ctx.lineTo(gx1, front);
+        ctx.stroke();
+
+        // ön kənar — şüşənin qalınlığı: işıq sınır, yaşılımtıl görünür
+        const T = 4;
+        const edge = ctx.createLinearGradient(0, front, 0, front + T);
+        edge.addColorStop(0, 'rgba(205, 242, 236, .8)');
+        edge.addColorStop(0.5, 'rgba(120, 182, 176, .5)');
+        edge.addColorStop(1, 'rgba(55, 105, 100, .6)');
+        ctx.fillStyle = edge;
+        ctx.fillRect(gx0, front, W, T);
+        ctx.fillStyle = 'rgba(255, 255, 255, .9)';
+        ctx.fillRect(gx0, front, W, 1);
+        // künclərdə parıltı
+        ctx.fillStyle = 'rgba(255, 255, 255, .7)';
+        ctx.fillRect(gx0, front, 2, T);
+        ctx.fillRect(gx1 - 2, front, 2, T);
+        // şüşənin süfrəyə saldığı nazik kölgə
+        ctx.fillStyle = 'rgba(0, 0, 0, .2)';
+        ctx.fillRect(x0, front + T, x1 - x0, 2);
+    }
+
+    /** Dörd guşəli parıltı */
+    function glintStar(x, y, r, a) {
+        ctx.save();
+        ctx.globalAlpha *= a;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.moveTo(x, y - r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.quadraticCurveTo(x, y, x, y + r);
+        ctx.quadraticCurveTo(x, y, x - r, y);
+        ctx.quadraticCurveTo(x, y, x, y - r);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    /**
+     * Şüşə qırığı: demək olar şəffaf gövdə, işığa baxan kənarlar parlaq, o biri tərəf tünd,
+     * fırlandıqca parıldayır. Masaya düşəndə perspektivdə yastı uzanır və arabir sayrışır.
+     */
+    function drawShard(s) {
+        const pts = s.pts;
+        const n = pts.length;
+        // parıltı: uçarkən fırlanmadan, masada isə vaxtdan asılı sayrışır
+        const glint = s.rest
+            ? Math.max(0, Math.sin(g.time * 2.2 + s.seed * 3)) ** 6
+            : 0.5 + 0.5 * Math.sin(s.rot * 2.5 + s.seed);
+
+        const restY = FLOOR + 1 + (s.depth || 0);
+        ctx.save();
+        ctx.translate(s.x, s.rest ? restY : s.y);
+        if (s.rest) {
+            // masanın şüşəsinə düşən yumşaq kölgə, qırıq üfüqi yastı görünür
+            ctx.fillStyle = 'rgba(0, 0, 0, .25)';
+            ctx.beginPath();
+            ctx.ellipse(1.2, 1.4, s.size * 0.75, s.size * 0.22, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.scale(1, 0.42);
+        }
+        ctx.rotate(s.rot);
+
+        const shape = () => {
+            ctx.beginPath();
+            ctx.moveTo(pts[0][0], pts[0][1]);
+            for (let i = 0; i < n; i++) {
+                const p = pts[i], q = pts[(i + 1) % n];
+                if (i === s.curve) ctx.quadraticCurveTo((p[0] + q[0]) * 0.8, (p[1] + q[1]) * 0.8, q[0], q[1]);
+                else ctx.lineTo(q[0], q[1]);
+            }
+            ctx.closePath();
+        };
+
+        // gövdə: şəffaf, bir az mavi-ağ və ya çay rəngli
+        shape();
+        ctx.fillStyle = s.tea ? 'rgba(176, 62, 18, .32)' : 'rgba(215, 236, 242, .2)';
+        ctx.fill();
+        // içindən keçən işıq: bir küncdən parlaq, o biri tərəfə sönür
+        const lg = ctx.createLinearGradient(-s.size, -s.size, s.size, s.size);
+        lg.addColorStop(0, `rgba(255, 255, 255, ${0.12 + 0.6 * glint})`);
+        lg.addColorStop(0.45, 'rgba(255, 255, 255, 0)');
+        lg.addColorStop(1, `rgba(255, 255, 255, ${0.08 + 0.18 * (1 - glint)})`);
+        ctx.fillStyle = lg;
+        ctx.fill();
+
+        // kənarlar ayrı-ayrı: işığa baxanlar parlaq, qalanları tünd (qalınlıq hissi)
+        ctx.lineJoin = 'round';
+        for (let i = 0; i < n; i++) {
+            const p = pts[i], q = pts[(i + 1) % n];
+            const facing = Math.sin(Math.atan2(q[1] - p[1], q[0] - p[0]) + s.rot) > -0.2;
+            ctx.beginPath();
+            ctx.moveTo(p[0], p[1]);
+            if (i === s.curve) ctx.quadraticCurveTo((p[0] + q[0]) * 0.8, (p[1] + q[1]) * 0.8, q[0], q[1]);
+            else ctx.lineTo(q[0], q[1]);
+            if (s.gold && i === 0) {
+                ctx.strokeStyle = '#e9b24a';           // qızılı haşiyənin qırığı
+                ctx.lineWidth = 1.8;
+            } else {
+                ctx.strokeStyle = facing ? `rgba(255, 255, 255, ${0.55 + 0.4 * glint})` : 'rgba(60, 40, 30, .45)';
+                ctx.lineWidth = s.size < 3 ? 0.6 : 0.9;
+            }
+            ctx.stroke();
+        }
+        ctx.restore();
+
+        // güclü parıltı anında kiçik ulduz
+        if (glint > 0.85) {
+            glintStar(s.x + s.size * 0.2, (s.rest ? restY : s.y) - s.size * 0.2, 2 + s.size * 0.45, (glint - 0.85) / 0.15);
+        }
     }
 
     function drawScene() {
@@ -1141,9 +1455,12 @@
         if (!PHOTO_IS_BASE && photoReady()) {
             const dh = LH * 1.15;
             const dw = Math.max(LW, dh * BG.photo.naturalWidth / BG.photo.naturalHeight);
-            ctx.drawImage(BG.photo, LW / 2 - dw / 2, LH - dh + Math.min(LH * 0.15, cam * 0.08), dw, dh);
+            const px = LW / 2 - dw / 2, py = LH - dh + Math.min(LH * 0.15, cam * 0.08);
+            ctx.drawImage(BG.photo, px, py, dw, dh);
             ctx.fillStyle = `rgba(0, 0, 0, ${BG_DARKEN})`; // şəkli bir az qaraldırıq ki, stəkanlar önə çıxsın
             ctx.fillRect(0, 0, LW, LH);
+            // şəkildəki tağlı pəncərədən çöl görünür — qaraldılmadan sonra, çünki çöl otaqdan işıqlıdır
+            drawWindow(px, py, dw / BG.photo.naturalWidth);
         }
 
         // 50 Qəpik loqosu — fon şəklinin üstündə, yuxarıda kiçik yumru nişan (yerində qalır)
@@ -1247,7 +1564,9 @@
         // ilk stəkan fotodakı stəkandır — foto varsa onu çəkmirik
         g.tower.forEach((t, i) => {
             if (i === 0 && baseInPhoto()) return;
-            drawGlass(t.x + sx * (i / Math.max(1, g.tower.length)), BASE_Y - i * GH, 0, 1, t.s ? t.s.a : 0);
+            const gy = BASE_Y - i * GH;
+            if (gy + 8 + cam < 0 || gy - GH - 24 + cam > LH) return; // ekrandan kənardadır — çəkmirik
+            drawGlass(t.x + sx * (i / Math.max(1, g.tower.length)), gy, 0, 1, t.s ? t.s.a : 0);
         });
 
         // yellənən / düşən / aşan stəkan
@@ -1273,8 +1592,8 @@
             const top = g.tower[g.tower.length - 1];
             drawSteam(top.x, BASE_Y - (g.tower.length - 1) * GH - GH, 0);
         }
-        if (g.state === 'swing' || g.state === 'ready') drawSteam(g.swing.x, swingY() - GH, 0.5);
-        if (g.state === 'drop') drawSteam(g.drop.x, g.drop.y - GH, 0.5);
+        if (g.state === 'swing' || g.state === 'ready') drawSteam(g.swing.x, swingY() - GH, 0.5, g.steam.drift);
+        if (g.state === 'drop') drawSteam(g.drop.x, g.drop.y - GH, 0.5, g.steam.drift);
 
         // şüşə qırıqları və çay damcıları
         for (const s of g.shards) {
@@ -1286,20 +1605,7 @@
                 else ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
                 ctx.fill();
             } else {
-                ctx.save();
-                ctx.translate(s.x, s.y);
-                ctx.rotate(s.rot);
-                ctx.beginPath();
-                ctx.moveTo(-s.size * 0.5, s.size * 0.4);
-                ctx.lineTo(s.size * 0.1, -s.size * 0.6);
-                ctx.lineTo(s.size * 0.6, s.size * 0.3);
-                ctx.closePath();
-                ctx.fillStyle = s.gold ? 'rgba(233, 162, 59, .95)' : 'rgba(255, 255, 255, .88)';
-                ctx.strokeStyle = s.gold ? '#c9831f' : 'rgba(140, 100, 70, .55)'; // açıq fonda da görünsün
-                ctx.lineWidth = 1;
-                ctx.fill();
-                ctx.stroke();
-                ctx.restore();
+                drawShard(s);
             }
         }
         ctx.globalAlpha = 1;
@@ -1353,7 +1659,7 @@
     function initWeather() {
         fx.drops = []; fx.flakes = []; fx.leaves = []; fx.fog = []; fx.stars = [];
         fx.flash = 0; fx.bolt = null; fx.nextBolt = rnd(3, 6);
-        if (!W) return;
+        if (!W) { initWindow(); return; }
         // küləyin gəldiyi tərəf (dərəcə) — şərqdən əsəndə sola, qərbdən əsəndə sağa
         const s = Math.sin(W.windDir * Math.PI / 180);
         windX = (Math.abs(s) < 0.3 ? 1 : -Math.sign(s)) * Math.min(1, W.wind / 50);
@@ -1364,6 +1670,7 @@
         if (k === 'fog') for (let i = 0; i < 4; i++) fx.fog.push({x: rnd(0, LW), y: 140 + i * 95, w: rnd(320, 460)});
         if (W.windy) for (let i = 0; i < 16; i++) fx.leaves.push(newLeaf(true));
         if (!W.day) for (let i = 0; i < 28; i++) fx.stars.push({x: rnd(0, LW), y: rnd(10, 260), p: rnd(0, 6)});
+        initWindow();
     }
 
     function newDrop(any) {
@@ -1382,8 +1689,10 @@
     }
 
     function updateWeather(dt) {
-        if (!W || !(dt > 0)) return;
+        if (!(dt > 0)) return;
         fx.t += dt;
+        updateWindow(dt);   // hava hələ gəlməyibsə də pəncərədəki buludlar sürüşür
+        if (!W) return;
         for (const d of fx.drops) {
             d.y += d.v * dt;
             d.x += windX * d.v * 0.45 * dt;
@@ -1484,6 +1793,297 @@
             ctx.fillRect(f.x - f.w / 2, f.y - 40, f.w, 80);
             ctx.fillRect(f.x - f.w / 2 - LW - 60, f.y - 40, f.w, 80); // ekranın o biri tərəfindən davamı
         }
+    }
+
+    /* ---------- Fondakı tağlı pəncərə: içində çöldəki canlı hava ---------- */
+
+    // Pəncərənin açılışı fon şəklinin öz piksellərində (736×1104): sol krem sütun, yuxarıda qövs,
+    // sağda tünd çərçivə (x≈192), aşağıda maili narıncı altlıq. x=164-də və y=330-da çərçivə tirləri.
+    const WIN_PTS = [[92, 535], [92, 268], [103, 240], [118, 212], [134, 186], [150, 168], [168, 152], [184, 140], [192, 134], [192, 462]];
+    const WIN_BOX = {x0: 92, x1: 192, y0: 124, y1: 535};
+    const WIN_SILL = u => 535 - u * 73;           // altlığın hündürlüyü (u: 0 — sol, 1 — sağ)
+    const WIN_MULLION = 164, WIN_TRANSOM = 330;
+    const SKY = {
+        day: {clear: ['#3f86d1', '#b9dcf3'], clouds: ['#7f97b0', '#cdd8e2'], rain: ['#56636f', '#97a3ad'], storm: ['#2b313d', '#55606d'], snow: ['#a9b5c1', '#e4e9ee'], fog: ['#c3c9ce', '#e2e5e7']},
+        night: {clear: ['#070d24', '#22325c'], clouds: ['#151a28', '#343c50'], rain: ['#0e131c', '#262e3b'], storm: ['#0a0d14', '#202633'], snow: ['#232b3c', '#4d5870'], fog: ['#2a2f38', '#4a5059']},
+    };
+    const CLOUD_COLOR = {
+        day: {clear: '#ffffff', clouds: '#eef2f5', rain: '#7c8691', storm: '#3b414c', snow: '#d3dae1', fog: '#dfe3e6'},
+        night: {clear: '#3a4258', clouds: '#3d4558', rain: '#232a36', storm: '#1a1f29', snow: '#5b667c', fog: '#4a5059'},
+    };
+    // Uzaqda Bakı: alçaq binalar [u başlanğıc, u son, hündürlük (şəkil px)] və üç Alov qülləsi [u, hündürlük]
+    const CITY = [[0, .1, 18], [.08, .18, 30], [.17, .24, 22], [.23, .33, 38], [.32, .4, 26], [.39, .46, 44], [.45, .52, 20], [.86, .94, 28], [.93, 1, 16]];
+    const FLAMES = [[.56, 78], [.68, 98], [.8, 70]];
+    const win = {drops: [], flakes: [], clouds: [], stars: [], beads: [], lit: []};
+
+    function initWindow() {
+        win.drops = []; win.flakes = []; win.clouds = []; win.stars = []; win.beads = [];
+        const k = W ? W.kind : 'clouds';
+        const nClouds = {clear: 1, clouds: 5, rain: 6, storm: 7, snow: 5, fog: 3}[k] ?? 4;
+        for (let i = 0; i < nClouds; i++) win.clouds.push({u: rnd(-0.3, 1.1), v: rnd(0.05, 0.55), s: rnd(0.7, 1.3), sp: rnd(0.012, 0.03)});
+        const nDrops = k === 'rain' ? 60 : k === 'storm' ? 110 : 0;
+        for (let i = 0; i < nDrops; i++) win.drops.push({u: rnd(-0.2, 1.2), v: rnd(0, 1), sp: rnd(1.4, 2)});
+        if (k === 'snow') for (let i = 0; i < 55; i++) win.flakes.push({u: rnd(0, 1), v: rnd(0, 1), r: rnd(0.6, 1.4), sp: rnd(0.08, 0.16), p: rnd(0, 6)});
+        if (W && !W.day) for (let i = 0; i < 26; i++) win.stars.push({u: rnd(0, 1), v: rnd(0.02, 0.55), p: rnd(0, 6)});
+        // şüşədəki su damcıları (yağışda)
+        if (k === 'rain' || k === 'storm') for (let i = 0; i < 26; i++) win.beads.push({u: rnd(0.03, 0.97), v: rnd(0.08, 0.95), r: rnd(0.7, 1.6), sp: Math.random() < 0.3 ? rnd(0.01, 0.04) : 0});
+        // gecə binalarda yanan pəncərələr
+        win.lit = [];
+        for (const [u0, u1, h] of CITY) {
+            for (let j = 0; j < Math.round((u1 - u0) * 30); j++) win.lit.push({u: rnd(u0 + 0.01, u1 - 0.01), h: rnd(4, h - 4), on: Math.random() < 0.55});
+        }
+    }
+
+    function updateWindow(dt) {
+        if (!(dt > 0)) return;
+        const dir = windX < 0 ? -1 : 1, gust = 1 + Math.abs(windX) * 3;
+        for (const c of win.clouds) {
+            c.u += c.sp * dir * gust * dt;
+            if (c.u > 1.4) c.u = -0.4; else if (c.u < -0.4) c.u = 1.4;
+        }
+        for (const d of win.drops) {
+            d.v += d.sp * dt; d.u += windX * d.sp * 0.4 * dt;
+            if (d.v > 1.05) { d.v = rnd(-0.1, 0); d.u = rnd(-0.2, 1.2); }
+        }
+        for (const f of win.flakes) {
+            f.v += f.sp * dt; f.u += (windX * 0.2 + Math.sin(fx.t * 1.5 + f.p) * 0.05) * dt;
+            if (f.v > 1.02) { f.v = rnd(-0.05, 0); f.u = rnd(0, 1); }
+        }
+        for (const b of win.beads) {
+            if (!b.sp) continue;
+            b.v += b.sp * dt;                                  // iri damcılar şüşədən aşağı süzülür
+            if (b.v > 0.97) { b.v = rnd(0.05, 0.3); b.u = rnd(0.03, 0.97); }
+        }
+    }
+
+    /** Alov qülləsinin forması: enli dib, yuxarı əyilib iti uca çatır */
+    function flamePath(x, base, w, h) {
+        ctx.beginPath();
+        ctx.moveTo(x - w / 2, base);
+        ctx.quadraticCurveTo(x - w * 0.62, base - h * 0.55, x + w * 0.08, base - h);
+        ctx.quadraticCurveTo(x + w * 0.62, base - h * 0.5, x + w / 2, base);
+        ctx.closePath();
+    }
+
+    /**
+     * Pəncərəni çəkir. (ox, oy) — fon şəklinin kətandakı sol yuxarı küncü, k — miqyas (kətan px / şəkil px).
+     * Hava hələ gəlməyibsə, sakit buludlu gündüz göstərilir.
+     */
+    function drawWindow(ox, oy, k) {
+        const night = W ? !W.day : false;
+        const kind = W && SKY.day[W.kind] ? W.kind : 'clouds';
+        const tod = night ? 'night' : 'day';
+        const X = x => ox + x * k, Y = y => oy + y * k;
+        const bx0 = X(WIN_BOX.x0), bx1 = X(WIN_BOX.x1), by0 = Y(WIN_BOX.y0), by1 = Y(WIN_BOX.y1);
+        const ww = bx1 - bx0, wh = by1 - by0;
+        const U = u => bx0 + u * ww, V = v => by0 + v * wh;
+        const sill = u => Y(WIN_SILL(u));
+
+        // otağa düşən işıq: gündüz pəncərənin ətrafı yumşaq işıqlanır
+        if (!night) {
+            const lx = X(142), ly = Y(330);
+            const glow = ctx.createRadialGradient(lx, ly, 10, lx, ly, ww * 3.2);
+            glow.addColorStop(0, kind === 'clear' ? 'rgba(255, 244, 220, .22)' : 'rgba(235, 240, 245, .14)');
+            glow.addColorStop(1, 'rgba(255, 244, 220, 0)');
+            ctx.fillStyle = glow;
+            ctx.fillRect(0, 0, LW, LH);
+        }
+
+        ctx.save();
+        ctx.beginPath();
+        WIN_PTS.forEach(([x, y], i) => (i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y))));
+        ctx.closePath();
+        ctx.clip();
+
+        // səma
+        const [c0, c1] = SKY[tod][kind];
+        const sg = ctx.createLinearGradient(0, by0, 0, by1);
+        sg.addColorStop(0, c0);
+        sg.addColorStop(1, c1);
+        ctx.fillStyle = sg;
+        ctx.fillRect(bx0 - 2, by0 - 2, ww + 4, wh + 4);
+
+        // ulduzlar və ay (gecə, açıq və ya azca buludlu)
+        if (night && (kind === 'clear' || kind === 'clouds')) {
+            for (const s of win.stars) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + 0.5 * Math.abs(Math.sin(fx.t * 1.3 + s.p))})`;
+                ctx.fillRect(U(s.u), V(s.v * 0.6), 1.2, 1.2);
+            }
+            const mx = U(0.62), my = V(0.17);
+            const mg = ctx.createRadialGradient(mx, my, 2, mx, my, 26);
+            mg.addColorStop(0, 'rgba(250, 245, 210, .45)');
+            mg.addColorStop(1, 'rgba(250, 245, 210, 0)');
+            ctx.fillStyle = mg;
+            ctx.fillRect(mx - 26, my - 26, 52, 52);
+            ctx.fillStyle = '#f4efcf';
+            ctx.beginPath(); ctx.arc(mx, my, 6, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = 'rgba(200, 195, 160, .5)';            // ayın ləkələri
+            ctx.beginPath(); ctx.arc(mx - 1.5, my - 1, 1.4, 0, Math.PI * 2); ctx.arc(mx + 2, my + 2, 1, 0, Math.PI * 2); ctx.fill();
+        }
+        // günəş (gündüz, açıq və ya azca buludlu)
+        if (!night && (kind === 'clear' || kind === 'clouds')) {
+            const sx = U(0.66), sy = V(0.15);
+            const sgl = ctx.createRadialGradient(sx, sy, 3, sx, sy, kind === 'clear' ? 46 : 30);
+            sgl.addColorStop(0, `rgba(255, 240, 190, ${kind === 'clear' ? 0.85 : 0.5})`);
+            sgl.addColorStop(1, 'rgba(255, 240, 190, 0)');
+            ctx.fillStyle = sgl;
+            ctx.fillRect(sx - 50, sy - 50, 100, 100);
+            ctx.fillStyle = kind === 'clear' ? '#fff6d0' : 'rgba(255, 246, 210, .75)';
+            ctx.beginPath(); ctx.arc(sx, sy, 7, 0, Math.PI * 2); ctx.fill();
+        }
+
+        // buludlar: küləklə sürüşən yumşaq topalar
+        const cc = CLOUD_COLOR[tod][kind];
+        for (const c of win.clouds) {
+            const cx = U(c.u), cy = V(c.v * 0.6), s = c.s * ww * 0.22;
+            ctx.fillStyle = cc;
+            ctx.globalAlpha = kind === 'clear' ? 0.6 : 0.92;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, s * 1.5, s * 0.55, 0, 0, Math.PI * 2);
+            ctx.ellipse(cx - s * 0.6, cy - s * 0.25, s * 0.7, s * 0.6, 0, 0, Math.PI * 2);
+            ctx.ellipse(cx + s * 0.45, cy - s * 0.4, s * 0.85, s * 0.75, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            // altı bir az tünd — həcm
+            ctx.fillStyle = 'rgba(0, 0, 0, .1)';
+            ctx.beginPath(); ctx.ellipse(cx, cy + s * 0.25, s * 1.4, s * 0.28, 0, 0, Math.PI * 2); ctx.fill();
+        }
+
+        // ildırım: pəncərə ağarır, içində şimşək xətti
+        if (fx.flash > 0) {
+            ctx.fillStyle = `rgba(230, 236, 255, ${fx.flash * 0.75})`;
+            ctx.fillRect(bx0, by0, ww, wh);
+            if (fx.flash > 0.45) {
+                ctx.strokeStyle = `rgba(255, 255, 255, ${fx.flash})`;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                let px = U(0.4), py = by0;
+                ctx.moveTo(px, py);
+                for (let i = 0; i < 7; i++) { px += Math.sin(i * 2.7 + fx.nextBolt) * ww * 0.12; py += wh * 0.08; ctx.lineTo(px, py); }
+                ctx.stroke();
+            }
+        }
+
+        // uzaqda şəhər: binalar və Alov qüllələri (dibləri altlıq xəttindədir)
+        const hazy = kind === 'fog' || kind === 'snow' || kind === 'rain' || kind === 'storm';
+        const cityCol = night ? '#0b0e16' : hazy ? '#7d8893' : '#53647a';
+        ctx.fillStyle = cityCol;
+        for (const [u0, u1, h] of CITY) {
+            const yb = sill((u0 + u1) / 2) + 2;
+            ctx.fillRect(U(u0), yb - h * k, (u1 - u0) * ww + 0.5, h * k + 4);
+        }
+        if (night) {
+            for (const l of win.lit) {
+                if (!l.on) continue;
+                const twinkle = 0.6 + 0.4 * Math.sin(fx.t * 0.7 + l.u * 40);
+                ctx.fillStyle = `rgba(255, 214, 140, ${0.75 * twinkle})`;
+                ctx.fillRect(U(l.u), sill(l.u) - l.h * k, 1, 1);
+            }
+        }
+        for (const [u, h] of FLAMES) {
+            const fxp = U(u), base = sill(u) + 2, fw = ww * 0.1;
+            flamePath(fxp, base, fw, h * k);
+            if (night) {
+                // gecə qüllələrin üzündə yanan alov: aşağıdan yuxarı dalğalanan narıncı-qırmızı
+                const f = ctx.createLinearGradient(0, base, 0, base - h * k);
+                const sh = 0.5 + 0.5 * Math.sin(fx.t * 3 + u * 9);
+                f.addColorStop(0, '#ff4b14');
+                f.addColorStop(0.35 + sh * 0.2, '#ff9a1f');
+                f.addColorStop(0.75, '#ffd25a');
+                f.addColorStop(1, '#ff6a1a');
+                ctx.fillStyle = f;
+                ctx.shadowColor = 'rgba(255, 120, 30, .8)';
+                ctx.shadowBlur = 6;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            } else {
+                // gündüz şüşə fasad: səmanı əks etdirir
+                const f = ctx.createLinearGradient(fxp - fw / 2, 0, fxp + fw / 2, 0);
+                f.addColorStop(0, hazy ? '#8a96a2' : '#5f7d9c');
+                f.addColorStop(0.5, hazy ? '#b3bcc5' : '#9cc0de');
+                f.addColorStop(1, hazy ? '#76828e' : '#3f5a76');
+                ctx.fillStyle = f;
+                ctx.fill();
+            }
+        }
+
+        // duman: şəhəri yarı örtən ağımtıl qatlar
+        if (kind === 'fog') {
+            for (let i = 0; i < 3; i++) {
+                const yy = V(0.45 + i * 0.18), off = ((fx.t * 0.02 + i * 0.37) % 1) * ww;
+                const fg = ctx.createLinearGradient(0, yy - 20, 0, yy + 20);
+                fg.addColorStop(0, 'rgba(230, 233, 236, 0)');
+                fg.addColorStop(0.5, night ? 'rgba(120, 126, 134, .55)' : 'rgba(236, 239, 241, .7)');
+                fg.addColorStop(1, 'rgba(230, 233, 236, 0)');
+                ctx.fillStyle = fg;
+                ctx.fillRect(bx0 - ww + off, yy - 20, ww * 3, 40);
+            }
+        }
+
+        // yağış və qar (pəncərənin arxasında, çöldə)
+        if (win.drops.length) {
+            ctx.strokeStyle = night ? 'rgba(170, 185, 210, .5)' : 'rgba(225, 235, 248, .65)';
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            for (const d of win.drops) {
+                const x = U(d.u), y = V(d.v);
+                ctx.moveTo(x, y);
+                ctx.lineTo(x - windX * 3, y - 7);
+            }
+            ctx.stroke();
+        }
+        if (win.flakes.length) {
+            ctx.fillStyle = 'rgba(255, 255, 255, .95)';
+            ctx.beginPath();
+            for (const f of win.flakes) {
+                const x = U(f.u), y = V(f.v);
+                ctx.moveTo(x + f.r, y);
+                ctx.arc(x, y, f.r, 0, Math.PI * 2);
+            }
+            ctx.fill();
+            // altlıqda yığılmış qar
+            ctx.fillStyle = '#f3f6f9';
+            ctx.beginPath();
+            ctx.moveTo(U(0), sill(0) + 3);
+            for (let u = 0; u <= 1.001; u += 0.1) ctx.lineTo(U(u), sill(u) - 3 - Math.sin(u * 12) * 1.2);
+            ctx.lineTo(U(1), sill(1) + 3);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // şüşə: çəp parıltı və (yağışda) şüşəyə yapışmış damcılar
+        ctx.fillStyle = 'rgba(255, 255, 255, .08)';
+        ctx.beginPath();
+        ctx.moveTo(U(0.15), by0); ctx.lineTo(U(0.38), by0); ctx.lineTo(U(0.05), by1); ctx.lineTo(U(-0.18), by1);
+        ctx.closePath();
+        ctx.fill();
+        for (const b of win.beads) {
+            const x = U(b.u), y = V(b.v);
+            ctx.fillStyle = 'rgba(200, 215, 230, .35)';
+            ctx.beginPath(); ctx.arc(x, y, b.r, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = 'rgba(255, 255, 255, .7)';
+            ctx.fillRect(x - b.r * 0.4, y - b.r * 0.5, 0.8, 0.8);
+            if (b.sp) {                                         // süzülən damcının arxasında iz
+                ctx.strokeStyle = 'rgba(200, 215, 230, .25)';
+                ctx.lineWidth = 0.6;
+                ctx.beginPath(); ctx.moveTo(x, y - b.r); ctx.lineTo(x, y - 10); ctx.stroke();
+            }
+        }
+
+        // çərçivə: şaquli və üfüqi tirlər, kənarlarda daxili kölgə
+        ctx.fillStyle = '#22120a';
+        ctx.fillRect(X(WIN_MULLION) - 1.4, by0, 2.8, wh);
+        ctx.fillRect(bx0, Y(WIN_TRANSOM) - 1.4, ww, 2.8);
+        ctx.fillStyle = 'rgba(217, 162, 55, .35)';              // tirlərin işıqlı tərəfi
+        ctx.fillRect(X(WIN_MULLION) - 1.4, by0, 0.8, wh);
+        ctx.fillRect(bx0, Y(WIN_TRANSOM) - 1.4, ww, 0.8);
+        ctx.strokeStyle = 'rgba(0, 0, 0, .55)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        WIN_PTS.forEach(([x, y], i) => (i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y))));
+        ctx.closePath();
+        ctx.stroke();
+        ctx.restore();
     }
 
     function weatherFront() {
@@ -1716,5 +2316,7 @@
         manual: on => { manual = on; },
         weather: () => ({W, windX, drops: fx.drops.length, flakes: fx.flakes.length, leaves: fx.leaves.length}),
         step: (dt = 1 / 60) => { if (g.state !== 'over' || g.falling) update(dt); },
+        // animasiya dayananda (gizli tab) kadrı əl ilə çəkmək üçün
+        draw: () => { ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0); drawScene(); },
     };
 })();

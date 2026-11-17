@@ -13,22 +13,25 @@ return [
 
     'wheel' => [
         // Çarx restoranda, masada oynanılır və endirim həmin masanın cari hesabına tətbiq olunur,
-        // ona görə kod yalnız bu ziyarət üçündür: bu qədər saatdan sonra avtomatik qüvvədən düşür.
-        'code_valid_hours' => 3,
+        // ona görə kod yalnız bu ziyarət üçündür: bu qədər dəqiqədən sonra avtomatik qüvvədən düşür
+        // (vaxtı keçmiş, istifadə olunmamış kuponlar bazadan avtomatik silinir — WheelSpin::pruneExpired).
+        'code_valid_minutes' => 10,
         // Hər istifadəçiyə gündə neçə fırlatma cəhdi verilir. Hər fırlatmadan sonra oyunçu
         // ya "Hədiyyəni götür" basır (kod yaranır, raund bitir), ya da yenidən fırladır.
         'attempts_per_day' => (int) env('WHEEL_ATTEMPTS_PER_DAY', 3),
         'segments' => [
             // Böyük endirimlər daha nadir düşür; "Şansını bir daha sına" hədiyyə vermir
             // Sıra elə seçilib ki, eyni nəticələr nə yan-yana, nə də üzbəüz olmasın
-            ['key' => 'discount_10',   'label' => '10% endirim', 'color' => '#7E1A1A', 'weight' => 14, 'prize' => true],
-            ['key' => 'discount_15',   'label' => '15% endirim', 'color' => '#C9831F', 'weight' => 8,  'prize' => true],
-            ['key' => 'discount_10_b', 'label' => '10% endirim', 'color' => '#7E1A1A', 'weight' => 14, 'prize' => true],
-            ['key' => 'free_tea',      'label' => 'Çaynik çay Hədiyyə', 'color' => '#C9831F', 'weight' => 8,  'prize' => true], // qəlyanla üzbəüz
-            ['key' => 'discount_20',   'label' => '20% endirim', 'color' => '#3A0D0D', 'weight' => 4,  'prize' => true],
-            ['key' => 'try_again',     'label' => 'Şansını bir daha sına', 'color' => '#5B6B73', 'weight' => 30, 'prize' => false],
-            ['key' => 'discount_25',   'label' => '25% endirim', 'color' => '#3A0D0D', 'weight' => 2,  'prize' => true],
-            ['key' => 'free_hookah',   'label' => 'Qəlyan Hədiyyə', 'color' => '#E9A23B', 'weight' => 1,  'prize' => true], // ən nadir
+            // Çəkilər tam ədəd olmalıdır; cəmi 812 — sektorun şansı = weight / 812
+            ['key' => 'discount_10',   'label' => '10% endirim', 'color' => '#7E1A1A', 'weight' => 140, 'prize' => true], // ~17%
+            ['key' => 'discount_15',   'label' => '15% endirim', 'color' => '#C9831F', 'weight' => 80,  'prize' => true], // ~10%
+            ['key' => 'discount_10_b', 'label' => '10% endirim', 'color' => '#7E1A1A', 'weight' => 140, 'prize' => true], // ~17%
+            ['key' => 'free_tea',      'label' => 'Çaynik çay Hədiyyə', 'color' => '#C9831F', 'weight' => 80, 'prize' => true], // ~10%
+            ['key' => 'discount_20',   'label' => '20% endirim', 'color' => '#3A0D0D', 'weight' => 40,  'prize' => true], // ~5%
+            ['key' => 'try_again',     'label' => 'Şansını bir daha sına', 'color' => '#5B6B73', 'weight' => 300, 'prize' => false], // ~37%
+            ['key' => 'discount_50',   'label' => '50% endirim', 'color' => '#B3261E', 'weight' => 2,   'prize' => true], // ~0.25% — ən nadir (təxminən 400 fırlatmada bir)
+            ['key' => 'discount_25',   'label' => '25% endirim', 'color' => '#3A0D0D', 'weight' => 20,  'prize' => true], // ~2.5%
+            ['key' => 'free_hookah',   'label' => 'Qəlyan Hədiyyə', 'color' => '#E9A23B', 'weight' => 10,  'prize' => true], // ~1.2%
         ],
     ],
 
