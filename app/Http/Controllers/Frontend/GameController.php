@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\Models\WheelSpin;
 use App\Services\BakuWeather;
+use App\Services\Crossword;
 use App\Services\NardLeaderboard;
 use App\Services\StackRecordNotifier;
 use Illuminate\Http\JsonResponse;
@@ -296,6 +297,23 @@ class GameController extends Controller
     public function claw(): View
     {
         return view('frontend.games.claw');
+    }
+
+    /**
+     * Krossvord: hər gün hamı üçün eyni (tarixdən qurulur); ?n=<rəqəm> — məşq üçün başqa krossvord.
+     * Hələlik yalnız əyləncə üçündür — xal yazılmır, hədiyyə verilmir.
+     */
+    public function crossword(Request $request): View
+    {
+        $n = (string) $request->query('n', '');
+        $practice = $n !== '' && ctype_digit($n) && strlen($n) <= 10 && (int) $n > 0;
+        $seed = $practice ? (int) $n % 2147483647 : Crossword::dailySeed();
+
+        return view('frontend.games.crossword', [
+            'puzzle' => Crossword::make($seed),
+            'practice' => $practice,
+            'dateLabel' => now('Asia/Baku')->format('d.m.Y'),
+        ]);
     }
 
     public function wheel(Request $request): View

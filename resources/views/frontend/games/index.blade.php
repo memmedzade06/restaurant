@@ -214,6 +214,43 @@
                     </div>
                 </a>
             </div>
+            <div class="col-md-6 col-lg-4">
+                <a href="{{ route('games.crossword') }}" class="game-card">
+                    <div class="game-art cw-art">
+                        {{-- kiçik krossvord: PLOV (üfüqi), LİMON (şaquli), NAR (üfüqi) — hərflər növbə ilə yazılır --}}
+                        <svg class="cw-art-svg" viewBox="0 0 180 160" aria-hidden="true">
+                            <rect class="ca-cell" x="30" y="8" width="30" height="30"/>
+                            <text x="33" y="17" font-size="7">1</text>
+                            <text class="ca-pop" style="animation-delay:0.00s" x="45" y="30" font-size="16" text-anchor="middle">P</text>
+                            <rect class="ca-cell" x="60" y="8" width="30" height="30"/>
+                            <text x="63" y="17" font-size="7">2</text>
+                            <text class="ca-pop" style="animation-delay:0.22s" x="75" y="30" font-size="16" text-anchor="middle">L</text>
+                            <rect class="ca-cell" x="90" y="8" width="30" height="30"/>
+                            <text class="ca-pop" style="animation-delay:0.44s" x="105" y="30" font-size="16" text-anchor="middle">O</text>
+                            <rect class="ca-cell" x="120" y="8" width="30" height="30"/>
+                            <text class="ca-pop" style="animation-delay:0.66s" x="135" y="30" font-size="16" text-anchor="middle">V</text>
+                            <rect class="ca-cell" x="60" y="38" width="30" height="30"/>
+                            <text class="ca-pop" style="animation-delay:0.88s" x="75" y="60" font-size="16" text-anchor="middle">İ</text>
+                            <rect class="ca-cell ca-hl" x="60" y="68" width="30" height="30"/>
+                            <text class="ca-pop" style="animation-delay:1.10s" x="75" y="90" font-size="16" text-anchor="middle">M</text>
+                            <rect class="ca-cell" x="60" y="98" width="30" height="30"/>
+                            <text class="ca-pop" style="animation-delay:1.32s" x="75" y="120" font-size="16" text-anchor="middle">O</text>
+                            <rect class="ca-cell" x="60" y="128" width="30" height="30"/>
+                            <text x="63" y="137" font-size="7">3</text>
+                            <text class="ca-pop" style="animation-delay:1.54s" x="75" y="150" font-size="16" text-anchor="middle">N</text>
+                            <rect class="ca-cell" x="90" y="128" width="30" height="30"/>
+                            <text class="ca-pop" style="animation-delay:1.76s" x="105" y="150" font-size="16" text-anchor="middle">A</text>
+                            <rect class="ca-cell" x="120" y="128" width="30" height="30"/>
+                            <text class="ca-pop" style="animation-delay:1.98s" x="135" y="150" font-size="16" text-anchor="middle">R</text>
+                        </svg>
+                    </div>
+                    <div class="game-body">
+                        <h4>Krossvord</h4>
+                        <p>Azərbaycan sözləri ilə hər gün yeni krossvord: mətbəx, Novruz, musiqi və şəhərlər.</p>
+                        <span class="game-go">Həll et <i class="fa fa-arrow-right ms-1"></i></span>
+                    </div>
+                </a>
+            </div>
         </div>
 
         <div class="row g-4 mt-1">

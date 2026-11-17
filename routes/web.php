@@ -123,6 +123,7 @@ Route::prefix('oyunlar')->name('games.')->controller(\App\Http\Controllers\Front
     Route::post('/stekan/hediyye', 'stackPrize')->middleware(['auth', 'phone.verified', 'throttle:10,1'])->name('stack.prize');
     Route::post('/stekan/netice', 'stackResult')->middleware(['auth', 'phone.verified', 'throttle:30,1'])->name('stack.result');
     Route::get('/hediyye-krani', 'claw')->name('claw');
+    Route::get('/krossvord', 'crossword')->name('crossword');
     Route::get('/bext-carxi', 'wheel')->name('wheel');
     Route::post('/bext-carxi/firlat', 'spin')->middleware('throttle:15,1')->name('wheel.spin');
     Route::post('/bext-carxi/gotur', 'claim')->middleware(['auth', 'phone.verified', 'throttle:15,1'])->name('wheel.claim');
