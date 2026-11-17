@@ -60,6 +60,8 @@
     // Qonaq üçün vəziyyət brauzerdə saxlanılır (sınaq), təsdiqlənmiş istifadəçi üçün serverdən gəlir
     let state = JSON.parse(root.dataset.state || 'null') || {attempts, attemptsLeft: attempts, last: null, claimed: null};
     const attemptsBox = document.getElementById('wheelAttempts');
+    // əyləncə rejimi (bu gün hədiyyə artıq götürülüb): son əyləncə fırlatmasının nəticəsi
+    let funLast = null;
 
     function post(url) {
         return fetch(url, {method: 'POST', headers: {'Accept': 'application/json', 'X-CSRF-TOKEN': csrf}, credentials: 'same-origin'})
@@ -69,12 +71,23 @@
     function render(animate) {
         // cəhd göstəricisi
         const used = state.attempts - state.attemptsLeft;
-        attemptsBox.innerHTML = `<span class="attempts-label">${state.claimed ? 'Hədiyyə götürülüb' : `Qalan cəhd: <b>${state.attemptsLeft}</b> / ${state.attempts}`}</span>` +
+        const label = state.fun ? 'Əyləncə rejimi — limitsiz' : state.claimed ? 'Hədiyyə götürülüb' : `Qalan cəhd: <b>${state.attemptsLeft}</b> / ${state.attempts}`;
+        attemptsBox.innerHTML = `<span class="attempts-label">${label}</span>` +
             `<span class="attempts-dots">${Array.from({length: state.attempts}, (_, i) => `<i class="${i < used || state.claimed ? 'used' : ''}"></i>`).join('')}</span>`;
 
         // nəticə paneli
         let html = '';
         const demoNote = verified ? '' : '<span class="demo-tag">Sınaq</span>';
+        // bu gün başqa oyunda (Hədiyyə Kranı) hədiyyə götürülüb — oynamaq olar, götürmək olmaz
+        const warn = state.blockedBy
+            ? `<div class="rules-note prize-block"><i class="fa fa-exclamation-triangle me-2"></i>${esc(state.blockedMessage)}</div>` : '';
+        // əyləncə fırlatmasının nəticəsi — hədiyyəsiz
+        const fun = state.fun
+            ? `<div class="fun-result">${funLast
+                ? `<span class="eyebrow">Əyləncə üçün</span><div><b>${esc(funLast.label)}</b> düşdü — bu gün hədiyyə verilmir.</div>`
+                : (state.funReason === 'attempts'
+                    ? 'Bu günün cəhdləri bitdi — çarxı əyləncə üçün istədiyiniz qədər fırlada bilərsiniz, amma hədiyyə verilmir.'
+                    : 'Çarxı əyləncə üçün istədiyiniz qədər fırlada bilərsiniz — hədiyyə verilmir.')}</div>` : '';
         if (state.claimed) {
             html = `<span class="eyebrow">Hədiyyəniz 🎉</span><h3>${esc(state.claimed.label)}</h3>` +
                 `<div class="prize-code">${esc(state.claimed.code)}</div>` +
@@ -82,10 +95,17 @@
                 (state.claimed.expired
                     // kodun vaxtı bitib (bazadan da silinir) — bu gün yenidən fırlatmaq olmur
                     ? `<p class="small text-muted mb-0">Kodun vaxtı <b>${esc(state.claimed.expires)}</b>-də bitib. Sabah yenə fırladın!</p>`
-                    : `<p class="small text-muted mb-0">Kodu ofisianta göstərin. ${esc(state.claimed.expires)} tarixinədək etibarlıdır. Kod <a href="/hediyyelerim">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>`);
+                    : `<p class="small text-muted mb-0">Kodu ofisianta göstərin. ${esc(state.claimed.expires)} tarixinədək etibarlıdır. Kod <a href="/hediyyelerim">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>`)
+                + fun;
         } else if (state.last) {
             const left = state.attemptsLeft;
-            if (state.last.prize) {
+            if (state.last.prize && state.blockedBy) {
+                html = `${warn}<span class="eyebrow">Sizə düşdü</span><h3>${esc(state.last.label)}</h3>` +
+                    `<p class="small text-muted">Bu gün hədiyyəni başqa oyunda götürdüyünüz üçün bu hədiyyəni götürmək olmur.</p>` +
+                    (left > 0
+                        ? `<div class="choice"><button type="button" class="btn btn-primary" data-act="spin"><i class="fa fa-redo me-2"></i>Yenidən fırlat</button></div><p class="small text-muted mb-0">${left} cəhdiniz qalıb.</p>`
+                        : '<p class="mb-0">Bu gün üçün cəhdləriniz bitdi. Sabah yenə gəlin!</p>');
+            } else if (state.last.prize) {
                 html = `${demoNote}<span class="eyebrow">Sizə düşdü</span><h3>${esc(state.last.label)}</h3>` +
                     `<div class="choice">` +
                     `<button type="button" class="btn btn-primary" data-act="claim"><i class="fa fa-gift me-2"></i>Hədiyyəni götür</button>` +
@@ -99,8 +119,13 @@
                     (left > 0
                         ? `<div class="choice"><button type="button" class="btn btn-primary" data-act="spin"><i class="fa fa-redo me-2"></i>Yenidən fırlat</button></div><p class="small text-muted mb-0">${left} cəhdiniz qalıb.</p>`
                         : '<p class="mb-0">Bu gün üçün cəhdləriniz bitdi. Sabah yenə gəlin!</p>');
+                html = warn + html;
             }
+        } else {
+            html = warn + fun; // başqa oyunda hədiyyə götürülüb — xəbərdarlıq və əyləncə nəticəsi
         }
+        // əyləncə rejimində (məs. cəhdlər bitib) əyləncə qeydi hər zaman görünsün
+        if (state.fun && !html.includes('fun-result')) html += fun;
         resultBox.innerHTML = html;
         resultBox.hidden = !html;
         intro.hidden = !!(state.claimed || (state.last && verified));
@@ -111,8 +136,8 @@
         }
 
         // mərkəzdəki düymə
-        btn.disabled = spinning || !!state.claimed || state.attemptsLeft <= 0;
-        btn.textContent = state.claimed ? 'Hazır' : state.attemptsLeft <= 0 ? 'Bitdi' : (state.last ? 'Yenə fırlat' : (verified ? 'Fırlat' : 'Sınaq fırlat'));
+        btn.disabled = spinning || (!state.fun && (!!state.claimed || state.attemptsLeft <= 0));
+        btn.textContent = state.fun ? 'Fırlat' : state.claimed ? 'Hazır' : state.attemptsLeft <= 0 ? 'Bitdi' : (state.last ? 'Yenə fırlat' : (verified ? 'Fırlat' : 'Sınaq fırlat'));
     }
 
     async function claim() {
@@ -138,7 +163,7 @@
     });
 
     async function spin() {
-        if (spinning || state.claimed || state.attemptsLeft <= 0) return;
+        if (spinning || (!state.fun && (state.claimed || state.attemptsLeft <= 0))) return;
         spinning = true;
         render();
 
@@ -172,6 +197,7 @@
             finished = true;
             g.removeEventListener('transitionend', done);
             spinning = false;
+            if (d.fun) funLast = {label: d.label, prize: d.prize}; // əyləncə — hədiyyəsiz
             if (d.state) {
                 state = d.state;
             } else { // qonaq: sınaq vəziyyətini brauzerdə yeniləyirik

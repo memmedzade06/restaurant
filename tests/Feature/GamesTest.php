@@ -78,7 +78,10 @@ class GamesTest extends TestCase
             $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertOk()
                 ->assertJson(['demo' => false, 'prize' => false, 'state' => ['attemptsLeft' => $left]]);
         }
-        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertStatus(429);
+        // cəhdlər hədiyyəsiz bitdi — əyləncə üçün limitsiz fırlatmaq olar, hədiyyə verilmir
+        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertOk()
+            ->assertJson(['fun' => true, 'state' => ['attemptsLeft' => 0, 'fun' => true, 'funReason' => 'attempts']]);
+        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/gotur')->assertStatus(422);
         // fırlatmalar bazaya yazılmır — yalnız götürülən hədiyyə yazılır
         $this->assertSame(0, WheelSpin::where('user_id', $u->id)->count());
     }
@@ -108,8 +111,9 @@ class GamesTest extends TestCase
         $spin = WheelSpin::where('user_id', $u->id)->first();
         $this->assertEqualsWithDelta(now()->addMinutes(10)->timestamp, $spin->expires_at->timestamp, 60);
 
-        // götürəndən sonra fırlatmaq olmur, ikinci "götür" eyni kodu qaytarır
-        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertStatus(429);
+        // götürəndən sonra yalnız əyləncə üçün fırlatmaq olar (yeni hədiyyə yoxdur), ikinci "götür" eyni kodu qaytarır
+        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertOk()->assertJson(['fun' => true, 'state' => ['attemptsLeft' => 0]]);
+        $this->assertSame(1, WheelSpin::where('user_id', $u->id)->count());
         $this->actingAs($u)->postJson('/oyunlar/bext-carxi/gotur')->assertOk()->assertJson(['state' => ['claimed' => ['code' => $r->json('state.claimed.code')]]]);
 
         $this->actingAs($u)->get('/hesabim')->assertSee($r->json('state.claimed.code'));
@@ -127,9 +131,9 @@ class GamesTest extends TestCase
         $this->artisan('prizes:prune')->assertSuccessful();
         $this->assertNull(WheelSpin::where('code', $code)->first());
 
-        // amma bu gün yenidən fırlatmaq olmur — "götürülüb" qeydi gün sonunadək qalır
-        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertStatus(429)
-            ->assertJson(['state' => ['attemptsLeft' => 0, 'claimed' => ['code' => $code, 'expired' => true]]]);
+        // amma bu gün yeni hədiyyə olmur (yalnız əyləncə) — "götürülüb" qeydi gün sonunadək qalır
+        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertOk()
+            ->assertJson(['fun' => true, 'state' => ['attemptsLeft' => 0, 'claimed' => ['code' => $code, 'expired' => true]]]);
         $this->actingAs($u)->postJson('/oyunlar/bext-carxi/gotur')->assertOk()->assertJson(['state' => ['claimed' => ['expired' => true]]]);
         $this->assertSame(0, WheelSpin::where('user_id', $u->id)->count()); // yeni kod yaranmayıb
     }

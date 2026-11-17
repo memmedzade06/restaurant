@@ -12,6 +12,7 @@ use App\Services\BakuWeather;
 use App\Services\Crossword;
 use App\Services\NardLeaderboard;
 use App\Services\StackRecordNotifier;
+use App\Support\DailyPrize;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -348,8 +349,19 @@ class GameController extends Controller
             User::whereKey($user->id)->lockForUpdate()->first(); // eyni anda iki fırlatmanın qarşısını alır
             $state = $this->wheelState($user->id);
 
-            if ($state['claimed']) {
-                return response()->json(['message' => 'Bu günün hədiyyəsini artıq götürmüsünüz. Sabah yenə gəlin!', 'state' => $state], 429);
+            // Bu gün hədiyyə artıq götürülüb (çarxda və ya Hədiyyə Kranında) — əyləncə üçün fırlada bilər:
+            // cəhd sayılmır, nəticə yadda saxlanmır, hədiyyə verilmir
+            if ($state['fun']) {
+                $index = $this->pickIndex($segments);
+
+                return response()->json([
+                    'index' => $index,
+                    'label' => $segments[$index]['label'],
+                    'prize' => (bool) $segments[$index]['prize'],
+                    'demo' => false,
+                    'fun' => true,
+                    'state' => $state,
+                ]);
             }
             if ($state['attemptsLeft'] <= 0) {
                 return response()->json(['message' => 'Bu gün üçün cəhdləriniz bitdi. Sabah yenə gəlin!', 'state' => $state], 429);
@@ -385,6 +397,9 @@ class GameController extends Controller
 
             if ($state['claimed']) {
                 return response()->json(['state' => $state]); // artıq götürülüb — eyni kodu qaytarırıq
+            }
+            if ($state['blockedBy']) {
+                return response()->json(['message' => $state['blockedMessage'], 'state' => $state], 422);
             }
 
             $round = $this->round($user->id);
@@ -429,11 +444,23 @@ class GameController extends Controller
             $claimed['expired'] = true;
         }
 
+        // gündə yalnız bir oyunda hədiyyə: bu gün Hədiyyə Kranında götürübsə, çarxı yalnız əyləncə üçün fırladır
+        $blockedBy = $claimed ? null : DailyPrize::claimedElsewhere($userId, 'wheel');
+
+        $left = $claimed || $blockedBy ? 0 : max(0, $this->attempts() - $round['count']);
+        // cəhdlər hədiyyəsiz bitib (götürülməmiş hədiyyə gözləmir) — əyləncə üçün oynaya bilər
+        $outOfAttempts = ! $claimed && ! $blockedBy && $left <= 0 && ! ($last && $this->isPrize($last['key']));
+
         return [
             'attempts' => $this->attempts(),
-            'attemptsLeft' => $claimed ? 0 : max(0, $this->attempts() - $round['count']),
-            'last' => $last && ! $claimed ? ['label' => $last['label'], 'prize' => $this->isPrize($last['key'])] : null,
+            'attemptsLeft' => $left,
+            'last' => $last && ! $claimed && ! $blockedBy ? ['label' => $last['label'], 'prize' => $this->isPrize($last['key'])] : null,
             'claimed' => $claimed,
+            'blockedBy' => $blockedBy,
+            'blockedMessage' => $blockedBy ? DailyPrize::message($blockedBy) : null,
+            // əyləncə rejimi: limitsiz oynamaq olar, hədiyyəsiz — hədiyyə götürülüb və ya cəhdlər bitib
+            'fun' => (bool) ($claimed || $blockedBy || $outOfAttempts),
+            'funReason' => $claimed ? 'claimed' : ($blockedBy ? 'blocked' : ($outOfAttempts ? 'attempts' : null)),
         ];
     }
 

@@ -95,8 +95,10 @@
         for (var s = 0; s < 840; s++) physics(STEP, true);
     }
 
-    function attemptsLeft() { return VERIFIED ? (server ? server.attemptsLeft : 0) : game.demoLeft; }
-    function dayClosed() { return VERIFIED && server && (server.claimed || (server.attemptsLeft <= 0 && !server.last)); }
+    // əyləncə rejimi: bu gün hədiyyə artıq götürülüb (kranda və ya Bəxt çarxında) — limitsiz, hədiyyəsiz
+    function funMode() { return VERIFIED && server && server.fun; }
+    function attemptsLeft() { return VERIFIED ? (funMode() ? Infinity : (server ? server.attemptsLeft : 0)) : game.demoLeft; }
+    function dayClosed() { return VERIFIED && server && !server.fun && (server.claimed || (server.attemptsLeft <= 0 && !server.last)); }
 
     function newGame() {
         resetClaw();
@@ -231,14 +233,17 @@
         return best;
     }
 
-    // Tutuşun möhkəmliyi: şarın düz ortasından və üstü boş olanda yaxşı tutulur
+    // Tutuşun möhkəmliyi: şarın düz ortasından və üstü boş olanda yaxşı tutulur.
+    // HOLD — ayarlar: base — ortadan tutanda saxlama şansı, edge — kənardan tutanda nə qədər azalır,
+    // buried — üstündəki hər şar üçün nə qədər azalır, min/max — şansın hədləri
+    var HOLD = { base: .97, edge: .4, buried: .08, min: .35, max: .97 };
     function holdChance(a) {
         var off = flat(a) / a.r;
         var buried = 0;
         items.forEach(function (b) {
             if (b !== a && b.y < a.y - a.r * .3 && Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z) < a.r + b.r + 2) buried++;
         });
-        return clamp(.9 - off * .7 - buried * .18, .05, .9);
+        return clamp(HOLD.base - off * HOLD.edge - buried * HOLD.buried, HOLD.min, HOLD.max);
     }
 
     function releaseHeld(slipped) {
@@ -402,7 +407,24 @@
         el.result.hidden = false;
         hud();
     }
-    function closeDialog() { el.result.hidden = true; game.over = false; }
+    function closeDialog() {
+        el.result.hidden = true;
+        game.over = false;
+        // əyləncə rejimində pəncərə bağlananda kran oynamağa hazır olsun
+        if (funMode() && claw.state !== 'ready' && claw.state !== 'down' && claw.state !== 'close' && claw.state !== 'up' && claw.state !== 'home' && claw.state !== 'release') {
+            claw.state = 'ready';
+            game.turnLeft = TURN_SECONDS;
+        }
+        hud();
+    }
+
+    // əyləncə rejiminin səbəbinə görə qısa izah
+    function funText() {
+        if (!server) return '';
+        if (server.funReason === 'attempts') return 'Bu günün cəhdləri bitdi — əyləncə üçün istədiyiniz qədər oynaya bilərsiniz, amma hədiyyə verilmir. Sabah yenə 3 cəhdiniz olacaq.';
+        if (server.funReason === 'blocked') return 'Bu gün hədiyyəni artıq ' + server.blockedBy + ' qazanmısınız — əyləncə üçün oynaya bilərsiniz, amma hədiyyə verilmir.';
+        return 'Bu gün hədiyyəni artıq qazanmısınız — əyləncə üçün oynaya bilərsiniz, amma hədiyyə verilmir.';
+    }
 
     function playAgain() {
         closeDialog();
@@ -412,10 +434,8 @@
         hud();
     }
 
-    function leftText() {
-        var n = attemptsLeft();
-        return n > 0 ? 'Yenidən oyna <small>(' + n + ' cəhd)</small>' : '';
-    }
+    // Bəxt çarxındakı kimi: "Hədiyyəni götür" və ya "Davam et"
+    var CONTINUE = '<i class="fa fa-redo me-2"></i>Davam et';
 
     /** Şar açıldı: içindəki hədiyyə */
     function showBall(d, col) {
@@ -426,18 +446,32 @@
                 ? '<p class="cl-note">Bu <b>sınaq</b> idi — real hədiyyə və kod üçün qeydiyyatdan keçin və nömrənizi Telegram ilə təsdiqləyin.</p>'
                 : '<p class="cl-note">Bu <b>sınaq</b> idi.</p>';
             actions.push({ label: 'Qeydiyyat', href: URL.register, primary: true });
-            if (game.demoLeft > 0) actions.push({ label: 'Yenidən oyna <small>(' + game.demoLeft + ')</small>', fn: playAgain });
+            if (game.demoLeft > 0) actions.push({ label: CONTINUE + ' <small>(' + game.demoLeft + ')</small>', fn: playAgain });
             else actions.push({ label: 'Yenidən başla', fn: restartDemo });
+        } else if (d.fun) {
+            // əyləncə rejimi: nəticə göstərilir, amma hədiyyə verilmir
+            note = '<p class="cl-note">' + esc(funText()) + '</p>';
+            actions.push({ label: CONTINUE, fn: playAgain, primary: true });
+            if (server && server.claimed) actions.push({ label: '<i class="fa fa-ticket-alt me-2"></i>Kodum', fn: showClaimed });
         } else if (d.prize) {
-            note = '<p class="cl-note">Hədiyyəni götürsəniz, kod yaranır və bu günün oyunu bitir. Yenidən oynasanız, bu hədiyyə itir.</p>';
+            var left = attemptsLeft();
+            note = left > 0
+                ? '<p class="cl-note">Hədiyyəni götürsəniz, kod yaranır və bu günün oyunu bitir. Davam etsəniz, <b>' + esc(d.label) + '</b> itəcək. ' + left + ' cəhdiniz qalıb.</p>'
+                : '<p class="cl-note">Bu son cəhdiniz idi — hədiyyəni götürün!</p>';
             actions.push({ label: '<i class="fa fa-gift me-2"></i>Hədiyyəni götür', fn: claimPrize, primary: true });
-            if (attemptsLeft() > 0) actions.push({ label: leftText(), fn: playAgain });
+            if (left > 0) actions.push({ label: CONTINUE, fn: playAgain });
+        } else if (funMode()) {
+            // son cəhd də boş çıxdı — artıq əyləncə rejimi
+            note = '<p class="cl-note">' + esc(funText()) + '</p>';
+            actions.push({ label: '<i class="fa fa-play me-2"></i>Əyləncə üçün oyna', fn: playAgain, primary: true });
         } else {
-            note = attemptsLeft() > 0 ? '<p class="cl-note">Növbəti şarda şansınızı sınayın!</p>' : '<p class="cl-note">Bu günün cəhdləri bitdi. Sabah yenə gəlin!</p>';
-            if (attemptsLeft() > 0) actions.push({ label: leftText(), fn: playAgain, primary: true });
+            note = attemptsLeft() > 0
+                ? '<p class="cl-note">Növbəti şarda şansınızı sınayın! ' + attemptsLeft() + ' cəhdiniz qalıb.</p>'
+                : '<p class="cl-note">Bu günün cəhdləri bitdi. Sabah yenə gəlin!</p>';
+            if (attemptsLeft() > 0) actions.push({ label: CONTINUE, fn: playAgain, primary: true });
             else actions.push({ label: 'Bağla', fn: closeDialog, primary: true });
         }
-        dialog(ball + '<span class="eyebrow">' + (d.prize ? 'Şarın içindən çıxdı 🎉' : 'Şar boş çıxdı') + '</span>'
+        dialog(ball + '<span class="eyebrow">' + (d.fun ? 'Əyləncə üçün' : d.prize ? 'Şarın içindən çıxdı 🎉' : 'Şar boş çıxdı') + '</span>'
             + '<h3 class="cl-prize">' + esc(d.label) + '</h3>' + note, actions);
     }
 
@@ -462,19 +496,26 @@
                 + '<p class="claimed-at"><i class="fa fa-clock me-1"></i>Götürülüb: <b>' + esc(c.claimed_at) + '</b></p>'
                 + '<p class="cl-note">Kodu ofisianta göstərin. <b>' + esc(c.expires) + '</b>-dək etibarlıdır. Kod <a href="' + URL.prizes + '">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>';
         }
-        dialog(body, [{ label: 'Bağla', fn: function () { el.result.hidden = true; }, primary: true }]);
+        // hədiyyə götürülüb — kran əyləncə üçün oynanmağa davam edə bilər (hədiyyəsiz)
+        dialog(body + '<p class="cl-note">İstəsəniz, əyləncə üçün oynamağa davam edə bilərsiniz — hədiyyə verilmir.</p>',
+            [{ label: '<i class="fa fa-play me-2"></i>Əyləncə üçün oyna', fn: playAgain, primary: true },
+             { label: 'Bağla', fn: closeDialog }]);
     }
 
     function showDayClosed() {
         if (server && server.claimed) { showClaimed(); return; }
-        if (server && server.last) { showBall({ label: server.last.label, prize: server.last.prize, demo: false }, BALL_COLORS[0]); return; }
+        // götürülməmiş hədiyyə gözləyir (məs. səhifə yenilənib) — şarı yenidən göstəririk ki, götürə bilsin;
+        // boş şarı yenidən göstərməyin mənası yoxdur
+        if (server && server.last && server.last.prize) { showBall({ label: server.last.label, prize: true, demo: false }, BALL_COLORS[0]); return; }
         if (!VERIFIED) { restartDemoDialog(); return; }
-        dialog('<span class="eyebrow">Bu gün üçün</span><h3>Cəhdlər bitdi</h3><p class="cl-note">Sabah yenə 3 cəhdiniz olacaq. Gəlin şansınızı yenidən sınayın!</p>',
-            [{ label: 'Bağla', fn: function () { el.result.hidden = true; }, primary: true }]);
+        // cəhdlər bitib — əyləncə üçün oynamaq olar (hədiyyəsiz)
+        dialog('<span class="eyebrow">Bu gün üçün</span><h3>Cəhdlər bitdi</h3><p class="cl-note">' + esc(funText() || 'Sabah yenə 3 cəhdiniz olacaq.') + '</p>',
+            [{ label: '<i class="fa fa-play me-2"></i>Əyləncə üçün oyna', fn: playAgain, primary: true },
+             { label: 'Bağla', fn: closeDialog }]);
     }
 
     function showTimeUp() {
-        dialog('<h3>Vaxt bitdi! ⏰</h3><p class="cl-note">Çəngəli ' + TURN_SECONDS + ' saniyə ərzində salmadınız. Cəhd sayılmadı — yenidən başlayın.</p>',
+        dialog('<h3>Vaxt bitdi! ⏰</h3><p class="cl-note">Kranı ' + TURN_SECONDS + ' saniyə ərzində salmadınız. Cəhd sayılmadı — yenidən başlayın.</p>',
             [{ label: 'Yenidən başla', fn: playAgain, primary: true }]);
     }
 
@@ -500,7 +541,7 @@
         var key = left + '|' + t + '|' + claw.state + '|' + game.busy + '|' + game.over;
         if (key === lastHud) return;
         lastHud = key;
-        el.attempts.textContent = left;
+        el.attempts.textContent = left === Infinity ? '∞' : left; // əyləncə rejimi — limitsiz
         el.time.textContent = t;
         el.time.parentNode.classList.toggle('is-low', claw.state === 'ready' && game.turnLeft <= 5);
         el.drop.disabled = game.busy || game.over || (game.started && claw.state !== 'ready') || left <= 0;
@@ -509,14 +550,90 @@
     /* =========================================================
        Rəsm
        ========================================================= */
-    var dpr = Math.min(2, window.devicePixelRatio || 1);
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
+    var dpr = 1;
     var back = document.createElement('canvas'), front = document.createElement('canvas');
-    back.width = front.width = W * dpr;
-    back.height = front.height = H * dpr;
+
+    /**
+     * Kətanın daxili ölçüsü ekrandakı ölçüyə uyğun seçilir: tam ekranda böyük göstəriləndə
+     * də bulanıq olmasın. Arxa və ön qatlar yenidən çəkilir.
+     */
+    function setResolution() {
+        var cssW = canvas.getBoundingClientRect().width || W;
+        var next = Math.min(3, Math.max(1, (window.devicePixelRatio || 1) * cssW / W));
+        next = Math.round(next * 4) / 4;   // xırda dəyişikliklərdə hər dəfə yenidən çəkməyək
+        if (next === dpr && canvas.width) return;
+        dpr = next;
+        canvas.width = back.width = front.width = Math.round(W * dpr);
+        canvas.height = back.height = front.height = Math.round(H * dpr);
+        if (typeof drawBack === 'function' && game) { drawBack(); drawFront(); }
+    }
+    setResolution();
 
     var GOLD = '#E9A23B', GOLD_D = '#C9831F', WINE = '#7E1A1A', CREAM = '#FBF6EF';
+
+    // arxa divardakı 50 Qəpik loqosu — yüklənəndə arxa qat yenidən çəkilir
+    var LOGO = new Image();
+    LOGO.onload = function () { drawBack(); };
+
+    /**
+     * 50 qəpiklik sikkə: iki metallı (gümüşü xarici halqa, qızılı orta), günəş şüaları,
+     * iki neft buruğu, "50" və "QƏPİK" yazısı. (x, y) — mərkəz, r — radius.
+     */
+    function drawCoin(c, x, y, r) {
+        c.save();
+        c.translate(x, y);
+        // kölgə
+        c.fillStyle = 'rgba(0,0,0,.35)';
+        c.beginPath(); c.arc(1, 1.5, r, 0, Math.PI * 2); c.fill();
+        // xarici gümüşü halqa
+        var ring = c.createLinearGradient(-r, -r, r, r);
+        ring.addColorStop(0, '#f2f2ee'); ring.addColorStop(.45, '#b9b8b0'); ring.addColorStop(1, '#7d7c74');
+        c.fillStyle = ring;
+        c.beginPath(); c.arc(0, 0, r, 0, Math.PI * 2); c.fill();
+        // halqada şüalar
+        c.strokeStyle = 'rgba(90,88,80,.45)'; c.lineWidth = .5;
+        for (var i = 0; i < 40; i++) {
+            var t = i / 40 * Math.PI * 2;
+            c.beginPath(); c.moveTo(Math.cos(t) * r * .7, Math.sin(t) * r * .7); c.lineTo(Math.cos(t) * r * .93, Math.sin(t) * r * .93); c.stroke();
+        }
+        // qızılı orta hissə
+        var core = c.createRadialGradient(-r * .2, -r * .25, r * .05, 0, 0, r * .68);
+        core.addColorStop(0, '#fbe7a1'); core.addColorStop(.6, '#dcb04a'); core.addColorStop(1, '#a87b22');
+        c.fillStyle = core;
+        c.beginPath(); c.arc(0, 0, r * .68, 0, Math.PI * 2); c.fill();
+        c.strokeStyle = 'rgba(110,80,20,.6)'; c.lineWidth = .7; c.stroke();
+        c.save();
+        c.beginPath(); c.arc(0, 0, r * .68, 0, Math.PI * 2); c.clip();
+        // günəş şüaları (yuxarıda)
+        c.strokeStyle = 'rgba(140,100,30,.45)'; c.lineWidth = .45;
+        for (var j = 0; j < 18; j++) {
+            var a = Math.PI + j / 17 * Math.PI;
+            c.beginPath(); c.moveTo(Math.cos(a) * r * .18, -r * .1 + Math.sin(a) * r * .18); c.lineTo(Math.cos(a) * r * .9, -r * .1 + Math.sin(a) * r * .9); c.stroke();
+        }
+        // iki neft buruğu (sağda)
+        c.strokeStyle = 'rgba(95,65,15,.9)'; c.lineWidth = .7;
+        [[r * .2, r * .62], [r * .48, r * .5]].forEach(function (d) {
+            var bx = d[0], h = d[1], w = r * .1;
+            c.beginPath();
+            c.moveTo(bx - w, r * .55); c.lineTo(bx, r * .55 - h); c.lineTo(bx + w, r * .55);
+            c.moveTo(bx - w * .66, r * .55 - h * .33); c.lineTo(bx + w * .66, r * .55 - h * .33);
+            c.moveTo(bx - w * .33, r * .55 - h * .66); c.lineTo(bx + w * .33, r * .55 - h * .66);
+            c.stroke();
+        });
+        c.restore();
+        // "50" və "QƏPİK" (solda)
+        c.fillStyle = '#7a5410';
+        c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.font = '900 ' + Math.round(r * .62) + 'px Nunito, sans-serif';
+        c.fillText('50', -r * .26, r * .05);
+        c.font = '800 ' + Math.max(4, Math.round(r * .2)) + 'px Nunito, sans-serif';
+        c.fillText('QƏPİK', -r * .22, r * .42);
+        // parıltı
+        c.fillStyle = 'rgba(255,255,255,.45)';
+        c.beginPath(); c.ellipse(-r * .45, -r * .55, r * .25, r * .09, -.7, 0, Math.PI * 2); c.fill();
+        c.restore();
+    }
+    if (root.dataset.logo) LOGO.src = root.dataset.logo;
 
     function rr(c, x, y, w, h, r) {
         c.beginPath();
@@ -612,6 +729,22 @@
         c.stroke();
         c.restore();
         c.strokeStyle = 'rgba(233,162,59,.35)'; c.lineWidth = 1.5; c.strokeRect(bl.x, bl.y, br.x - bl.x, br.y - bl.y);
+
+        // arxa divara yapışdırılmış 50 Qəpik loqosu — yalnız loqonun öz dairəsi (əlavə haşiyə/altlıq yoxdur)
+        if (LOGO.complete && LOGO.naturalWidth) {
+            var lx = (bl.x + br.x) / 2, ly = (bl.y + br.y) / 2, lr = 34;   // arxa divarın tam ortası
+            // altında yüngül kölgə — divardan bir az qabarıq görünsün
+            c.save();
+            c.shadowColor = 'rgba(0,0,0,.45)'; c.shadowBlur = 8; c.shadowOffsetY = 2;
+            c.fillStyle = 'rgba(0,0,0,.01)';
+            c.beginPath(); c.arc(lx, ly, lr * .96, 0, Math.PI * 2); c.fill();
+            c.restore();
+            c.save();
+            c.beginPath(); c.arc(lx, ly, lr, 0, Math.PI * 2); c.clip();   // şəklin künclərini kəsirik
+            c.drawImage(LOGO, lx - lr, ly - lr, lr * 2, lr * 2);
+            c.fillStyle = 'rgba(40,10,5,.1)'; c.fillRect(lx - lr, ly - lr, lr * 2, lr * 2); // divarın işığına uyğun
+            c.restore();
+        }
 
         // döşəmə: perspektivdə xalça torları
         quad(c, [[G.l, FLOOR, 0], [G.r, FLOOR, 0], [G.r, FLOOR, D], [G.l, FLOOR, D]]);
@@ -713,8 +846,8 @@
         }
         rr(c, 252, FLOOR + 11, 22, 24, 5); c.fillStyle = GOLD; c.fill();
         c.fillStyle = '#1E0B0B'; rr(c, 261.5, FLOOR + 15, 3, 16, 1.5); c.fill();
-        c.fillStyle = GOLD; c.font = '700 16px "Playfair Display", Georgia, serif';
-        c.fillText('50 Qəpik', 334, FLOOR + 24);
+        // 50 qəpiklik sikkə — panelin sağında
+        drawCoin(c, 360, FLOOR + 23, 18);
 
         // şüşənin çərçivəsi
         c.lineWidth = 5; c.strokeStyle = GOLD;
@@ -1081,6 +1214,35 @@
 
     el.drop.addEventListener('click', function () { if (!game.started) start(); else drop(); });
 
+    /* ---------- tam ekran ---------- */
+    var fullBtn = $('.cl-full');
+    var fsEl = function () { return document.fullscreenElement || document.webkitFullscreenElement; };
+    function setFull(on) {
+        root.classList.toggle('is-full', on);
+        document.documentElement.classList.toggle('cl-noscroll', on);
+        fullBtn.innerHTML = on ? '<i class="fa fa-compress"></i>' : '<i class="fa fa-expand"></i>';
+        fullBtn.title = fullBtn.ariaLabel = on ? 'Tam ekrandan çıx' : 'Tam ekran';
+        requestAnimationFrame(setResolution);
+    }
+    fullBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (root.classList.contains('is-full')) {
+            if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+            setFull(false);
+            return;
+        }
+        setFull(true);
+        // brauzerin öz tam ekranı (iPhone-da yoxdur — orada oyun sadəcə səhifəni örtür)
+        var req = root.requestFullscreen || root.webkitRequestFullscreen;
+        if (req) { try { var p = req.call(root); if (p && p.catch) p.catch(function () {}); } catch (err) { /* icazə verilmədi */ } }
+    });
+    // Esc ilə və ya brauzerin öz düyməsi ilə çıxanda
+    ['fullscreenchange', 'webkitfullscreenchange'].forEach(function (ev) {
+        document.addEventListener(ev, function () { if (!fsEl() && root.classList.contains('is-full')) setFull(false); });
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && root.classList.contains('is-full') && !fsEl()) setFull(false); });
+    window.addEventListener('resize', function () { requestAnimationFrame(setResolution); });
+
     // Şüşəyə toxunanda çəngəl həmin yerə gedir: ekran nöqtəsini qalağın təxmini
     // hündürlüyündəki üfüqi müstəviyə geri proyeksiya edirik
     function aim(e) {
@@ -1103,7 +1265,8 @@
     /* ---------- başla ---------- */
     newGame();
     // bu gün artıq hədiyyə götürülüb, cəhdlər bitib və ya açılmış şar gözləyir — dərhal göstəririk
-    if (VERIFIED && server && (server.claimed || server.last || server.attemptsLeft <= 0)) {
+    // (başqa oyunda hədiyyə götürülübsə pəncərə açılmır — xəbərdarlıq yan paneldədir, əyləncə üçün oynayır)
+    if (VERIFIED && server && (server.claimed || (server.last && server.last.prize) || (!server.fun && server.attemptsLeft <= 0))) {
         el.start.hidden = true;
         game.started = true;
         showDayClosed();

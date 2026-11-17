@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Frontend;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\WheelSpin;
+use App\Support\DailyPrize;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -32,7 +33,8 @@ class ClawController extends Controller
             'verified' => $verified,
             'attempts' => $this->attempts(),
             'state' => $verified ? $this->state($user->id) : null,
-            'prizes' => collect(config('games.claw.prizes'))->where('prize', true)->pluck('label')->unique()->values(),
+            // şarlardan çıxa bilən hədiyyələrin siyahısı (ehtimallar göstərilmir, boş şar daxil deyil)
+            'prizes' => collect(config('games.claw.prizes'))->where('prize', true)->sortByDesc('weight')->pluck('label')->unique()->values(),
         ]);
     }
 
@@ -48,12 +50,16 @@ class ClawController extends Controller
             return response()->json(['token' => $token, 'demo' => true]);
         }
 
-        return DB::transaction(function () use ($user, $token) {
+        return DB::transaction(function () use ($request, $user, $token) {
             User::whereKey($user->id)->lockForUpdate()->first(); // eyni anda iki cəhd olmasın
             $state = $this->state($user->id);
 
-            if ($state['claimed']) {
-                return response()->json(['message' => 'Bu günün hədiyyəsini artıq götürmüsünüz. Sabah yenə gəlin!', 'state' => $state], 429);
+            // Bu gün hədiyyə artıq götürülüb (kranda və ya Bəxt çarxında) — əyləncə üçün oynaya bilər:
+            // cəhd sayılmır, şar açılır, amma hədiyyə verilmir
+            if ($state['fun']) {
+                $request->session()->put('claw_demo', ['token' => $token, 'at' => microtime(true)]);
+
+                return response()->json(['token' => $token, 'demo' => false, 'fun' => true, 'state' => $state]);
             }
             if ($state['attemptsLeft'] <= 0) {
                 return response()->json(['message' => 'Bu gün üçün cəhdləriniz bitdi. Sabah yenə gəlin!', 'state' => $state], 429);
@@ -76,14 +82,21 @@ class ClawController extends Controller
         $user = $request->user();
         $minSeconds = (float) config('games.claw.min_seconds_per_attempt', 1.5);
 
-        if (! $user || ! $user->hasVerifiedPhone()) {
-            $demo = $request->session()->pull('claw_demo');
-            if (! $demo || ! hash_equals($demo['token'], $data['token']) || microtime(true) - $demo['at'] < $minSeconds) {
+        // sınaq (qonaq) və əyləncə (bu gün hədiyyə götürülüb) cəhdləri — hədiyyəsiz
+        $demo = $request->session()->get('claw_demo');
+        if ($demo && hash_equals($demo['token'], $data['token'])) {
+            $request->session()->forget('claw_demo');
+            if (microtime(true) - $demo['at'] < $minSeconds) {
                 return response()->json(['message' => 'Cəhd tapılmadı.'], 422);
             }
             $p = $this->pick();
+            $verified = $user && $user->hasVerifiedPhone();
 
-            return response()->json(['label' => $p['label'], 'prize' => (bool) $p['prize'], 'demo' => true]);
+            return response()->json(['label' => $p['label'], 'prize' => (bool) $p['prize'], 'demo' => ! $verified, 'fun' => $verified]
+                + ($verified ? ['state' => $this->state($user->id)] : []));
+        }
+        if (! $user || ! $user->hasVerifiedPhone()) {
+            return response()->json(['message' => 'Cəhd tapılmadı.'], 422);
         }
 
         return DB::transaction(function () use ($user, $data, $minSeconds) {
@@ -115,6 +128,9 @@ class ClawController extends Controller
             $state = $this->state($user->id);
             if ($state['claimed']) {
                 return response()->json(['state' => $state]); // artıq götürülüb — eyni kodu qaytarırıq
+            }
+            if ($state['blockedBy']) {
+                return response()->json(['message' => $state['blockedMessage'], 'state' => $state], 422);
             }
 
             $round = $this->round($user->id);
@@ -156,12 +172,23 @@ class ClawController extends Controller
             $claimed['expired'] = true;
         }
         $last = $round['last'];
+        // gündə yalnız bir oyunda hədiyyə: bu gün Bəxt çarxında götürübsə, kranda yalnız əyləncə üçün oynayır
+        $blockedBy = $claimed ? null : DailyPrize::claimedElsewhere($userId, 'claw');
+
+        $left = $claimed || $blockedBy ? 0 : max(0, $this->attempts() - $round['count']);
+        // cəhdlər hədiyyəsiz bitib (götürülməmiş hədiyyə gözləmir) — əyləncə üçün oynaya bilər
+        $outOfAttempts = ! $claimed && ! $blockedBy && $left <= 0 && ! ($last && $this->isPrize($last['key']));
 
         return [
             'attempts' => $this->attempts(),
-            'attemptsLeft' => $claimed ? 0 : max(0, $this->attempts() - $round['count']),
-            'last' => $last && ! $claimed ? ['label' => $last['label'], 'prize' => $this->isPrize($last['key'])] : null,
+            'attemptsLeft' => $left,
+            'last' => $last && ! $claimed && ! $blockedBy ? ['label' => $last['label'], 'prize' => $this->isPrize($last['key'])] : null,
             'claimed' => $claimed,
+            'blockedBy' => $blockedBy,
+            'blockedMessage' => $blockedBy ? DailyPrize::message($blockedBy) : null,
+            // əyləncə rejimi: limitsiz oynamaq olar, hədiyyəsiz — hədiyyə götürülüb və ya cəhdlər bitib
+            'fun' => (bool) ($claimed || $blockedBy || $outOfAttempts),
+            'funReason' => $claimed ? 'claimed' : ($blockedBy ? 'blocked' : ($outOfAttempts ? 'attempts' : null)),
         ];
     }
 

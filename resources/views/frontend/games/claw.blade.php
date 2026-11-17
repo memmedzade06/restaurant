@@ -10,7 +10,7 @@
     </div>
 </section>
 
-<section class="section pt-4">
+<section class="section pt-4 games-scene">
     <div class="container">
         <a href="{{ route('games.index') }}" class="back-link"><i class="fa fa-arrow-left"></i> Oyunlara qayıt</a>
         <div class="row g-4">
@@ -23,15 +23,17 @@
                      data-open-url="{{ route('games.claw.open') }}"
                      data-claim-url="{{ route('games.claw.claim') }}"
                      data-prizes-url="{{ route('prizes') }}"
+                     data-logo="{{ asset('img/games/stack-logo.png') }}"
                      data-register-url="{{ auth()->check() ? route('verify.telegram') : route('register') }}">
                     <div class="st-stage cl-stage">
                         <canvas aria-label="Hədiyyə Kranı oyunu"></canvas>
+                        <button type="button" class="st-full cl-full" title="Tam ekran" aria-label="Tam ekran"><i class="fa fa-expand"></i></button>
 
                         <div class="st-start cl-start">
                             <div class="st-start-box">
                                 <i class="fa fa-hand-pointer"></i>
                                 <b>Başlamaq üçün toxunun</b>
-                                <span>Oxlarla çəngəli sağa-sola və irəli-geri sürün, <kbd>Boşluq</kbd> ilə tutun</span>
+                                <span>Oxlarla kranı sağa-sola və irəli-geri sürün, <kbd>Boşluq</kbd> ilə tutun</span>
                             </div>
                         </div>
 
@@ -72,23 +74,35 @@
                         </div>
                     @endunless
 
+                    @if ($state['blockedBy'] ?? null)
+                        {{-- bu gün Bəxt çarxında hədiyyə götürülüb: oynamaq olar, götürmək olmaz --}}
+                        <div class="rules-note prize-block"><i class="fa fa-exclamation-triangle me-2"></i>{{ $state['blockedMessage'] }}</div>
+                    @elseif (($state['funReason'] ?? null) === 'attempts')
+                        <div class="rules-note prize-block"><i class="fa fa-exclamation-triangle me-2"></i>Bu günün cəhdləri bitdi — əyləncə üçün istədiyiniz qədər oynaya bilərsiniz, amma hədiyyə verilmir. Sabah yenə {{ $attempts }} cəhdiniz olacaq.</div>
+                    @endif
+
                     <div class="side-card">
                         <h5><i class="fa fa-book me-2 text-primary"></i>Necə oynanır?</h5>
                         <div class="rules-note"><i class="fa fa-info-circle me-2"></i>Hədiyyədən istifadə üçün minimal masa hesabı <b>30 AZN</b> olmalıdır.</div>
                         <ul class="rules">
                             <li>Gündə <b>{{ $attempts }} cəhdiniz</b> var, hər cəhdə <b>15 saniyə</b>. Vaxt bitsə, cəhd sayılmır — <b>Yenidən başla</b> ilə davam edirsiniz.</li>
-                            <li>Çəngəl <b>sağa-sola</b> (◀ ▶) və <b>irəli-geri</b> (▲ ▼) gedir. Klaviaturada <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> və ya şüşəyə toxunaraq da sürə bilərsiniz.</li>
-                            <li>Şarın üstündəki <b>qızılı halqa</b> çəngəlin düşəcəyi yeri göstərir. <b>TUT</b> (və ya <kbd>Boşluq</kbd>) basın — çəngəl şarı tutub ön sol küncdəki çıxışa aparır.</li>
+                            <li>Kran <b>sağa-sola</b> (◀ ▶) və <b>irəli-geri</b> (▲ ▼) gedir. Klaviaturada <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> və ya şüşəyə toxunaraq da sürə bilərsiniz.</li>
+                            <li>Şarın üstündəki <b>qızılı halqa</b> kranın düşəcəyi yeri göstərir. <b>TUT</b> (və ya <kbd>Boşluq</kbd>) basın — kran şarı tutub ön sol küncdəki çıxışa aparır.</li>
                             <li>Şarın düz ortasından tutun — kənarından tutsanız, yolda sürüşüb düşə bilər.</li>
-                            <li>Çıxışa düşən şar açılır və içindən <b>təsadüfi hədiyyə</b> çıxır (bəzən şar boş olur). <b>Hədiyyəni götür</b> seçsəniz, kod yaranır və bu günün oyunu bitir. <b>Yenidən oynasanız</b>, əvvəlki hədiyyə itir — risk sizindir!</li>
+                            <li>Çıxışa düşən şar açılır və içindən <b>təsadüfi hədiyyə</b> çıxır (bəzən şar boş olur). <b>Hədiyyəni götür</b> seçsəniz, kod yaranır və bu günün oyunu bitir. <b>Davam et</b> seçsəniz, əvvəlki hədiyyə itir — risk sizindir!</li>
                             <li>Kod <b>{{ config('games.claw.code_valid_minutes') }} dəqiqə</b> etibarlıdır — ofisianta göstərin. Bütün kodlarınız: <a href="{{ route('prizes') }}">Hədiyyələrim</a>.</li>
+                            <li>Gündə yalnız <b>bir oyunda</b> hədiyyə götürmək olar — Bəxt çarxında və ya Hədiyyə Kranında. Hədiyyə götürdükdən sonra hər iki oyunu əyləncə üçün istədiyiniz qədər oynaya bilərsiniz, amma həmin gün yeni hədiyyə verilmir.</li>
                         </ul>
-                        <div class="cl-legend">
-                            <div class="mb-1"><b>Şarların içində:</b></div>
+                    </div>
+
+                    {{-- şarlardan çıxa bilən hədiyyələr — config('games.claw.prizes')-dən (boş şar siyahıda deyil) --}}
+                    <div class="side-card">
+                        <h5><i class="fa fa-gift me-2 text-primary"></i>Şarların içində</h5>
+                        <ul class="cl-odds">
                             @foreach ($prizes as $label)
-                                <div><span class="cl-dot" style="background:{{ ['#e63946', '#f4a261', '#2a9d8f', '#3a86ff', '#8338ec', '#ff006e', '#ffbe0b', '#06d6a0'][$loop->index % 8] }}"></span>{{ $label }}</div>
+                                <li><span>🎁 {{ $label }}</span></li>
                             @endforeach
-                        </div>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -98,5 +112,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/claw.js') }}?v=8"></script>
+<script src="{{ asset('js/games/claw.js') }}?v=22"></script>
 @endsection

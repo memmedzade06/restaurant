@@ -37,20 +37,20 @@ return [
 
     // Hədiyyə Kranı: tutulan şarın içindən hədiyyə çıxır. Gündə bu qədər cəhd; hər şar açılandan sonra
     // oyunçu ya "Hədiyyəni götür" basır (kod yaranır, gün bağlanır), ya da yenidən oynayır (əvvəlki hədiyyə itir).
-    // Şarın içindəkini server seçir — "weight" düşmə ehtimalıdır (cəmi 812; şans = weight / 812).
+    // Şarın içindəkini server seçir — "weight" düşmə ehtimalıdır (cəmi 812; şans = weight / 812). Boş şar da ola bilər.
     'claw' => [
         'attempts_per_day' => (int) env('CLAW_ATTEMPTS_PER_DAY', 3),
         'code_valid_minutes' => 10,
         'min_seconds_per_attempt' => 1.5,   // çəngəl enib-qalxıb çıxışa çatana qədər ən az bu qədər vaxt keçir
         'prizes' => [
-            ['key' => 'claw_empty',  'label' => 'Boş şar',            'weight' => 300, 'prize' => false], // ~37%
-            ['key' => 'claw_10',     'label' => '10% endirim',        'weight' => 280, 'prize' => true],  // ~34%
-            ['key' => 'claw_15',     'label' => '15% endirim',        'weight' => 80,  'prize' => true],  // ~10%
-            ['key' => 'claw_tea',    'label' => 'Çaynik çay Hədiyyə', 'weight' => 80,  'prize' => true],  // ~10%
-            ['key' => 'claw_20',     'label' => '20% endirim',        'weight' => 40,  'prize' => true],  // ~5%
-            ['key' => 'claw_25',     'label' => '25% endirim',        'weight' => 20,  'prize' => true],  // ~2.5%
-            ['key' => 'claw_hookah', 'label' => 'Qəlyan Hədiyyə',     'weight' => 10,  'prize' => true],  // ~1.2%
-            ['key' => 'claw_50',     'label' => '50% endirim',        'weight' => 2,   'prize' => true],  // ~0.25%
+            ['key' => 'claw_empty',  'label' => 'Boş şar',            'weight' => 300, 'prize' => false], // ~36.9%
+            ['key' => 'claw_tea',    'label' => 'Çaynik çay Hədiyyə', 'weight' => 280, 'prize' => true],  // ~34.5% — ən çox düşən hədiyyə
+            ['key' => 'claw_10',     'label' => '10% endirim',        'weight' => 80,  'prize' => true],  // ~9.9%
+            ['key' => 'claw_jam',    'label' => 'Mürəbbə Hədiyyə',    'weight' => 80,  'prize' => true],  // ~9.9%
+            ['key' => 'claw_nuts',   'label' => 'Çərəz Hədiyyə',      'weight' => 40,  'prize' => true],  // ~4.9%
+            ['key' => 'claw_hookah', 'label' => 'Qəlyan Hədiyyə',     'weight' => 20,  'prize' => true],  // ~2.5%
+            ['key' => 'claw_25',     'label' => '25% endirim',        'weight' => 10,  'prize' => true],  // ~1.2%
+            ['key' => 'claw_50',     'label' => '50% endirim',        'weight' => 2,   'prize' => true],  // ~0.25% (təxminən 400 şarda bir)
         ],
     ],
 

@@ -10,7 +10,7 @@
     </div>
 </section>
 
-<section class="section pt-4">
+<section class="section pt-4 games-scene">
     <div class="container">
         <a href="{{ route('games.index') }}" class="back-link"><i class="fa fa-arrow-left"></i> Oyunlara qayıt</a>
 

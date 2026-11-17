@@ -62,13 +62,14 @@ class ClawTest extends TestCase
     public function test_guest_plays_demo_without_code(): void
     {
         $this->only(true);
+        $before = WheelSpin::where('game', 'claw')->count();
         $token = $this->postJson('/oyunlar/hediyye-krani/basla')->assertOk()->assertJson(['demo' => true])->json('token');
         $this->postJson('/oyunlar/hediyye-krani/ac', ['token' => $token])->assertOk()
             ->assertJson(['demo' => true, 'prize' => true, 'label' => '10% endirim']);
         // açar bir dəfəlikdir
         $this->postJson('/oyunlar/hediyye-krani/ac', ['token' => $token])->assertStatus(422);
         $this->postJson('/oyunlar/hediyye-krani/gotur')->assertUnauthorized();
-        $this->assertSame(0, WheelSpin::where('game', 'claw')->count());
+        $this->assertSame($before, WheelSpin::where('game', 'claw')->count());
     }
 
     public function test_prize_is_claimed_as_real_code_and_day_closes(): void
@@ -89,15 +90,45 @@ class ClawTest extends TestCase
         $this->assertSame('Hədiyyə Kranı', $spin->gameLabel());
         $this->assertEqualsWithDelta(now()->addMinutes(10)->timestamp, $spin->expires_at->timestamp, 60);
 
-        // gün bağlıdır: yeni cəhd yoxdur, ikinci "götür" eyni kodu qaytarır
-        $this->actingAs($u)->postJson('/oyunlar/hediyye-krani/basla')->assertStatus(429);
-        $this->actingAs($u)->postJson('/oyunlar/hediyye-krani/gotur')->assertOk()->assertJsonPath('state.claimed.code', $code);
+        // hədiyyə götürülüb: əyləncə üçün oynamaq olar (cəhd sayılmır), amma yeni hədiyyə yoxdur
+        $token = $this->actingAs($u)->postJson('/oyunlar/hediyye-krani/basla')->assertOk()->assertJson(['fun' => true])->json('token');
+        $this->actingAs($u)->postJson('/oyunlar/hediyye-krani/ac', ['token' => $token])->assertOk()->assertJson(['fun' => true, 'demo' => false]);
+        $this->actingAs($u)->postJson('/oyunlar/hediyye-krani/gotur')->assertOk()->assertJsonPath('state.claimed.code', $code); // eyni kod
+        $this->assertSame(1, WheelSpin::where('user_id', $u->id)->count());
         $this->actingAs($u)->get('/hediyyelerim')->assertSee($code);
 
-        // kod istifadə olunub bazadan silinsə də, bu gün yenidən oynamaq olmur
+        // kod istifadə olunub bazadan silinsə də, bu gün yeni hədiyyə olmur — yalnız əyləncə
         $spin->delete();
-        $this->actingAs($u)->postJson('/oyunlar/hediyye-krani/basla')->assertStatus(429)
-            ->assertJsonPath('state.claimed.expired', true);
+        $this->actingAs($u)->postJson('/oyunlar/hediyye-krani/basla')->assertOk()
+            ->assertJson(['fun' => true])->assertJsonPath('state.claimed.expired', true);
+    }
+
+    public function test_prize_only_in_one_game_per_day(): void
+    {
+        $this->only(true);
+        config(['games.wheel.segments' => [['key' => 'discount_10', 'label' => '10% endirim', 'color' => '#000', 'weight' => 1, 'prize' => true]]]);
+        $u = $this->user();
+
+        // kranda hədiyyə götürdü
+        $this->attempt($u)->assertOk();
+        $this->actingAs($u)->postJson('/oyunlar/hediyye-krani/gotur')->assertOk();
+
+        // çarx: oynamaq olar (əyləncə), xəbərdarlıq var, hədiyyə götürmək olmaz
+        // xəbərdarlığı səhifədə JS göstərir — vəziyyətdə əyləncə rejimi var
+        $this->actingAs($u)->get('/oyunlar/bext-carxi')->assertOk()->assertSee('"fun":true', false);
+        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertOk()
+            ->assertJson(['fun' => true, 'state' => ['blockedBy' => 'Hədiyyə Kranında', 'fun' => true]]);
+        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/gotur')->assertStatus(422);
+        $this->assertSame(0, WheelSpin::where('user_id', $u->id)->where('game', 'wheel')->count());
+
+        // tərsinə: çarxda götürən kranda yalnız əyləncə üçün oynayır
+        $v = $this->user();
+        $this->actingAs($v)->postJson('/oyunlar/bext-carxi/firlat')->assertOk();
+        $this->actingAs($v)->postJson('/oyunlar/bext-carxi/gotur')->assertOk();
+        $this->actingAs($v)->get('/oyunlar/hediyye-krani')->assertOk()->assertSee('Bəxt çarxında artıq hədiyyə qazanmısınız');
+        $this->attempt($v)->assertOk()->assertJson(['fun' => true, 'state' => ['blockedBy' => 'Bəxt çarxında']]);
+        $this->actingAs($v)->postJson('/oyunlar/hediyye-krani/gotur')->assertStatus(422);
+        $this->assertSame(0, WheelSpin::where('user_id', $v->id)->where('game', 'claw')->count());
     }
 
     public function test_three_attempts_per_day_and_playing_again_loses_prize(): void
