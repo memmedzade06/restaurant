@@ -244,8 +244,17 @@
             src.start(t);
         }
 
+        /** Fon musiqisi üçün audio konteksti (səs bağlı olsa da yaradılır; toxunuşda çağırılmalıdır) */
+        function context() {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return null;
+            if (!ac) ac = new AC();
+            if (ac.state === 'suspended') ac.resume();
+            return ac;
+        }
+
         return {
-            clink, crash, thunder,
+            clink, crash, thunder, context,
             get muted() { return muted; },
             // səs artıq oyunçunun toxunuşu ilə açılıbmı (brauzer səsi yalnız toxunuşdan sonra icazə verir)
             get started() { return !!ac && ac.state === 'running'; },
@@ -261,18 +270,36 @@
     // data-music faylı (mp3) dövrə vuraraq sakit çalınır. Brauzer səsi yalnız toxunuşdan sonra icazə verir —
     // ona görə fayl oyunçu oyuna başlayanda yüklənir və başlayır (səhifə açılanda yüklənmir).
     // Səs düyməsi (🔊) musiqini də söndürür; vərəqə gizlənəndə (başqa tab, telefon kilidi) dayanır.
-    const MUSIC_VOLUME = 0.35;
+    const MUSIC_VOLUME = 0.2;          // fon musiqisinin ən yüksək səsi (0–1)
+    const MUSIC_FADE_MS = 500;
     const music = (() => {
         const src = root.dataset.music;
-        let el = null, wanted = false;
+        let el = null, gain = null, wanted = false;
+
+        // Səs səviyyəsi: iPhone/iPad-də audio elementinin volume-u dəyişmir (həmişə 100%) —
+        // ona görə musiqi Web Audio-nun gain qovşağından keçir; o olmayanda — adi volume
+        function setLevel(v) {
+            if (gain) gain.gain.value = v; else if (el) el.volume = v;
+        }
+        function create() {
+            el = new Audio(src);
+            el.loop = true;
+            try {
+                const a = sound.context();
+                if (a) {
+                    gain = a.createGain();
+                    gain.gain.value = MUSIC_VOLUME;
+                    a.createMediaElementSource(el).connect(gain);
+                    gain.connect(a.destination);
+                }
+            } catch (e) { gain = null; }
+            setLevel(MUSIC_VOLUME);
+        }
         function sync() {
             if (!src || !wanted) return;
             if (sound.muted || document.hidden) { if (el) el.pause(); return; }
-            if (!el) {
-                el = new Audio(src);
-                el.loop = true;
-                el.volume = MUSIC_VOLUME;
-            }
+            if (!el) create();
+            sound.context(); // iPhone audio kontekstini dayandırmış ola bilər — oyadırıq
             if (el.paused) el.play().catch(() => {}); // brauzer icazə verməsə — səssiz davam
         }
         document.addEventListener('visibilitychange', sync);
@@ -292,27 +319,34 @@
             start() {
                 wanted = true;
                 if (fade) { clearInterval(fade); fade = null; }
-                if (el) el.volume = MUSIC_VOLUME;
+                setLevel(MUSIC_VOLUME);
                 sync();
                 if (el && !sound.muted && !document.hidden) announce();
             },
-            // qüllə dağılanda: musiqi yarım saniyəyə yavaşca susur; yeni oyunda əvvəldən başlayır
+            // qüllə dağılanda: musiqi yarım saniyəyə yavaşca susur, sonra MÜTLƏQ dayanır
+            // (sönmə vaxta görə gedir — səs səviyyəsini dəyişməyə icazə verməyən brauzerdə də);
+            // yeni oyunda əvvəldən başlayır
             halt() {
                 wanted = false;
                 if (!el || el.paused) return;
                 if (fade) clearInterval(fade);
+                const steps = 8;
+                let i = 0;
                 fade = setInterval(() => {
-                    el.volume = Math.max(0, el.volume - MUSIC_VOLUME / 8);
-                    if (el.volume <= 0.001) {
+                    i++;
+                    setLevel(MUSIC_VOLUME * Math.max(0, 1 - i / steps));
+                    if (i >= steps) {
                         clearInterval(fade); fade = null;
                         el.pause();
                         el.currentTime = 0;
-                        el.volume = MUSIC_VOLUME;
+                        setLevel(MUSIC_VOLUME);
                     }
-                }, 60);
+                }, MUSIC_FADE_MS / steps);
             },
             sync,
             get playing() { return !!el && !el.paused && !fade; },
+            get level() { return gain ? +gain.gain.value.toFixed(3) : (el ? el.volume : null); },
+            get viaWebAudio() { return !!gain; },
         };
     })();
 
@@ -2447,7 +2481,7 @@
     window.__stack = {
         state: () => g, tap, consts: {GW, PERFECT, SUPPORT, BOOST_FROM}, boost, newSwing, stability, checkPrize, continueGame,
         manual: on => { manual = on; },
-        audio: () => ({musicPlaying: music.playing, muted: sound.muted}),
+        audio: () => ({musicPlaying: music.playing, muted: sound.muted, level: music.level, viaWebAudio: music.viaWebAudio}),
         weather: () => ({W, windX, drops: fx.drops.length, flakes: fx.flakes.length, leaves: fx.leaves.length}),
         step: (dt = 1 / 60) => { if (g.state !== 'over' || g.falling) update(dt); },
         // animasiya dayananda (gizli tab) kadrı əl ilə çəkmək üçün

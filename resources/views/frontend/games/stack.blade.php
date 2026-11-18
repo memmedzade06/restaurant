@@ -125,5 +125,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/stack.js') }}?v=99"></script>
+<script src="{{ asset('js/games/stack.js') }}?v=101"></script>
 @endsection
