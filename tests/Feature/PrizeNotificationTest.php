@@ -51,12 +51,41 @@ class PrizeNotificationTest extends TestCase
 
         $code = $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/gotur')->assertOk()->json('state.claimed.code');
 
+        // bir mesaj: təbrik + kod, altında şəxsi dəvət linki
         $texts = $this->sentTo('9001');
         $this->assertCount(1, $texts);
         $this->assertStringContainsString('Təbriklər', $texts[0]);
         $this->assertStringContainsString('Çarx oyununda hədiyyə qazandınız: <b>10% endirim</b>', $texts[0]);
         $this->assertStringContainsString("<code>{$code}</code>", $texts[0]);
         $this->assertStringContainsString('tarixinədək etibarlıdır', $texts[0]);
+        $this->assertStringContainsString('Profilinizdəki linki dostlarınızla paylaşın', $texts[0]);
+        $this->assertStringContainsString(route('referral', $u->fresh()->referral_code), $texts[0]);
+        $this->assertStringContainsString('Hədiyyə marketində', $texts[0]);
+        // dəvət hissəsi təbrikdən sonra gəlir
+        $this->assertLessThan(strpos($texts[0], 'Profilinizdəki'), strpos($texts[0], $code));
+    }
+
+    public function test_message_has_two_buttons_on_https(): void
+    {
+        \Illuminate\Support\Facades\URL::forceRootUrl('https://50qepik.test');
+        \Illuminate\Support\Facades\URL::forceScheme('https');
+        config(['games.wheel.segments' => [
+            ['key' => 'discount_10', 'label' => '10% endirim', 'color' => '#000', 'size' => 360, 'prize' => true],
+        ]]);
+        $u = $this->user('9005');
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/firlat')->assertOk();
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/dayan', ['ms' => 0])->assertOk();
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/gotur')->assertOk();
+
+        Http::assertSent(function ($r) {
+            $kb = $r['reply_markup']['inline_keyboard'] ?? null;
+
+            return str_contains($r->url(), 'sendMessage') && (string) ($r['chat_id'] ?? '') === '9005'
+                && $kb[0][0]['url'] === 'https://50qepik.test/hediyyelerim'
+                && $kb[1][0]['url'] === 'https://50qepik.test/hediyye-marketi'
+                && ! str_contains($r['text'], 'Hədiyyələrim: ')   // düymə var — link mətndə təkrarlanmır
+                && $r['disable_web_page_preview'] === true;
+        });
     }
 
     public function test_market_purchase_sends_coupon(): void
@@ -67,6 +96,7 @@ class PrizeNotificationTest extends TestCase
         $this->actingAs($u)->post('/hediyye-marketi/market_tea')->assertSessionHas('market_bought');
         $code = WheelSpin::where('user_id', $u->id)->value('code');
 
+        // marketdən alana yalnız kupon mesajı (dəvət xatırlatması yox — xalı onsuz da dəvətlə toplayıb)
         $texts = $this->sentTo('9002');
         $this->assertCount(1, $texts);
         $this->assertStringContainsString('Hədiyyəniz hazırdır', $texts[0]);

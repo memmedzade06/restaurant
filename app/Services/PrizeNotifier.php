@@ -31,7 +31,9 @@ class PrizeNotifier
         }
 
         try {
-            $this->bot->sendMessage($user->telegram_chat_id, $this->text($spin), $this->button() ?? []);
+            // bir mesaj: təbrik + kod, oyunda qazananlara altında dəvət linki; link önizləməsi göstərilmir
+            $this->bot->sendMessage($user->telegram_chat_id, $this->text($spin),
+                ($this->buttons($spin) ?? []) + ['disable_web_page_preview' => true]);
         } catch (\Throwable $e) {
             // bildiriş getməsə də hədiyyə qüvvədədir (kod saytda — Hədiyyələrim səhifəsində)
             Log::warning('Hədiyyə bildirişi Telegram-a göndərilmədi: ' . $e->getMessage(), ['spin_id' => $spin->id]);
@@ -52,8 +54,20 @@ class PrizeNotifier
         }
         $lines[] = 'Kodu restoranda ofisianta göstərin.';
 
-        // https olmayanda (lokal) düymə yoxdur — link mətndə
-        if (! $this->button()) {
+        // oyunda qazananlara: dəvət linkini paylaşıb daha çox hədiyyə qazanmaq olar
+        // (marketdən alan onsuz da xalı dəvətlə toplayıb — ona yazılmır)
+        if ($spin->game !== 'market') {
+            $levels = Referrals::levels();
+            $lines[] = '';
+            $lines[] = '💡 <b>Daha çox hədiyyə qazanın!</b>';
+            $lines[] = 'Profilinizdəki linki dostlarınızla paylaşın. Kimsə onunla qeydiyyatdan keçəndə '
+                . '<b>' . Referrals::format($levels[0] ?? 0) . ' xal</b> qazanırsınız, xallarla isə '
+                . 'Hədiyyə marketində çay, şirniyyat, yemək və qəlyan ala bilərsiniz.';
+            $lines[] = '🔗 Sizin linkiniz: ' . Referrals::link($spin->user);
+        }
+
+        // https olmayanda (lokal) düymə yoxdur — linklər mətndə
+        if (! $this->buttons($spin)) {
             $lines[] = '';
             $lines[] = '🎁 Hədiyyələrim: ' . route('prizes');
         }
@@ -61,8 +75,16 @@ class PrizeNotifier
         return implode("\n", $lines);
     }
 
-    private function button(): ?array
+    /** Mesajın altındakı düymələr: Hədiyyələrim (+ oyunda qazananlara Hədiyyə marketi) */
+    private function buttons(WheelSpin $spin): ?array
     {
-        return TelegramBot::linkButton('🎁 Hədiyyələrim', route('prizes'));
+        $prizes = TelegramBot::linkButton('🎁 Hədiyyələrim', route('prizes'));
+        if (! $prizes || $spin->game === 'market') {
+            return $prizes;
+        }
+        $market = TelegramBot::linkButton('🛍 Hədiyyə marketi', route('market'));
+        $prizes['reply_markup']['inline_keyboard'][] = $market['reply_markup']['inline_keyboard'][0];
+
+        return $prizes;
     }
 }
