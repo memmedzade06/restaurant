@@ -105,6 +105,55 @@ class TelegramRegistrationTest extends TestCase
         Http::assertSent(fn ($r) => str_contains($r->url(), 'sendMessage') && str_contains($r['text'], 'təsdiqləndi'));
     }
 
+    public function test_registration_needs_only_name_phone_and_one_password(): void
+    {
+        // formada e-poçt və "şifrənin təkrarı" yoxdur; şifrə sahəsinə göz düyməsi skripti qoşulur
+        $this->get('/qeydiyyat')->assertOk()
+            ->assertDontSee('name="email"', false)
+            ->assertDontSee('password_confirmation', false)
+            ->assertSee('js/password-toggle.js', false);
+
+        $this->post('/qeydiyyat', ['name' => 'Sadə Qeydiyyat', 'phone' => '055 444 33 22', 'password' => 'secret123'])
+            ->assertRedirect(route('verify.telegram'));
+        $user = User::where('phone', '+994554443322')->firstOrFail();
+        $this->assertNull($user->email);
+        $this->assertFalse($user->hasVerifiedPhone()); // yalnız Telegram ilə təsdiqlənir
+
+        // qısa şifrə qəbul olunmur
+        $this->post('/cixis');
+        $this->post('/qeydiyyat', ['name' => 'Qısa', 'phone' => '055 444 33 23', 'password' => '123'])
+            ->assertSessionHasErrors('password');
+    }
+
+    public function test_success_message_has_link_to_site(): void
+    {
+        // canlı saytda (https) — mesajın altında "Sayta daxil ol" düyməsi
+        \Illuminate\Support\Facades\URL::forceRootUrl('https://50qepik.test');
+        $user = $this->register('050 222 11 00');
+        $this->get('/tesdiq');
+        $this->webhook($this->msg(['text' => '/start ' . $user->fresh()->telegram_token], 501));
+        $this->webhook($this->msg(['contact' => ['phone_number' => '994502221100', 'user_id' => 501]], 501));
+        $this->assertTrue($user->fresh()->hasVerifiedPhone());
+
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'sendMessage') && str_contains($r['text'] ?? '', 'təsdiqləndi')
+            && ($r['reply_markup']['inline_keyboard'][0][0]['url'] ?? null) === 'https://50qepik.test/hesabim'
+            && ($r['reply_markup']['inline_keyboard'][0][0]['text'] ?? null) === '🌐 Sayta daxil ol');
+    }
+
+    public function test_success_message_has_text_link_without_https(): void
+    {
+        // lokal mühitdə (http) Telegram düyməni qəbul etmir — link mətnin içində verilir
+        \Illuminate\Support\Facades\URL::forceRootUrl('http://localhost');
+        $user = $this->register('050 222 11 01');
+        $this->get('/tesdiq');
+        $this->webhook($this->msg(['text' => '/start ' . $user->fresh()->telegram_token], 502));
+        $this->webhook($this->msg(['contact' => ['phone_number' => '994502221101', 'user_id' => 502]], 502));
+
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'sendMessage') && str_contains($r['text'] ?? '', 'təsdiqləndi')
+            && str_contains($r['text'], 'Sayta daxil olun: http://localhost/hesabim')
+            && ! isset($r['reply_markup']['inline_keyboard']));
+    }
+
     public function test_wrong_number_is_rejected(): void
     {
         $user = $this->register('055 765 43 21');

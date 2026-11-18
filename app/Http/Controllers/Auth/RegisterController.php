@@ -12,6 +12,10 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 
+/**
+ * Qeydiyyat: ad, nömrə, şifrə (bir dəfə yazılır — formada "şifrəni göstər" düyməsi var).
+ * E-poçt soruşulmur. Qeydiyyat yalnız Telegram ilə təsdiqlənir.
+ */
 class RegisterController extends Controller
 {
     public function show(Request $request): View
@@ -31,12 +35,11 @@ class RegisterController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'phone' => ['required', 'regex:/^\+994\d{9}$/', 'unique:users,phone'],
-            'email' => ['required', 'email', 'max:150', 'unique:users,email'],
-            'password' => ['required', 'confirmed', Password::min(8)],
+            'password' => ['required', Password::min(8)],
         ], [
+            'phone.required' => 'Mobil nömrəni yazın.',
             'phone.regex' => 'Nömrəni düzgün yazın, məsələn: 050 123 45 67.',
             'phone.unique' => 'Bu nömrə ilə artıq qeydiyyat var.',
-            'email.unique' => 'Bu e-poçt ilə artıq qeydiyyat var.',
         ]);
 
         $user = User::create($data);

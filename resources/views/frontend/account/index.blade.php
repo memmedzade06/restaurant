@@ -74,7 +74,9 @@
                     <span class="acc-verified"><i class="fa fa-check-circle me-1"></i>Telegram ilə təsdiqlənib</span>
                     <ul class="account-list acc-details">
                         <li><span><i class="fa fa-phone-alt me-2"></i>Telefon</span><b>{{ \App\Support\Phone::format($me->phone) }}</b></li>
-                        <li><span><i class="fa fa-envelope me-2"></i>E-poçt</span><b>{{ $me->email }}</b></li>
+                        @if ($me->email)
+                            <li><span><i class="fa fa-envelope me-2"></i>E-poçt</span><b>{{ $me->email }}</b></li>
+                        @endif
                         <li><span><i class="fa fa-calendar-alt me-2"></i>Qeydiyyat</span><b>{{ $me->created_at->format('d.m.Y') }}</b></li>
                     </ul>
                     <form method="POST" action="{{ route('logout') }}">

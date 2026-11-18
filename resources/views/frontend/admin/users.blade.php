@@ -92,7 +92,7 @@
                                     <td class="text-end">
                                         @unless ($u->is_admin || $u->id === auth()->id())
                                             <form method="POST" action="{{ route('admin.users.destroy', $u) }}"
-                                                  onsubmit="return confirm({{ \Illuminate\Support\Js::from($u->name . ' (' . (\App\Support\Phone::format($u->phone) ?: $u->email) . ') birdəfəlik silinsin? Onun hədiyyə kodları və oyun nəticələri də silinəcək. Bunu geri qaytarmaq olmur.') }})">
+                                                  onsubmit="return confirm({{ \Illuminate\Support\Js::from($u->name . ' (' . (\App\Support\Phone::format($u->phone) ?: ($u->email ?: $u->username)) . ') birdəfəlik silinsin? Onun hədiyyə kodları və oyun nəticələri də silinəcək. Bunu geri qaytarmaq olmur.') }})">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="btn-user-delete" title="İstifadəçini sil" aria-label="{{ $u->name }} — sil"><i class="fa fa-trash-alt"></i></button>

@@ -75,7 +75,7 @@ class TelegramVerification
         if (! $user) {
             // Kod artıq istifadə olunub: bu Telegram ilə təsdiqlənmiş hesab varsa, bunu bildiririk
             if (User::where('telegram_chat_id', $chatId)->whereNotNull('phone_verified_at')->exists()) {
-                $this->bot->sendMessage($chatId, "✅ Qeydiyyatınız artıq təsdiqlənib.\nSayta qayıdıb davam edə bilərsiniz.", TelegramBot::removeKeyboard());
+                $this->sendWithSiteLink($chatId, "✅ Qeydiyyatınız artıq təsdiqlənib.\nSayta qayıdıb davam edə bilərsiniz.");
                 return;
             }
 
@@ -84,7 +84,7 @@ class TelegramVerification
         }
 
         if ($user->hasVerifiedPhone()) {
-            $this->bot->sendMessage($chatId, '✅ Bu hesab artıq təsdiqlənib.', TelegramBot::removeKeyboard());
+            $this->sendWithSiteLink($chatId, '✅ Bu hesab artıq təsdiqlənib.');
             return;
         }
 
@@ -134,6 +134,20 @@ class TelegramVerification
         ])->save();
         Referrals::reward($user); // dəvət linki ilə gəlibsə — dəvət edənə xal
 
-        $this->bot->sendMessage($chatId, "✅ Təşəkkürlər! Qeydiyyatınız təsdiqləndi.\nSayta qayıda bilərsiniz.", TelegramBot::removeKeyboard());
+        $this->sendWithSiteLink($chatId, "✅ Təşəkkürlər! Qeydiyyatınız təsdiqləndi.\nSayta qayıda bilərsiniz.");
+    }
+
+    /**
+     * Mesaj + sayta keçid: https-də "🌐 Sayta daxil ol" düyməsi, yoxsa mətndə link.
+     * Nömrə düyməsi bir dəfəlikdir (one_time_keyboard) — kontakt paylaşılanda özü gizlənir.
+     */
+    private function sendWithSiteLink(string $chatId, string $text): void
+    {
+        $url = route('account');
+        $button = TelegramBot::linkButton('🌐 Sayta daxil ol', $url);
+
+        $button
+            ? $this->bot->sendMessage($chatId, $text, $button)
+            : $this->bot->sendMessage($chatId, $text . "\n\n🌐 Sayta daxil olun: " . $url, TelegramBot::removeKeyboard());
     }
 }

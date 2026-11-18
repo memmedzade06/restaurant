@@ -36,21 +36,10 @@
                 </div>
 
                 <div class="field">
-                    <label for="email">E-poçt</label>
-                    <input id="email" name="email" type="email" value="{{ old('email') }}" autocomplete="email" required class="@error('email') is-invalid @enderror">
-                    @error('email') <small class="err">{{ $message }}</small> @enderror
-                </div>
-
-                <div class="row g-3">
-                    <div class="col-sm-6 field">
-                        <label for="password">Şifrə</label>
-                        <input id="password" name="password" type="password" autocomplete="new-password" required class="@error('password') is-invalid @enderror">
-                        @error('password') <small class="err">{{ $message }}</small> @enderror
-                    </div>
-                    <div class="col-sm-6 field">
-                        <label for="password_confirmation">Şifrənin təkrarı</label>
-                        <input id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" required>
-                    </div>
+                    <label for="password">Şifrə</label>
+                    <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required class="@error('password') is-invalid @enderror">
+                    <small class="hint">Ən azı 8 simvol. Yazdığınızı görmək üçün <i class="fa fa-eye"></i> işarəsinə basın.</small>
+                    @error('password') <small class="err">{{ $message }}</small> @enderror
                 </div>
 
                 <button type="submit" class="btn btn-primary w-100 py-3 mt-2">Qeydiyyatdan keç <i class="fa fa-arrow-right ms-2"></i></button>

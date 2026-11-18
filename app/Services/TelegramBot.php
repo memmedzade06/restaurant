@@ -45,4 +45,17 @@ class TelegramBot
     {
         return ['reply_markup' => ['remove_keyboard' => true]];
     }
+
+    /**
+     * Mesajın altında sayta aparan düymə. Telegram düymədə yalnız https linki qəbul edir —
+     * http (məs. lokal mühit) olanda null qaytarır, onda link mətnin içində verilir.
+     */
+    public static function linkButton(string $text, string $url): ?array
+    {
+        if (! str_starts_with($url, 'https://')) {
+            return null;
+        }
+
+        return ['reply_markup' => ['inline_keyboard' => [[['text' => $text, 'url' => $url]]]]];
+    }
 }
