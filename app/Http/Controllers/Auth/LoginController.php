@@ -42,7 +42,13 @@ class LoginController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended($request->user()->is_admin ? route('admin.prizes') : route('account'));
+        // admin — panelə, oyunçu — oyunlara (müəyyən səhifəni açmaq istəyirdisə, ora).
+        // Adi istifadəçini admin ünvanına qaytarmırıq — orada onsuz da 403 alar.
+        if (! $request->user()->is_admin && str_contains((string) $request->session()->get('url.intended'), '/admin')) {
+            $request->session()->forget('url.intended');
+        }
+
+        return redirect()->intended($request->user()->is_admin ? route('admin.prizes') : route('games.index'));
     }
 
     public function destroy(Request $request): RedirectResponse

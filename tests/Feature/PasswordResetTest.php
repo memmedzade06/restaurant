@@ -106,7 +106,7 @@ class PasswordResetTest extends TestCase
 
         // Köhnə şifrə ilə giriş olmur, yenisi ilə olur
         $this->post('/giris', ['login' => '055 123 45 67', 'password' => 'old-secret1'])->assertSessionHasErrors('login');
-        $this->post('/giris', ['login' => '055 123 45 67', 'password' => 'new-secret1'])->assertRedirect(route('account'));
+        $this->post('/giris', ['login' => '055 123 45 67', 'password' => 'new-secret1'])->assertRedirect(route('games.index'));
     }
 
     public function test_other_telegram_must_share_matching_phone(): void

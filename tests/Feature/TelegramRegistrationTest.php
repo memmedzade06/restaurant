@@ -87,14 +87,16 @@ class TelegramRegistrationTest extends TestCase
 
         $this->assertTrue($user->fresh()->hasVerifiedPhone());
         $this->assertNull($user->fresh()->telegram_token);
-        $this->getJson('/tesdiq/status')->assertJson(['verified' => true, 'redirect' => route('account')])
+        // təsdiqdən sonra birbaşa Oyunlar səhifəsi açılır, orada "qeydiyyat təsdiqləndi" pəncərəsi çıxır
+        $this->getJson('/tesdiq/status')->assertJson(['verified' => true, 'redirect' => route('games.index')])
             ->assertSessionHas('registered', true);
         // Testdə daxil olmuş istifadəçi yaddaşda qalır; real sorğuda hər dəfə bazadan oxunur
-        $this->actingAs($user->fresh())->get('/hesabim')->assertOk()
-            ->assertSee('+994 50 123 45 67')
-            ->assertSee('registeredModal', false);
+        $this->actingAs($user->fresh())->get('/oyunlar')->assertOk()->assertSee('registeredModal', false);
         // Pəncərə yalnız bir dəfə görünür
-        $this->get('/hesabim')->assertOk()->assertDontSee('registeredModal', false);
+        $this->get('/oyunlar')->assertOk()->assertDontSee('registeredModal', false);
+        $this->get('/hesabim')->assertOk()->assertSee('+994 50 123 45 67');
+        // təsdiq səhifəsini yenidən açanda da oyunlara aparır
+        $this->get('/tesdiq')->assertRedirect(route('games.index'));
 
         // Eyni linki yenidən açanda "etibarsız" yox, "artıq təsdiqlənib" deyilir
         $this->webhook($this->msg(['text' => "/start {$token}"]));
@@ -137,7 +139,7 @@ class TelegramRegistrationTest extends TestCase
         $this->assertTrue($user->fresh()->hasVerifiedPhone());
 
         Http::assertSent(fn ($r) => str_contains($r->url(), 'sendMessage') && str_contains($r['text'] ?? '', 'təsdiqləndi')
-            && ($r['reply_markup']['inline_keyboard'][0][0]['url'] ?? null) === 'https://50qepik.test/hesabim'
+            && ($r['reply_markup']['inline_keyboard'][0][0]['url'] ?? null) === 'https://50qepik.test/oyunlar'
             && ($r['reply_markup']['inline_keyboard'][0][0]['text'] ?? null) === '🌐 Sayta daxil ol');
     }
 
@@ -151,7 +153,7 @@ class TelegramRegistrationTest extends TestCase
         $this->webhook($this->msg(['contact' => ['phone_number' => '994502221101', 'user_id' => 502]], 502));
 
         Http::assertSent(fn ($r) => str_contains($r->url(), 'sendMessage') && str_contains($r['text'] ?? '', 'təsdiqləndi')
-            && str_contains($r['text'], 'Sayta daxil olun: http://localhost/hesabim')
+            && str_contains($r['text'], 'Sayta daxil olun: http://localhost/oyunlar')
             && ! isset($r['reply_markup']['inline_keyboard']));
     }
 
@@ -195,7 +197,9 @@ class TelegramRegistrationTest extends TestCase
         $this->get('/giris')->assertOk()->assertSee('Mobil nömrə')->assertDontSee('e-poçt');
         $this->post('/giris', ['login' => '0512223344', 'password' => 'wrongpass'])->assertSessionHasErrors(['login' => 'Nömrə və ya şifrə yanlışdır.']);
 
-        $this->post('/giris', ['login' => '0512223344', 'password' => 'secret123'])->assertRedirect();
+        // daxil olan kimi Oyunlar səhifəsi açılır (əvvəl admin səhifəsinə cəhd edibsə belə — adi istifadəçi admin deyil)
+        $this->withSession(['url.intended' => url('/admin/istifadeciler')])
+            ->post('/giris', ['login' => '0512223344', 'password' => 'secret123'])->assertRedirect(route('games.index'));
         $this->assertAuthenticatedAs($user);
     }
 }

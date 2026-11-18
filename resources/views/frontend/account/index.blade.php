@@ -187,36 +187,10 @@
     </div>
 </section>
 
-@if (session('registered'))
-    {{-- Qeydiyyat təsdiqlənəndən sonra bir dəfə görünür, 5 saniyəyə özü bağlanır --}}
-    <div class="modal fade" id="registeredModal" tabindex="-1" aria-labelledby="registeredTitle" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content success-modal">
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Bağla"></button>
-                <div class="success-ico"><i class="fa fa-check"></i></div>
-                <h3 id="registeredTitle">Qeydiyyatınız təsdiqləndi!</h3>
-                <p>Telefon nömrəniz Telegram vasitəsilə uğurla təsdiqləndi. 50 Qəpik ailəsinə xoş gəlmisiniz!</p>
-                <button type="button" class="btn btn-primary px-5 py-2" data-bs-dismiss="modal">Oldu</button>
-                <span class="success-bar"></span>
-            </div>
-        </div>
-    </div>
-@endif
 @endsection
 
 @section('js')
 {{-- QR kod brauzerdə yaradılır (link heç bir kənar xidmətə göndərilmir) --}}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="{{ asset('js/referral.js') }}?v=1"></script>
-@if (session('registered'))
-<script>
-    (function () {
-        const el = document.getElementById('registeredModal');
-        const modal = new bootstrap.Modal(el);
-        modal.show();
-        const timer = setTimeout(() => modal.hide(), 5000);
-        el.addEventListener('hidden.bs.modal', () => clearTimeout(timer));
-    })();
-</script>
-@endif
 @endsection

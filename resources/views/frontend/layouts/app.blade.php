@@ -109,6 +109,7 @@
 <script src="{{ asset('js/main.js') }}"></script>
 <script src="{{ asset('js/games/rules.js') }}?v=2"></script>{{-- oyun səhifələrində əvvəlcə qaydalar pəncərəsi --}}
 <script src="{{ asset('js/password-toggle.js') }}?v=1"></script>{{-- şifrə sahələrində göz düyməsi --}}
+@include('frontend.partials.registered-modal')
 @auth
 <script>
     // "İndi saytda": səhifə açıq olduqca serverə siqnal göndəririk

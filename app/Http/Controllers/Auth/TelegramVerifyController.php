@@ -20,7 +20,7 @@ class TelegramVerifyController extends Controller
     {
         $user = $request->user();
         if ($user->hasVerifiedPhone()) {
-            return redirect()->route('account');
+            return redirect()->route('games.index');
         }
 
         return view('frontend.auth.verify-telegram', [
@@ -35,12 +35,12 @@ class TelegramVerifyController extends Controller
     {
         $verified = $request->user()->fresh()->hasVerifiedPhone();
 
-        // Profil səhifəsində "qeydiyyat təsdiqləndi" pəncərəsi bir dəfə göstərilsin
+        // Təsdiqdən sonra Oyunlar səhifəsi açılır; orada "qeydiyyat təsdiqləndi" pəncərəsi bir dəfə göstərilir
         if ($verified) {
             $request->session()->flash('registered', true);
         }
 
-        return response()->json(['verified' => $verified, 'redirect' => route('account')]);
+        return response()->json(['verified' => $verified, 'redirect' => route('games.index')]);
     }
 
     /** Telegram-ın webhook ünvanı (routes/api.php) */

@@ -143,7 +143,7 @@ class TelegramVerification
      */
     private function sendWithSiteLink(string $chatId, string $text): void
     {
-        $url = route('account');
+        $url = route('games.index'); // təsdiqdən sonra birbaşa oyunlara
         $button = TelegramBot::linkButton('🌐 Sayta daxil ol', $url);
 
         $button

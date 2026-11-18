@@ -25,5 +25,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         \Illuminate\Pagination\Paginator::useBootstrapFive();
+        // yeni hədiyyə kodu → qalibə Telegram bildirişi
+        \App\Models\WheelSpin::observe(\App\Observers\WheelSpinObserver::class);
     }
 }
