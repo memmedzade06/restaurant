@@ -7,12 +7,14 @@ use App\Models\User;
 use App\Models\WheelSpin;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
  * Hədiyyə marketi: oyunçu balansındakı xalları hədiyyəyə çevirir.
  * Hədiyyə alınanda qiyməti balansdan çıxılır və kupon kodu yaranır (Hədiyyələrim səhifəsində görünür).
+ * Gündə ən çox config('market.per_day') hədiyyə almaq olar.
  */
 class MarketController extends Controller
 {
@@ -24,6 +26,11 @@ class MarketController extends Controller
             ->filter(fn ($i) => (float) $i['cost'] > 0)
             ->keyBy('key')
             ->all();
+    }
+
+    public static function perDay(): int
+    {
+        return max(1, (int) config('market.per_day', 2));
     }
 
     public function index(Request $request): View
@@ -40,6 +47,8 @@ class MarketController extends Controller
             'items' => self::items(),
             'verified' => $verified,
             'balance' => $verified ? (float) $user->points : null,
+            'left' => $verified ? $this->leftToday($user->id) : null,
+            'perDay' => self::perDay(),
             'bought' => $bought,
         ]);
     }
@@ -52,28 +61,62 @@ class MarketController extends Controller
         $cost = (float) $item['cost'];
         $user = $request->user();
 
-        $coupon = DB::transaction(function () use ($user, $item, $cost) {
-            // xal yalnız balans kifayət edirsə çıxılır — eyni anda iki alış balansı mənfiyə sala bilməz
-            $paid = User::whereKey($user->id)->where('points', '>=', $cost)->decrement('points', $cost);
-            if (! $paid) {
-                return null;
+        $result = DB::transaction(function () use ($user, $item, $cost) {
+            // eyni istifadəçinin eyni anda gələn sorğuları növbəyə düzülür — gündəlik limiti keçmək olmur
+            User::whereKey($user->id)->lockForUpdate()->first();
+
+            if ($this->leftToday($user->id) <= 0) {
+                return 'limit';
+            }
+            // xal yalnız balans kifayət edirsə çıxılır — balans mənfiyə düşə bilməz
+            if (! User::whereKey($user->id)->where('points', '>=', $cost)->decrement('points', $cost)) {
+                return 'points';
             }
 
-            return WheelSpin::create([
+            $coupon = WheelSpin::create([
                 'user_id' => $user->id,
                 'game' => 'market',
                 'prize_key' => $item['key'],
                 'prize_label' => $item['label'],
                 'code' => WheelSpin::newCode(),
-                'spun_on' => now('Asia/Baku')->toDateString(),
+                'spun_on' => $this->today(),
                 'expires_at' => now()->addDays(max(1, (int) config('market.code_valid_days', 30))),
             ]);
+            $this->countToday($user->id);
+
+            return $coupon;
         });
 
-        if (! $coupon) {
-            return redirect()->route('market')->with('market_error', 'Balansınızda kifayət qədər xal yoxdur.');
-        }
+        return match (true) {
+            $result === 'limit' => redirect()->route('market')->with('market_error', 'Bu gün üçün ' . self::perDay() . ' hədiyyə limitiniz bitib. Sabah yenə gəlin!'),
+            $result === 'points' => redirect()->route('market')->with('market_error', 'Balansınızda kifayət qədər xal yoxdur.'),
+            default => redirect()->route('market')->with('market_bought', $result->id),
+        };
+    }
 
-        return redirect()->route('market')->with('market_bought', $coupon->id);
+    /** Bu gün neçə hədiyyə də almaq olar */
+    private function leftToday(int $userId): int
+    {
+        $inDb = WheelSpin::where('game', 'market')->where('user_id', $userId)->whereDate('spun_on', $this->today())->count();
+        // istifadə olunan kupon bazadan silinir — bu günün sayı keşdə də saxlanılır ki, limit sıfırlanmasın
+        $taken = max($inDb, (int) Cache::get($this->dayKey($userId), 0));
+
+        return max(0, self::perDay() - $taken);
+    }
+
+    private function countToday(int $userId): void
+    {
+        $key = $this->dayKey($userId);
+        Cache::put($key, (int) Cache::get($key, 0) + 1, now('Asia/Baku')->endOfDay());
+    }
+
+    private function dayKey(int $userId): string
+    {
+        return "market_taken:{$userId}:" . $this->today();
+    }
+
+    private function today(): string
+    {
+        return now('Asia/Baku')->toDateString();
     }
 }

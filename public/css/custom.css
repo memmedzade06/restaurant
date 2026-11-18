@@ -428,6 +428,11 @@ a.contact-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg)
 .market-bought { text-align: center; border: 2px dashed var(--primary); }
 .market-bought h3 { margin: 6px 0 12px; }
 .market-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.market-left { display: inline-block; font-size: 14px; font-weight: 700; color: #1e7b4f; background: #e7f6ee; border-radius: 20px; padding: 4px 12px; }
+.market-left.is-out { color: #b3261e; background: #fdecea; }
+.market-rules { position: sticky; top: 100px; }
+@media (max-width: 1199.98px) { .market-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 991.98px) { .market-rules { position: static; } }
 .market-item { display: flex; flex-direction: column; background: #fff; border-radius: 20px; padding: 22px 20px; box-shadow: var(--shadow); text-align: center; transition: transform .2s; }
 .market-item:hover { transform: translateY(-3px); }
 .market-item h5 { margin: 12px 0 6px; }

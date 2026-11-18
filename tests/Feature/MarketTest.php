@@ -76,6 +76,34 @@ class MarketTest extends TestCase
         $this->assertSame(2, WheelSpin::where('user_id', $u->id)->where('game', 'market')->count());
     }
 
+    public function test_only_two_gifts_per_day(): void
+    {
+        config(['market.per_day' => 2]);
+        $u = $this->user(100);
+
+        $this->actingAs($u)->get('/hediyye-marketi')->assertSee('Bu gün: <b>2</b> / 2', false)
+            ->assertSee('minimal masa hesabı <b>10 AZN</b>', false)->assertSee('Gündə ən çox <b>2 hədiyyə</b>', false);
+
+        $this->actingAs($u)->post('/hediyye-marketi/market_tea')->assertSessionHas('market_bought');
+        $this->actingAs($u)->post('/hediyye-marketi/market_hookah')->assertSessionHas('market_bought');
+        $this->assertEquals(92.5, $u->fresh()->points);
+
+        // üçüncü hədiyyə bu gün olmur — xal çıxılmır, kupon yaranmır
+        $this->actingAs($u)->post('/hediyye-marketi/market_tea')
+            ->assertRedirect(route('market'))->assertSessionHas('market_error');
+        $this->assertEquals(92.5, $u->fresh()->points);
+        $this->assertSame(2, WheelSpin::where('user_id', $u->id)->where('game', 'market')->count());
+        $this->actingAs($u)->get('/hediyye-marketi')->assertSee('Bu gün: <b>0</b> / 2', false)->assertSee('Bu günün limiti bitib');
+
+        // kupon istifadə olunub bazadan silinsə də, limit sıfırlanmır
+        WheelSpin::where('user_id', $u->id)->delete();
+        $this->actingAs($u)->post('/hediyye-marketi/market_tea')->assertSessionHas('market_error');
+
+        // sabah yenə 2 hədiyyə
+        $this->travel(1)->days();
+        $this->actingAs($u)->post('/hediyye-marketi/market_tea')->assertSessionHas('market_bought');
+    }
+
     public function test_cannot_buy_without_enough_points(): void
     {
         $u = $this->user(4);
