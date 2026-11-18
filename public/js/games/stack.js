@@ -104,18 +104,21 @@
     const placed = () => g.tower.length - 1; // oyunçunun qoyduğu stəkan sayı
     const boost = () => placed() < BOOST_FROM ? 1 : BOOST + (placed() - BOOST_FROM) * BOOST_STEP;
 
-    // Sürətlənmə ilə birlikdə (BOOST_FROM-dan sonra) çaşdırıcı, amma ədalətli hiylələr:
-    //  1) hər stəkan öz sürəti ilə gəlir (gah yavaş, gah sürətli), amma bir stəkan ərzində sürət sabitdir;
-    //  2) bəzən stəkan yolun ortasında BİR DƏFƏ geri dönür — dönməzdən əvvəl titrəyib xəbər verir.
-    const TRICK_SPEED = [0.85, 1.3];  // stəkanın sürət çarpanı (təsadüfi, bu aralıqda)
-    const TRICK_FLIP = 0.35;          // stəkanın yolda geri dönmə ehtimalı
+    // BOOST_FROM-dan sonra "hiylələr" (indi söndürülüb — stəkan yalnız sürətlənir, qəfil hərəkət etmir):
+    //  1) hər stəkan öz sürəti ilə gəlir — TRICK_SPEED = [1, 1] olanda hamısı eyni sürətlə;
+    //  2) stəkan yolun ortasında geri dönür — TRICK_FLIP = 0 olanda heç vaxt.
+    // Geri qaytarmaq üçün: TRICK_SPEED = [0.85, 1.3], TRICK_FLIP = 0.35.
+    const TRICK_SPEED = [1, 1];       // stəkanın sürət çarpanı (təsadüfi, bu aralıqda)
+    const TRICK_FLIP = 0;             // stəkanın yolda geri dönmə ehtimalı
     const TRICK_WARN = 0.35;          // geri dönməzdən neçə saniyə əvvəl titrəsin
     const rnd = (a, b) => a + Math.random() * (b - a);
 
     /** Yeni yellənən stəkanın xasiyyəti */
-    // Yellənən stəkan sağdan və ya soldan (təsadüfi) çıxır və ekranın o biri tərəfinə doğru hərəkət edir
+    // Yellənən stəkanın çıxdığı tərəf: ilk RANDOM_SIDE_FROM stəkan həmişə sağdan,
+    // ondan sonra sağdan və ya soldan (təsadüfi) — və ekranın o biri tərəfinə doğru hərəkət edir
+    const RANDOM_SIDE_FROM = 20;
     function startFromRandomSide() {
-        const fromLeft = Math.random() < 0.5;
+        const fromLeft = placed() >= RANDOM_SIDE_FROM && Math.random() < 0.5;
         g.swing.dir = fromLeft ? 1 : -1;
         g.swing.x = fromLeft ? GW / 2 + 12 : LW - GW / 2 - 12;
     }

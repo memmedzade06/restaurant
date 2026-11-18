@@ -104,7 +104,7 @@
                         <ul class="rules">
                             <li>Yuxarıda stəkan sağa-sola yellənir.</li>
                         <li><b>20-ci stəkandan sonra</b> yellənən stəkan daha yuxarıya qalxır — qülləyə daha uzaqdan düşür.</li>
-                        <li><b>30-cu stəkandan sonra</b> stəkan daha sürətli yellənir və hər yeni stəkanda daha da sürətlənir. Hər stəkanın sürəti fərqli olur və bəzən yolun ortasında geri dönür. Stəkan titrəyirsə — indi geri dönəcək!</li>
+                        <li><b>30-cu stəkandan sonra</b> stəkan daha sürətli yellənir və hər yeni stəkanda daha da sürətlənir.</li>
                             <li>Toxunun — stəkan düşüb qüllənin üstünə düşür.</li>
                             <li>Hər stəkan <b>1 xal</b> verir.</li>
                             @foreach ($prizes as $min => $p)
@@ -124,5 +124,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/stack.js') }}?v=87"></script>
+<script src="{{ asset('js/games/stack.js') }}?v=89"></script>
 @endsection
