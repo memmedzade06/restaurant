@@ -132,6 +132,7 @@ class TelegramVerification
             'telegram_token' => null,
             'telegram_token_expires_at' => null,
         ])->save();
+        Referrals::reward($user); // dəvət linki ilə gəlibsə — dəvət edənə xal
 
         $this->bot->sendMessage($chatId, "✅ Təşəkkürlər! Qeydiyyatınız təsdiqləndi.\nSayta qayıda bilərsiniz.", TelegramBot::removeKeyboard());
     }

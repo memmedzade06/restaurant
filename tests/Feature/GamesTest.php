@@ -32,30 +32,78 @@ class GamesTest extends TestCase
 
     public function test_pages_open_for_everyone(): void
     {
-        $this->get('/oyunlar')->assertOk()->assertSee('Uzun nərd')->assertSee('Bəxt çarxı');
+        $this->get('/oyunlar')->assertOk()->assertSee('Uzun nərd')->assertSee('Çarx oyunu');
         $this->get('/oyunlar/nerd')->assertOk()->assertSee('data-can-save="0"', false);
-        $this->get('/oyunlar/bext-carxi')->assertOk()->assertSee('<b>sınaq</b>', false);
-        $this->get('/oyunlar/hediyye-krani')->assertOk()->assertSee('Hədiyyə Kranı')->assertSee('js/games/claw.js', false);
-        $this->get('/oyunlar')->assertSee('Hədiyyə Kranı');
+        $this->get('/oyunlar/carx-oyunu')->assertOk()->assertSee('<b>sınaq</b>', false);
+        // köhnə ünvan (QR kodlar, köhnə linklər) yeni səhifəyə yönləndirilir
+        $this->get('/oyunlar/bext-carxi')->assertStatus(301)->assertRedirect('/oyunlar/carx-oyunu');
+        // Hədiyyə Kranı müvəqqəti bağlıdır: kartı yoxdur, səhifəsi açılmır
+        $this->get('/oyunlar')->assertDontSee(route('games.claw'));
+        $this->get('/oyunlar/hediyye-krani')->assertNotFound();
+        // çarxın qaydalarında da kran xatırlanmır; kran açılanda qayda geri qayıdır
+        $this->get('/oyunlar/carx-oyunu')->assertDontSee('Hədiyyə Kranında')->assertSee('çarxı əyləncə üçün');
+        config(['games.claw.enabled' => true]);
+        $this->get('/oyunlar/carx-oyunu')->assertSee('Çarx oyununda və ya Hədiyyə Kranında');
     }
 
-    public function test_wheel_has_rare_fifty_percent_discount(): void
+    public function test_each_game_opens_with_rules_popup(): void
+    {
+        // oyuna girəndə əvvəlcə qaydalar pəncərəsi açılır (js/games/rules.js qaydaları bu blokdan götürür)
+        foreach (['/oyunlar/stekan' => 'Stəkan qülləsi', '/oyunlar/carx-oyunu' => 'Çarx oyunu',
+                  '/oyunlar/nerd' => 'Uzun nərd', '/oyunlar/krossvord' => 'Krossvord'] as $url => $name) {
+            $this->get($url)->assertOk()
+                ->assertSee('data-game-rules="' . $name . '"', false)
+                ->assertSee('js/games/rules.js', false);
+        }
+        // oyunlar siyahısında və marketdə pəncərə yoxdur
+        $this->get('/oyunlar')->assertOk()->assertDontSee('data-game-rules', false);
+        $this->get('/hediyye-marketi')->assertOk()->assertDontSee('data-game-rules', false);
+    }
+
+    public function test_wheel_fifty_percent_is_the_narrowest_sector(): void
     {
         $segments = collect(config('games.wheel.segments'));
         $fifty = $segments->firstWhere('key', 'discount_50');
 
         $this->assertNotNull($fifty);
         $this->assertTrue($fifty['prize']);
-        // ən nadir sektor: hamısından az, ümumi şansı 0.5%-dən az
-        $this->assertSame($fifty['weight'], $segments->min('weight'));
-        $this->assertLessThan(0.005, $fifty['weight'] / $segments->sum('weight'));
-        $this->get('/oyunlar/bext-carxi')->assertOk()->assertSee('50% endirim');
+        // məharət oyunu: ən böyük hədiyyə ən dar sektordur, sektorların cəmi 360°
+        $this->assertSame($fifty['size'], $segments->min('size'));
+        $this->assertEquals(360, $segments->sum('size'));
+        // fərqli hədiyyələrin rəngləri fərqlidir (eyni nəticə — eyni rəng)
+        $colors = $segments->groupBy('label')->map(fn ($g) => $g->pluck('color')->unique());
+        $this->assertTrue($colors->every(fn ($c) => $c->count() === 1));
+        $this->assertSame($colors->count(), $colors->flatten()->unique()->count());
+        // qəlyan da dar sektordur (25%-dən dar)
+        $this->assertLessThan($segments->firstWhere('key', 'discount_25')['size'], $segments->firstWhere('key', 'free_hookah')['size']);
+        // sektorların mərkəzləri (dərəcə)
+        $centers = [];
+        $edge = -$segments[0]['size'] / 2;
+        foreach ($segments as $i => $s) {
+            $centers[$i] = $edge + $s['size'] / 2;
+            $edge += $s['size'];
+        }
+        // üç "Şansını bir daha sına" sektoru var
+        $this->assertCount(3, $segments->where('prize', false));
+        // iki "Çaynik çay" sektoru düz üzbəüzdür: mərkəzləri arasında 180°
+        $tea = $segments->where('label', 'Çaynik çay Hədiyyə')->keys();
+        $this->assertCount(2, $tea);
+        $this->assertEquals(180, $centers[$tea[1]] - $centers[$tea[0]]);
+        // 50% və qəlyan boz sektorun yanındadır
+        $n = $segments->count();
+        foreach (['discount_50', 'free_hookah'] as $key) {
+            $i = $segments->search(fn ($s) => $s['key'] === $key);
+            $this->assertTrue(! $segments[($i + 1) % $n]['prize'] || ! $segments[($i - 1 + $n) % $n]['prize'], $key);
+        }
+        $this->get('/oyunlar/carx-oyunu')->assertOk()->assertSee('50% endirim')->assertSee('/oyunlar/carx-oyunu/dayan');
     }
 
     public function test_guest_spin_is_demo_and_not_saved(): void
     {
         $before = WheelSpin::count();
-        $this->postJson('/oyunlar/bext-carxi/firlat')->assertOk()->assertJson(['demo' => true]);
+        $this->postJson('/oyunlar/carx-oyunu/firlat')->assertOk()->assertJson(['demo' => true])
+            ->assertJsonStructure(['run' => ['a0', 'dir', 'v', 'k', 'period', 'phase', 'max_ms']]);
+        $this->postJson('/oyunlar/carx-oyunu/dayan', ['ms' => 0])->assertOk()->assertJson(['demo' => true]);
         $this->assertSame($before, WheelSpin::count());
     }
 
@@ -64,9 +112,17 @@ class GamesTest extends TestCase
     {
         config(['games.wheel.attempts_per_day' => 3, 'games.wheel.segments' => [
             $prize
-                ? ['key' => 'discount_10', 'label' => '10% endirim', 'color' => '#000', 'weight' => 1, 'prize' => true]
-                : ['key' => 'try_again', 'label' => 'Şansını bir daha sına', 'color' => '#000', 'weight' => 1, 'prize' => false],
+                ? ['key' => 'discount_10', 'label' => '10% endirim', 'color' => '#000', 'size' => 360, 'prize' => true]
+                : ['key' => 'try_again', 'label' => 'Şansını bir daha sına', 'color' => '#000', 'size' => 360, 'prize' => false],
         ]]);
+    }
+
+    /** "Fırlat", sonra "Dayan" — dayan cavabını qaytarır */
+    private function play(User $u, int $ms = 0)
+    {
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/firlat')->assertOk();
+
+        return $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/dayan', ['ms' => $ms]);
     }
 
     public function test_three_attempts_then_blocked(): void
@@ -75,15 +131,137 @@ class GamesTest extends TestCase
         $u = $this->user();
 
         foreach ([2, 1, 0] as $left) {
-            $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertOk()
+            $this->play($u)->assertOk()
                 ->assertJson(['demo' => false, 'prize' => false, 'state' => ['attemptsLeft' => $left]]);
         }
         // cəhdlər hədiyyəsiz bitdi — əyləncə üçün limitsiz fırlatmaq olar, hədiyyə verilmir
-        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertOk()
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/firlat')->assertOk()
             ->assertJson(['fun' => true, 'state' => ['attemptsLeft' => 0, 'fun' => true, 'funReason' => 'attempts']]);
-        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/gotur')->assertStatus(422);
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/dayan', ['ms' => 0])->assertOk()->assertJson(['fun' => true]);
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/gotur')->assertStatus(422);
         // fırlatmalar bazaya yazılmır — yalnız götürülən hədiyyə yazılır
         $this->assertSame(0, WheelSpin::where('user_id', $u->id)->count());
+    }
+
+    public function test_attempt_counts_when_spin_starts(): void
+    {
+        $this->onlySegment(true);
+        $u = $this->user();
+
+        // fırlatmanı başladıb dayandırmadan yenisini başlatmaq — əvvəlki cəhd yanır
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/firlat')->assertOk()->assertJson(['state' => ['attemptsLeft' => 2]]);
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/firlat')->assertOk()->assertJson(['state' => ['attemptsLeft' => 1]]);
+        // son cəhd fırlanarkən əyləncə rejiminə keçmir — nəticə gözlənilir
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/firlat')->assertOk()->assertJson(['state' => ['attemptsLeft' => 0, 'fun' => false]]);
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/dayan', ['ms' => 0])->assertOk()
+            ->assertJson(['prize' => true, 'state' => ['last' => ['label' => '10% endirim', 'prize' => true]]]);
+        // dayan iki dəfə işləmir
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/dayan', ['ms' => 0])->assertStatus(422);
+    }
+
+    public function test_result_depends_on_stop_time(): void
+    {
+        config(['games.wheel.attempts_per_day' => 9, 'games.wheel.segments' => [
+            ['key' => 'try_again', 'label' => 'Boş', 'color' => '#000', 'size' => 180, 'prize' => false],
+            ['key' => 'discount_10', 'label' => '10% endirim', 'color' => '#000', 'size' => 180, 'prize' => true],
+        ]]);
+        $u = $this->user();
+        // sabit sürətli (90°/san) fırlanma, 10 saniyə əvvəl başlayıb
+        $fixed = fn () => session()->put('wheel_run', [
+            'a0' => 0, 'dir' => 1, 'v' => 90, 'k' => 0, 'period' => 2, 'phase' => 0, 'max_ms' => 15000,
+            'started' => microtime(true) - 10, 'mode' => 'real', 'user_id' => $u->id, 'day' => now('Asia/Baku')->toDateString(),
+        ]);
+
+        // 0.5 san → 45° döndü: göstəricinin altında hələ 0-cı sektor (boş)
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/firlat')->assertOk();
+        $fixed();
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/dayan', ['ms' => 500])->assertOk()
+            ->assertJson(['index' => 0, 'prize' => false, 'angle' => 45]);
+
+        // 1.5 san → 135°: 1-ci sektor (10% endirim)
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/firlat')->assertOk();
+        $fixed();
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/dayan', ['ms' => 1500])->assertOk()
+            ->assertJson(['index' => 1, 'prize' => true, 'state' => ['last' => ['label' => '10% endirim']]]);
+    }
+
+    public function test_wheel_reverses_direction(): void
+    {
+        // hər fırlatmada dönüş anları serverdən gəlir
+        $run = $this->postJson('/oyunlar/carx-oyunu/firlat')->assertOk()->json('run');
+        $this->assertNotEmpty($run['flips']);
+        $this->assertGreaterThan(0, $run['flip_ms']);
+
+        // 90°/san, 1-ci saniyədə dönüş: 0.9 san irəli, hamar dönüş, 0.9 san geri — başlanğıca qayıdır
+        $r = ['a0' => 10, 'dir' => 1, 'v' => 90, 'k' => 0, 'period' => 2, 'phase' => 0, 'flips' => [1000], 'flip_ms' => 200];
+        $c = \App\Http\Controllers\Frontend\GameController::class;
+        $this->assertEqualsWithDelta(10 + 81, $c::runAngle($r, 900), 0.01);           // dönüşə qədər
+        $this->assertEqualsWithDelta(10 + 81 + 18 / M_PI, $c::runAngle($r, 1000), 0.01); // dönüş anında dayanıb
+        $this->assertEqualsWithDelta(0, $c::runSpeed($r, 1000), 1e-9);
+        $this->assertEqualsWithDelta(-90, $c::runSpeed($r, 1500), 1e-9);              // əks tərəfə
+        $this->assertEqualsWithDelta(10, $c::runAngle($r, 2000), 0.01);
+    }
+
+    public function test_wheel_not_stopped_in_time_gives_no_prize(): void
+    {
+        $this->onlySegment(true); // hər yer hədiyyədir — amma vaxt bitəndə yenə də verilmir
+        $u = $this->user();
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/firlat')->assertOk();
+        $run = session('wheel_run');
+        session()->put('wheel_run', ['started' => microtime(true) - 10] + $run); // vaxt keçib
+
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/dayan', ['ms' => $run['max_ms']])->assertOk()
+            ->assertJson(['timeout' => true, 'prize' => false, 'label' => 'Vaxt bitdi',
+                'state' => ['attemptsLeft' => 2, 'last' => ['label' => 'Vaxt bitdi', 'prize' => false]]]);
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/gotur')->assertStatus(422);
+
+        // vaxt bitməmiş basılan "Dayan" isə hədiyyə verir
+        $this->play($u)->assertOk()->assertJson(['timeout' => false, 'prize' => true]);
+        $this->assertSame(5000, $run['max_ms']);
+    }
+
+    public function test_abandoned_last_spin_counts_as_failed(): void
+    {
+        $this->onlySegment(true);
+        $u = $this->user();
+        $this->play($u);
+        $this->play($u);
+        // son cəhd başladı, səhifə bağlandı — "Dayan" heç gəlmədi
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/firlat')->assertOk()->assertJson(['state' => ['fun' => false]]);
+        $this->travel(30)->seconds();
+        $this->actingAs($u)->get('/oyunlar/carx-oyunu')->assertSee('"attemptsLeft":0', false)->assertSee('"funReason":"attempts"', false);
+    }
+
+    public function test_stop_time_cannot_be_in_the_future(): void
+    {
+        $this->onlySegment(true);
+        $u = $this->user();
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/firlat')->assertOk();
+        // yenicə başlayıb — "5 saniyə sonra basdım" demək olmaz
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/dayan', ['ms' => 5000])->assertStatus(422);
+        // cəhd yanıb, nəticə yoxdur
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/gotur')->assertStatus(422);
+        $this->actingAs($u)->get('/oyunlar/carx-oyunu')->assertSee('"attemptsLeft":2', false);
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/dayan', ['ms' => 0])->assertStatus(422); // fırlanma yoxdur
+    }
+
+    public function test_daily_cap_closes_sector_for_everyone(): void
+    {
+        $this->onlySegment(true);
+        config(['games.wheel.daily_caps' => ['discount_10' => 1]]);
+        $a = $this->user();
+        $this->play($a)->assertOk()->assertJson(['prize' => true, 'closed' => false]);
+        $this->actingAs($a)->postJson('/oyunlar/carx-oyunu/gotur')->assertOk();
+
+        // limit doldu: başqa oyunçu eyni sektora düşür, amma hədiyyə almır
+        $b = $this->user();
+        $this->actingAs($b)->get('/oyunlar/carx-oyunu')->assertSee('data-closed=\'["discount_10"]\'', false);
+        $this->play($b)->assertOk()->assertJson(['prize' => false, 'closed' => true, 'state' => ['last' => ['prize' => false]]]);
+        $this->actingAs($b)->postJson('/oyunlar/carx-oyunu/gotur')->assertStatus(422);
+
+        // kupon istifadə olunub silinsə də, sektor gün sonunadək bağlı qalır
+        WheelSpin::where('user_id', $a->id)->delete();
+        $this->play($b)->assertOk()->assertJson(['closed' => true]);
     }
 
     public function test_code_is_created_only_when_prize_is_claimed(): void
@@ -92,15 +270,15 @@ class GamesTest extends TestCase
         $u = $this->user();
 
         // fırlatma özü kod yaratmır
-        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertOk()
+        $this->play($u)->assertOk()
             ->assertJson(['prize' => true, 'state' => ['attemptsLeft' => 2, 'last' => ['label' => '10% endirim'], 'claimed' => null]]);
         $this->assertSame(0, WheelSpin::where('user_id', $u->id)->whereNotNull('code')->count());
 
         // oyunçu yenidən fırlatmağı seçir — əvvəlki nəticə itir, hələ də kod yoxdur
-        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertOk()->assertJson(['state' => ['attemptsLeft' => 1]]);
+        $this->play($u)->assertOk()->assertJson(['state' => ['attemptsLeft' => 1]]);
 
         // "Hədiyyəni götür" — kod yaranır, raund bağlanır
-        $r = $this->actingAs($u)->postJson('/oyunlar/bext-carxi/gotur')->assertOk();
+        $r = $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/gotur')->assertOk();
         $this->assertMatchesRegularExpression('/^QP-[A-Z0-9]{6}$/', $r->json('state.claimed.code'));
         $this->assertSame(now('Asia/Baku')->format('d.m.Y H:i'), $r->json('state.claimed.claimed_at')); // götürülmə vaxtı
         $this->assertSame(0, $r->json('state.attemptsLeft'));
@@ -112,9 +290,10 @@ class GamesTest extends TestCase
         $this->assertEqualsWithDelta(now()->addMinutes(10)->timestamp, $spin->expires_at->timestamp, 60);
 
         // götürəndən sonra yalnız əyləncə üçün fırlatmaq olar (yeni hədiyyə yoxdur), ikinci "götür" eyni kodu qaytarır
-        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertOk()->assertJson(['fun' => true, 'state' => ['attemptsLeft' => 0]]);
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/firlat')->assertOk()->assertJson(['fun' => true, 'state' => ['attemptsLeft' => 0]]);
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/dayan', ['ms' => 0])->assertOk()->assertJson(['fun' => true]);
         $this->assertSame(1, WheelSpin::where('user_id', $u->id)->count());
-        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/gotur')->assertOk()->assertJson(['state' => ['claimed' => ['code' => $r->json('state.claimed.code')]]]);
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/gotur')->assertOk()->assertJson(['state' => ['claimed' => ['code' => $r->json('state.claimed.code')]]]);
 
         $this->actingAs($u)->get('/hesabim')->assertSee($r->json('state.claimed.code'));
     }
@@ -123,8 +302,8 @@ class GamesTest extends TestCase
     {
         $this->onlySegment(true);
         $u = $this->user();
-        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertOk();
-        $code = $this->actingAs($u)->postJson('/oyunlar/bext-carxi/gotur')->assertOk()->json('state.claimed.code');
+        $this->play($u)->assertOk();
+        $code =$this->actingAs($u)->postJson('/oyunlar/carx-oyunu/gotur')->assertOk()->json('state.claimed.code');
 
         // 11 dəqiqə sonra kodun vaxtı bitib və bazadan silinir
         $this->travel(11)->minutes();
@@ -132,9 +311,9 @@ class GamesTest extends TestCase
         $this->assertNull(WheelSpin::where('code', $code)->first());
 
         // amma bu gün yeni hədiyyə olmur (yalnız əyləncə) — "götürülüb" qeydi gün sonunadək qalır
-        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertOk()
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/firlat')->assertOk()
             ->assertJson(['fun' => true, 'state' => ['attemptsLeft' => 0, 'claimed' => ['code' => $code, 'expired' => true]]]);
-        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/gotur')->assertOk()->assertJson(['state' => ['claimed' => ['expired' => true]]]);
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/gotur')->assertOk()->assertJson(['state' => ['claimed' => ['expired' => true]]]);
         $this->assertSame(0, WheelSpin::where('user_id', $u->id)->count()); // yeni kod yaranmayıb
     }
 
@@ -167,13 +346,13 @@ class GamesTest extends TestCase
 
     public function test_cannot_claim_try_again_or_as_guest(): void
     {
-        $this->postJson('/oyunlar/bext-carxi/gotur')->assertUnauthorized();
+        $this->postJson('/oyunlar/carx-oyunu/gotur')->assertUnauthorized();
 
         $this->onlySegment(false);
         $u = $this->user();
-        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/gotur')->assertStatus(422); // heç fırlatmayıb
-        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertOk();
-        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/gotur')->assertStatus(422); // "Şansını bir daha sına"
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/gotur')->assertStatus(422); // heç fırlatmayıb
+        $this->play($u)->assertOk();
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/gotur')->assertStatus(422); // "Şansını bir daha sına"
     }
 
     public function test_stack_page_passes_baku_weather(): void
@@ -266,7 +445,9 @@ class GamesTest extends TestCase
 
     public function test_unverified_user_gets_demo_spin(): void
     {
-        $this->actingAs($this->user(false))->postJson('/oyunlar/bext-carxi/firlat')->assertOk()->assertJson(['demo' => true]);
+        $u = $this->user(false);
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/firlat')->assertOk()->assertJson(['demo' => true]);
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/dayan', ['ms' => 0])->assertOk()->assertJson(['demo' => true])->assertJsonMissingPath('state');
     }
 
     public function test_nard_vs_computer_gives_no_points(): void
@@ -407,9 +588,9 @@ class GamesTest extends TestCase
         $spin->delete();
         $this->stackPost($u, 'hediyye', 55, null, $this->playedFor(55) + ['stack_prize_claimed' => false])->assertStatus(429);
 
-        // Stəkan hədiyyəsi bəxt çarxını bloklamır
+        // Stəkan hədiyyəsi Çarx oyununu bloklamır
         $this->onlySegment(true);
-        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertOk()->assertJson(['demo' => false]);
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/firlat')->assertOk()->assertJson(['demo' => false]);
     }
 
     public function test_stack_prize_sixty_points_is_hookah(): void

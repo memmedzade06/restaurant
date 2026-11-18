@@ -13,6 +13,9 @@
 <section class="section pt-4">
     <div class="container">
         <div class="auth-card">
+            @if ($referrer ?? null)
+                <div class="alert-soft mb-3"><i class="fa fa-user-friends me-2"></i>Sizi <b>{{ $referrer->short_name }}</b> dəvət edib — xoş gəlmisiniz!</div>
+            @endif
             <form method="POST" action="{{ route('register') }}" novalidate>
                 @csrf
 

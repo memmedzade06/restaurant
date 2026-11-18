@@ -318,6 +318,7 @@ class GameController extends Controller
 
         return view('frontend.games.wheel', [
             'segments' => $this->segments(),
+            'closed' => $this->closedKeys(),
             'verified' => $verified,
             'attempts' => $this->attempts(),
             'state' => $verified ? $this->wheelState($user->id) : null,
@@ -325,65 +326,266 @@ class GameController extends Controller
     }
 
     /**
-     * Çarxı fırladır. Nəticəni server seçir (brauzerdə dəyişdirmək olmur).
-     * Təsdiqlənmiş istifadəçinin gündə 3 cəhdi var; hər fırlatmadan sonra ya hədiyyəni götürür,
-     * ya da yenidən fırladır (əvvəlki nəticə itir). Qonaqlar üçün sınaq fırlatmasıdır.
+     * "Fırlat": çarx dayanmadan fırlanmağa başlayır (məharət oyunu — nəticəni oyunçunun "Dayan" basdığı an həll edir).
+     * Fırlanmanın parametrlərini (başlanğıc bucaq, istiqamət, sürət, ritm) server seçir və sessiyada saxlayır.
+     * Təsdiqlənmiş istifadəçinin cəhdi elə burada sayılır — bəyənmədiyi fırlanmanı atıb yenisini başlatmaq olmur.
+     * Qonaqlar üçün sınaq fırlatmasıdır.
      */
     public function spin(Request $request): JsonResponse
     {
-        $segments = $this->segments();
         $user = $request->user();
 
         if (! $user || ! $user->hasVerifiedPhone()) {
-            $index = $this->pickIndex($segments);
+            $n = (int) $request->session()->get('wheel_demo_count', 0);
+            $request->session()->put('wheel_demo_count', $n + 1);
 
-            return response()->json([
-                'index' => $index,
-                'label' => $segments[$index]['label'],
-                'prize' => $segments[$index]['prize'],
-                'demo' => true,
-            ]);
+            return response()->json(['run' => $this->newRun($request, 'demo', $n), 'demo' => true]);
         }
 
-        return DB::transaction(function () use ($user, $segments) {
+        return DB::transaction(function () use ($request, $user) {
             User::whereKey($user->id)->lockForUpdate()->first(); // eyni anda iki fırlatmanın qarşısını alır
             $state = $this->wheelState($user->id);
 
-            // Bu gün hədiyyə artıq götürülüb (çarxda və ya Hədiyyə Kranında) — əyləncə üçün fırlada bilər:
-            // cəhd sayılmır, nəticə yadda saxlanmır, hədiyyə verilmir
+            // Bu gün hədiyyə artıq götürülüb (çarxda və ya Hədiyyə Kranında) və ya cəhdlər bitib — əyləncə üçün
+            // fırlada bilər: cəhd sayılmır, nəticə yadda saxlanmır, hədiyyə verilmir
             if ($state['fun']) {
-                $index = $this->pickIndex($segments);
+                $run = $this->newRun($request, 'fun', random_int(0, count(config('games.wheel.speeds', [1])) - 1));
 
-                return response()->json([
-                    'index' => $index,
-                    'label' => $segments[$index]['label'],
-                    'prize' => (bool) $segments[$index]['prize'],
-                    'demo' => false,
-                    'fun' => true,
-                    'state' => $state,
-                ]);
+                return response()->json(['run' => $run, 'demo' => false, 'fun' => true, 'state' => $state]);
             }
             if ($state['attemptsLeft'] <= 0) {
                 return response()->json(['message' => 'Bu gün üçün cəhdləriniz bitdi. Sabah yenə gəlin!', 'state' => $state], 429);
             }
 
-            $index = $this->pickIndex($segments);
-            $segment = $segments[$index];
-
-            // Fırlatma bazaya yazılmır: cəhd sayı və son nəticə serverin keşində saxlanılır
+            // Fırlatma bazaya yazılmır: cəhd sayı və son nəticə serverin keşində saxlanılır.
+            // Yeni fırlatma əvvəlki nəticəni silir.
             $round = $this->round($user->id);
             $round['count']++;
-            $round['last'] = ['key' => $segment['key'], 'label' => $segment['label']];
+            $round['last'] = null;
+            $round['pending'] = now()->timestamp; // fırlanır (səhifə bağlansa, max_seconds sonra cəhd uğursuz sayılır)
             $this->saveRound($user->id, $round);
 
             return response()->json([
-                'index' => $index,
+                'run' => $this->newRun($request, 'real', $round['count'] - 1),
                 'demo' => false,
-                'label' => $segment['label'],
-                'prize' => (bool) $segment['prize'],
                 'state' => $this->wheelState($user->id),
             ]);
         });
+    }
+
+    /**
+     * "Dayan": oyunçu fırlanma başlayandan neçə millisaniyə sonra basdığını göndərir.
+     * Server həmin andakı bucağı özü hesablayır və göstəricinin altındakı sektoru tapır.
+     */
+    public function stop(Request $request): JsonResponse
+    {
+        $data = $request->validate(['ms' => ['required', 'integer', 'min:0', 'max:600000']]);
+        $run = $request->session()->pull('wheel_run');
+        if (! $run) {
+            return response()->json(['message' => 'Çarx fırlanmır. "Fırlat" basın.'], 422);
+        }
+
+        // Oyunçu serverdə keçən vaxtdan çox ola bilməz (şəbəkə gecikməsi yalnız əksinə təsir edir)
+        $elapsed = (microtime(true) - $run['started']) * 1000;
+        if ($data['ms'] > $elapsed + 300) {
+            logger()->warning('Çarx oyunu: dayanma vaxtı uyğun deyil', [
+                'user_id' => $request->user()?->id, 'ms' => $data['ms'], 'elapsed' => round($elapsed), 'ip' => $request->ip(),
+            ]);
+            $this->clearPending($request, $run);
+
+            return response()->json(['message' => 'Fırlatma təsdiqlənmədi. Yenidən cəhd edin.'], 422);
+        }
+
+        // Oyunçu "Dayan" basmayıb, çarx vaxt bitəndə özü dayanıb — hədiyyə yoxdur, cəhd uğursuzdur
+        $timeout = (int) $data['ms'] >= (int) $run['max_ms'];
+        $ms = min((int) $data['ms'], (int) $run['max_ms']);
+        $angle = self::runAngle($run, $ms);
+        $segments = $this->segments();
+        $index = self::indexAt($segments, $angle);
+        $segment = $segments[$index];
+        if ($timeout) {
+            $segment = ['key' => 'timeout', 'label' => 'Vaxt bitdi', 'prize' => false];
+        }
+        $closed = in_array($segment['key'], $this->closedKeys(), true);
+        $prize = $segment['prize'] && ! $closed;
+
+        $payload = [
+            'index' => $index,
+            'angle' => round($angle, 3),
+            'label' => $segment['label'],
+            'prize' => $prize,
+            'closed' => $closed,
+            'timeout' => $timeout,
+            'demo' => $run['mode'] === 'demo',
+            'fun' => $run['mode'] === 'fun',
+        ];
+
+        $user = $request->user();
+        if (! $user || ! $user->hasVerifiedPhone() || $run['mode'] === 'demo') {
+            return response()->json($payload);
+        }
+
+        return DB::transaction(function () use ($user, $run, $segment, $prize, $payload) {
+            User::whereKey($user->id)->lockForUpdate()->first();
+
+            if ($run['mode'] === 'real' && $run['user_id'] === $user->id && $run['day'] === $this->today()) {
+                $round = $this->round($user->id);
+                $round['pending'] = false;
+                if (! $round['claimed']) {
+                    $round['last'] = ['key' => $segment['key'], 'label' => $segment['label'], 'prize' => $prize];
+                }
+                $this->saveRound($user->id, $round);
+            }
+
+            return response()->json($payload + ['state' => $this->wheelState($user->id)]);
+        });
+    }
+
+    /** Rədd edilmiş fırlatma: cəhd sayılıb, nəticə yoxdur */
+    private function clearPending(Request $request, array $run): void
+    {
+        $user = $request->user();
+        if ($run['mode'] === 'real' && $user && $run['user_id'] === $user->id && $run['day'] === $this->today()) {
+            $round = $this->round($user->id);
+            $round['pending'] = false;
+            $this->saveRound($user->id, $round);
+        }
+    }
+
+    /** Yeni fırlanmanın parametrləri; brauzerə gedir, server isə başlama vaxtı ilə birgə sessiyada saxlayır */
+    private function newRun(Request $request, string $mode, int $attemptNo): array
+    {
+        $cfg = config('games.wheel');
+        $speeds = array_values($cfg['speeds'] ?? [180]);
+        $base = (float) $speeds[max(0, min($attemptNo, count($speeds) - 1))];
+        $rnd = fn () => random_int(0, 1_000_000) / 1_000_000;
+        [$pMin, $pMax] = $cfg['wobble_period'] ?? [1.4, 2.6];
+
+        $maxMs = (int) (($cfg['max_seconds'] ?? 15) * 1000);
+
+        // İstiqamət dəyişmə anları (ms): dönüşlər bir-birinə qarışmasın deyə aralarında ən azı 2 × flip_ms
+        $flipMs = max(100, (int) ($cfg['reversal_ms'] ?? 500));
+        [$gMin, $gMax] = $cfg['reversal_gap'] ?? [0, 0];
+        [$fMin, $fMax] = $cfg['reversal_first'] ?? [$gMin, $gMax];
+        $flips = [];
+        if ($gMax > 0) {
+            $t = (int) round(($fMin + $rnd() * ($fMax - $fMin)) * 1000);
+            while ($t < $maxMs && count($flips) < 50) {
+                $flips[] = max($t, ($flips ? end($flips) : 0) + 2 * $flipMs);
+                $t = end($flips) + (int) round(($gMin + $rnd() * ($gMax - $gMin)) * 1000);
+            }
+        }
+
+        $run = [
+            'a0' => round($rnd() * 360, 3),
+            'dir' => random_int(0, 1) ? 1 : -1,
+            'v' => round($base * (1 + ($rnd() * 2 - 1) * (float) ($cfg['speed_jitter'] ?? 0)), 3),
+            'k' => min(0.9, max(0, (float) ($cfg['wobble'] ?? 0))),
+            'period' => round($pMin + $rnd() * ($pMax - $pMin), 3),
+            'phase' => round($rnd() * 2 * M_PI, 4),
+            'flips' => $flips,
+            'flip_ms' => $flipMs,
+            'max_ms' => $maxMs,
+        ];
+
+        $request->session()->put('wheel_run', $run + [
+            'started' => microtime(true),
+            'mode' => $mode,
+            'user_id' => $request->user()?->id,
+            'day' => $this->today(),
+        ]);
+
+        return $run;
+    }
+
+    /** Hesablama addımı (ms): bucaq bu addımlarla toplanır — wheel.js-də eyni */
+    public const RUN_STEP_MS = 5;
+
+    /**
+     * Çarxın sürəti (dərəcə/san, işarəli) $ms anında:
+     * v · (1 + k · sin(2π t / period + phase)) · istiqamət. Hər dönüş anı ətrafında (flip_ms ərzində)
+     * istiqamət hamar şəkildə +1-dən −1-ə keçir: çarx yavaşlayır, bir anlıq dayanır, əks tərəfə fırlanır.
+     * wheel.js-də eyni düstur var.
+     */
+    public static function runSpeed(array $run, float $ms): float
+    {
+        $t = $ms / 1000;
+        $speed = $run['v'] * (1 + $run['k'] * sin(2 * M_PI * $t / $run['period'] + $run['phase'])) * $run['dir'];
+        $h = ($run['flip_ms'] ?? 500) / 2;
+        foreach ($run['flips'] ?? [] as $f) {
+            if ($ms >= $f + $h) {
+                $speed = -$speed;
+            } elseif ($ms > $f - $h) {
+                $speed *= cos(M_PI * ($ms - $f + $h) / (2 * $h));
+            }
+        }
+
+        return $speed;
+    }
+
+    /**
+     * Çarxın bucağı (dərəcə, saat əqrəbi istiqamətində, 0–360) başlanğıcdan $ms sonra:
+     * sürət RUN_STEP_MS addımlarla (trapesiya üsulu) toplanır, son natamam addım xətti.
+     */
+    public static function runAngle(array $run, float $ms): float
+    {
+        $dt = self::RUN_STEP_MS;
+        $steps = (int) floor($ms / $dt);
+        $travel = 0.0;
+        $prev = self::runSpeed($run, 0);
+        for ($i = 0; $i < $steps; $i++) {
+            $next = self::runSpeed($run, ($i + 1) * $dt);
+            $travel += ($prev + $next) / 2 * $dt / 1000;
+            $prev = $next;
+        }
+        $travel += $prev * ($ms - $steps * $dt) / 1000;
+
+        return fmod(fmod($run['a0'] + $travel, 360) + 360, 360);
+    }
+
+    /**
+     * Göstərici (yuxarıda) altındakı sektor. 0-cı sektorun ortası çarxın "yuxarısı"dır,
+     * sektorlar saat əqrəbi istiqamətində düzülüb; çarx $rotation dərəcə dönübsə, göstəricinin
+     * altında çarxın (360 − rotation) nöqtəsi olur.
+     */
+    public static function indexAt(array $segments, float $rotation): int
+    {
+        $theta = fmod(fmod(360 - $rotation, 360) + 360, 360);
+        $pos = fmod($theta + $segments[0]['deg'] / 2, 360);
+
+        foreach ($segments as $i => $s) {
+            if ($pos < $s['deg']) {
+                return $i;
+            }
+            $pos -= $s['deg'];
+        }
+
+        return array_key_last($segments);
+    }
+
+    /** Bu gün bütün oyunçular üçün limiti dolmuş (bağlı) sektorların açarları */
+    private function closedKeys(): array
+    {
+        $closed = [];
+        foreach (config('games.wheel.daily_caps', []) as $key => $cap) {
+            if ($this->capTaken($key) >= (int) $cap) {
+                $closed[] = $key;
+            }
+        }
+
+        return $closed;
+    }
+
+    private function capTaken(string $key): int
+    {
+        $inDb = WheelSpin::where('game', 'wheel')->where('prize_key', $key)->whereDate('spun_on', $this->today())->count();
+        // istifadə olunan kupon bazadan silinir — sayı keşdə də saxlanılır
+        return max($inDb, (int) Cache::get($this->capKey($key), 0));
+    }
+
+    private function capKey(string $key): string
+    {
+        return "wheel_cap:{$key}:" . $this->today();
     }
 
     /** "Hədiyyəni götür": son fırlatmanın hədiyyəsi üçün kod yaradır və bu günün raundunu bağlayır */
@@ -404,7 +606,7 @@ class GameController extends Controller
 
             $round = $this->round($user->id);
             $last = $round['last'];
-            if (! $last || ! $this->isPrize($last['key'])) {
+            if (! $last || ! $this->lastIsPrize($last)) {
                 return response()->json(['message' => 'Götürüləcək hədiyyə yoxdur. Çarxı fırladın.', 'state' => $state], 422);
             }
 
@@ -419,6 +621,10 @@ class GameController extends Controller
                 // çarx masada oynanılır, endirim həmin masanın cari hesabına — kod yalnız bu ziyarət üçündür
                 'expires_at' => now()->addMinutes((int) config('games.wheel.code_valid_minutes', 10)),
             ]);
+            if (array_key_exists($last['key'], config('games.wheel.daily_caps', []))) {
+                $capKey = $this->capKey($last['key']);
+                Cache::put($capKey, $this->capTaken($last['key']), now('Asia/Baku')->endOfDay());
+            }
 
             $round['last'] = null;
             // vaxtı keçmiş kupon bazadan silinir — "bu gün götürülüb" qeydi gün sonunadək raundda qalır
@@ -449,12 +655,16 @@ class GameController extends Controller
 
         $left = $claimed || $blockedBy ? 0 : max(0, $this->attempts() - $round['count']);
         // cəhdlər hədiyyəsiz bitib (götürülməmiş hədiyyə gözləmir) — əyləncə üçün oynaya bilər
-        $outOfAttempts = ! $claimed && ! $blockedBy && $left <= 0 && ! ($last && $this->isPrize($last['key']));
+        // (son cəhd hələ fırlanırsa — nəticəsini gözləyirik)
+        // (dayandırılmadan atılmış fırlatma — səhifə bağlanıb — max_seconds keçəndən sonra uğursuz sayılır)
+        $spinning = ! empty($round['pending'])
+            && now()->timestamp - (int) $round['pending'] <= (int) config('games.wheel.max_seconds', 15) + 5;
+        $outOfAttempts = ! $claimed && ! $blockedBy && $left <= 0 && ! $spinning && ! ($last && $this->lastIsPrize($last));
 
         return [
             'attempts' => $this->attempts(),
             'attemptsLeft' => $left,
-            'last' => $last && ! $claimed && ! $blockedBy ? ['label' => $last['label'], 'prize' => $this->isPrize($last['key'])] : null,
+            'last' => $last && ! $claimed && ! $blockedBy ? ['label' => $last['label'], 'prize' => $this->lastIsPrize($last)] : null,
             'claimed' => $claimed,
             'blockedBy' => $blockedBy,
             'blockedMessage' => $blockedBy ? DailyPrize::message($blockedBy) : null,
@@ -467,7 +677,7 @@ class GameController extends Controller
     /** Bu günün raundu (keşdə): ['count' => fırlatma sayı, 'last' => son nəticə və ya null] */
     private function round(int $userId): array
     {
-        return Cache::get($this->roundKey($userId), ['count' => 0, 'last' => null, 'claimed' => null]);
+        return Cache::get($this->roundKey($userId), []) + ['count' => 0, 'last' => null, 'claimed' => null, 'pending' => false];
     }
 
     private function saveRound(int $userId, array $round): void
@@ -486,31 +696,21 @@ class GameController extends Controller
         return max(1, (int) config('games.wheel.attempts_per_day', 3));
     }
 
-    private function isPrize(string $key): bool
+    /** Son nəticə hədiyyədirmi: dayananda yazılır (bağlı sektor hədiyyə vermir) */
+    private function lastIsPrize(array $last): bool
     {
-        return (bool) (collect($this->segments())->firstWhere('key', $key)['prize'] ?? false);
+        return (bool) ($last['prize'] ?? (collect($this->segments())->firstWhere('key', $last['key'])['prize'] ?? false));
     }
 
     /* ---------------------------------------------------------------- */
 
+    /** Sektorlar, hər birinə "deg" (çarxdakı eni, dərəcə; cəmi 360) əlavə olunur */
     private function segments(): array
     {
-        return array_values(config('games.wheel.segments'));
-    }
+        $segments = array_values(config('games.wheel.segments'));
+        $total = array_sum(array_map(fn ($s) => max(0.0, (float) ($s['size'] ?? 1)), $segments)) ?: 1;
 
-    private function pickIndex(array $segments): int
-    {
-        $total = array_sum(array_column($segments, 'weight'));
-        $roll = random_int(1, max(1, $total));
-
-        foreach ($segments as $i => $segment) {
-            $roll -= $segment['weight'];
-            if ($roll <= 0) {
-                return $i;
-            }
-        }
-
-        return array_key_last($segments);
+        return array_map(fn ($s) => $s + ['deg' => max(0.0, (float) ($s['size'] ?? 1)) * 360 / $total], $segments);
     }
 
     private function newCode(): string

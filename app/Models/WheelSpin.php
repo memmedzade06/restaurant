@@ -29,10 +29,11 @@ class WheelSpin extends Model
 
     /** Hədiyyənin gəldiyi oyunun adı */
     public const GAME_LABELS = [
-        'wheel' => 'Bəxt çarxı',
+        'wheel' => 'Çarx oyunu',
         'stack' => 'Stəkan qülləsi',
         'nard' => 'Nərd — günün qalibi',
         'claw' => 'Hədiyyə Kranı',
+        'market' => 'Hədiyyə marketi', // xallarla alınıb
     ];
 
     /**

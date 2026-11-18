@@ -117,7 +117,8 @@
                         @include('frontend.games._nard_winners', ['winners' => $lastWinners])
                     </div>
 
-                    <div class="side-card">
+                    {{-- qaydalar pəncərəsi: nərd səhifəsinə girəndə; dostla canlı oyunda (rəqib gözləyir) göstərilmir --}}
+                    <div class="side-card" @unless (isset($match)) data-game-rules="Uzun nərd" @endunless>
                         <h5><i class="fa fa-book me-2 text-primary"></i>Qısa qaydalar</h5>
                         <div class="rules-note"><i class="fa fa-info-circle me-2"></i>Minimal masa hesabı <b>20 AZN</b> olmalıdır.</div>
                         <ul class="rules">

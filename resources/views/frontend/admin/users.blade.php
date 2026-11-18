@@ -17,6 +17,12 @@
             <a href="{{ route('admin.users') }}" class="active"><i class="fa fa-users me-1"></i>İstifadəçilər</a>
         </div>
 
+        @foreach (['success' => 'success', 'error' => 'danger'] as $key => $cls)
+            @if (session($key))
+                <div class="alert alert-{{ $cls }} admin-alert">{{ session($key) }}</div>
+            @endif
+        @endforeach
+
         <div class="side-card">
             <form method="GET" action="{{ route('admin.users') }}" class="admin-search">
                 <div class="admin-search-input">
@@ -42,7 +48,7 @@
                 <div class="table-responsive">
                     <table class="table admin-table align-middle mb-0">
                         <thead>
-                            <tr><th>Ad</th><th>Telefon</th><th>E-poçt</th><th>Qeydiyyat</th><th>Son aktivlik</th><th>Hədiyyələr</th><th>Oyunlar</th></tr>
+                            <tr><th>Ad</th><th>Telefon</th><th>E-poçt</th><th>Qeydiyyat</th><th>Son aktivlik</th><th>Hədiyyələr</th><th>Oyunlar</th><th><span class="visually-hidden">Əməliyyat</span></th></tr>
                         </thead>
                         <tbody>
                             @foreach ($users as $u)
@@ -82,6 +88,16 @@
                                             Stəkan rekordu: <b>{{ (int) $u->stack_best }}</b><br>
                                             Nərd bu gün: <b>{{ (int) $u->nard_today }} xal</b>
                                         </small>
+                                    </td>
+                                    <td class="text-end">
+                                        @unless ($u->is_admin || $u->id === auth()->id())
+                                            <form method="POST" action="{{ route('admin.users.destroy', $u) }}"
+                                                  onsubmit="return confirm({{ \Illuminate\Support\Js::from($u->name . ' (' . (\App\Support\Phone::format($u->phone) ?: $u->email) . ') birdəfəlik silinsin? Onun hədiyyə kodları və oyun nəticələri də silinəcək. Bunu geri qaytarmaq olmur.') }})">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn-user-delete" title="İstifadəçini sil" aria-label="{{ $u->name }} — sil"><i class="fa fa-trash-alt"></i></button>
+                                            </form>
+                                        @endunless
                                     </td>
                                 </tr>
                             @endforeach

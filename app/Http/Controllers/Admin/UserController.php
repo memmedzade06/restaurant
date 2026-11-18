@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\NardLeaderboard;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -57,6 +58,27 @@ class UserController extends Controller
             'counts' => collect(self::FILTERS)->map(fn ($label, $key) => $this->applyFilter(User::query(), $key, $todayStart)->count()),
             'total' => User::count(),
         ]);
+    }
+
+    /**
+     * İstifadəçini birdəfəlik silir. Onunla bağlı oyun nəticələri, hədiyyə kodları, nərd oyunları və
+     * dəvətləri bazada avtomatik silinir; onun dəvət etdikləri isə "dəvət edən: yoxdur" olaraq qalır
+     * (artıq yazılmış xallar geri alınmır). Admin özünü və başqa admini silə bilməz.
+     */
+    public function destroy(Request $request, User $user): RedirectResponse
+    {
+        if ($user->id === $request->user()->id) {
+            return back()->with('error', 'Öz hesabınızı silə bilməzsiniz.');
+        }
+        if ($user->is_admin) {
+            return back()->with('error', 'Admin hesabını buradan silmək olmaz.');
+        }
+
+        $label = trim($user->name . ' ' . (\App\Support\Phone::format($user->phone) ?: ''));
+        $user->delete();
+        logger()->info('Admin istifadəçini sildi', ['admin_id' => $request->user()->id, 'deleted_user_id' => $user->id]);
+
+        return back()->with('success', "{$label} silindi.");
     }
 
     private function applyFilter($query, string $filter, $todayStart)

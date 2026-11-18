@@ -21,8 +21,8 @@
     <link href="{{ asset('lib/owlcarousel/assets/owl.carousel.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/custom.css') }}?v=8" rel="stylesheet">
-    <link href="{{ asset('css/games.css') }}?v=42" rel="stylesheet">
+    <link href="{{ asset('css/custom.css') }}?v=16" rel="stylesheet">
+    <link href="{{ asset('css/games.css') }}?v=44" rel="stylesheet">
     @yield('css')
 </head>
 
@@ -44,9 +44,6 @@
                 <a href="{{ route('menu') }}" class="nav-item nav-link {{ request()->routeIs('menu') ? 'active' : '' }}">Menyu</a>
                 <a href="{{ route('games.index') }}" class="nav-item nav-link {{ request()->routeIs('games.*') ? 'active' : '' }}">Oyunlar</a>
                 <a href="{{ route('contact') }}" class="nav-item nav-link {{ request()->routeIs('contact') ? 'active' : '' }}">Əlaqə</a>
-                @if (auth()->user()?->is_admin)
-                    <a href="{{ route('admin.prizes') }}" class="nav-item nav-link {{ request()->routeIs('admin.*') ? 'active' : '' }}"><i class="fa fa-gift me-1"></i>Hədiyyələr</a>
-                @endif
             </div>
             @auth
                 <a href="{{ route('account') }}" class="nav-user"><i class="fa fa-user-circle"></i>{{ \Illuminate\Support\Str::of(auth()->user()->name)->explode(' ')->first() }}</a>
@@ -110,6 +107,7 @@
 <script src="{{ asset('lib/counterup/counterup.min.js') }}"></script>
 <script src="{{ asset('lib/owlcarousel/owl.carousel.min.js') }}"></script>
 <script src="{{ asset('js/main.js') }}"></script>
+<script src="{{ asset('js/games/rules.js') }}?v=2"></script>{{-- oyun səhifələrində əvvəlcə qaydalar pəncərəsi --}}
 @auth
 <script>
     // "İndi saytda": səhifə açıq olduqca serverə siqnal göndəririk

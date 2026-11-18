@@ -2,7 +2,7 @@
    50 Qəpik — Hədiyyə Kranı (3D)
    Şüşə qutuda rəngli şarlar: çəngəli sağa-sola və irəli-geri sürüb şar tutursunuz,
    ön sol küncdəki çıxışa düşən şar açılır və içindən hədiyyə çıxır.
-   Hədiyyəni SERVER seçir (ClawController): gündə 3 cəhd, real kod — Bəxt çarxı kimi.
+   Hədiyyəni SERVER seçir (ClawController): gündə 3 cəhd, real kod — Çarx oyunu kimi.
    Qonaqlar və təsdiqlənməmiş istifadəçilər sınaq rejimində oynayır (kod verilmir).
    ========================================================= */
 (function () {
@@ -95,7 +95,7 @@
         for (var s = 0; s < 840; s++) physics(STEP, true);
     }
 
-    // əyləncə rejimi: bu gün hədiyyə artıq götürülüb (kranda və ya Bəxt çarxında) — limitsiz, hədiyyəsiz
+    // əyləncə rejimi: bu gün hədiyyə artıq götürülüb (kranda və ya Çarx oyununda) — limitsiz, hədiyyəsiz
     function funMode() { return VERIFIED && server && server.fun; }
     function attemptsLeft() { return VERIFIED ? (funMode() ? Infinity : (server ? server.attemptsLeft : 0)) : game.demoLeft; }
     function dayClosed() { return VERIFIED && server && !server.fun && (server.claimed || (server.attemptsLeft <= 0 && !server.last)); }
@@ -434,7 +434,7 @@
         hud();
     }
 
-    // Bəxt çarxındakı kimi: "Hədiyyəni götür" və ya "Davam et"
+    // Çarx oyunundakı kimi: "Hədiyyəni götür" və ya "Davam et"
     var CONTINUE = '<i class="fa fa-redo me-2"></i>Davam et';
 
     /** Şar açıldı: içindəki hədiyyə */

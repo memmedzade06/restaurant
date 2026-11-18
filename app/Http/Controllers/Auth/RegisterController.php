@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Referrals;
 use App\Support\Phone;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,9 +14,13 @@ use Illuminate\View\View;
 
 class RegisterController extends Controller
 {
-    public function show(): View
+    public function show(Request $request): View
     {
-        return view('frontend.auth.register');
+        // dəvət linki ilə gəlibsə — kim dəvət edib (səhifədə göstərilir)
+        $code = strtoupper((string) $request->cookie(Referrals::COOKIE));
+        $referrer = $code !== '' ? User::where('referral_code', $code)->whereNotNull('phone_verified_at')->first() : null;
+
+        return view('frontend.auth.register', ['referrer' => $referrer]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -35,6 +40,7 @@ class RegisterController extends Controller
         ]);
 
         $user = User::create($data);
+        Referrals::attach($user, $request); // dəvət linki ilə gəlibsə — dəvət edəni yadda saxla
 
         Auth::login($user);
         $request->session()->regenerate();

@@ -1,17 +1,21 @@
 @extends('frontend.layouts.app')
-@section('title', 'Bəxt çarxı - 50 Qəpik Oyunlar')
+@section('title', 'Çarx oyunu - 50 Qəpik Oyunlar')
 
 @section('content')
 <section class="page-hero page-hero-sm">
     <div class="container">
         <span class="eyebrow">Oyunlar</span>
-        <h1>Bəxt çarxı</h1>
-        <p>{{ $attempts }} cəhdiniz var — bəyəndiyiniz endirimi götürün</p>
+        <h1>Çarx oyunu</h1>
+        <p>Çarxı düz vaxtında dayandırın — {{ $attempts }} cəhdiniz var</p>
     </div>
 </section>
 
 @php
     $authUrl = auth()->check() ? route('verify.telegram') : route('register');
+    $wheelSegments = collect($segments)->map(fn ($s) => [
+        'key' => $s['key'], 'label' => $s['label'], 'short' => $s['short'] ?? null,
+        'color' => $s['color'], 'deg' => round($s['deg'], 4),
+    ])->values();
 @endphp
 
 <section class="section pt-4 games-scene">
@@ -20,8 +24,10 @@
         <div class="row g-5 align-items-center">
             <div class="col-lg-7">
                 <div id="wheel" class="wheel"
-                     data-segments='@json(collect($segments)->map(fn ($s) => ['label' => $s['label'], 'color' => $s['color']])->values())'
+                     data-segments='@json($wheelSegments)'
+                     data-closed='@json($closed)'
                      data-spin-url="{{ route('games.wheel.spin') }}"
+                     data-stop-url="{{ route('games.wheel.stop') }}"
                      data-claim-url="{{ route('games.wheel.claim') }}"
                      data-auth-url="{{ $authUrl }}"
                      data-verified="{{ $verified ? 1 : 0 }}"
@@ -90,15 +96,23 @@
                     {{-- Nəticə və seçim düymələri JS ilə doldurulur --}}
                     <div id="wheelResult" class="wheel-result" hidden></div>
 
-                    <div id="wheelIntro">
+                    <div id="wheelIntro" data-game-rules="Çarx oyunu">
                         <h4>Necə işləyir?</h4>
                         <div class="rules-note"><i class="fa fa-info-circle me-2"></i>Hədiyyədən istifadə üçün minimal masa hesabı <b>30 AZN</b> olmalıdır.</div>
                         <ul class="rules">
-                            <li>Sizin <b>{{ $attempts }} cəhdiniz</b> var.</li>
-                            <li>Hər fırlatmadan sonra seçin: <b>Hədiyyəni götür</b> və ya <b>yenidən fırlat</b>.</li>
-                            <li>Yenidən fırladanda əvvəlki nəticə itir — risk sizindir!</li>
+                            <li><b>Fırlat</b> basın — çarx dayanmadan fırlanır. <b>Dayan</b> basın (və ya çarxa toxunun) — göstəricinin altındakı sektor sizindir. Burada şans yox, <b>dəqiqlik</b> qərar verir.</li>
+                            <li>Dayandırmaq üçün <b>{{ config('games.wheel.max_seconds') }} saniyəniz</b> var. Vaxt bitsə, çarx özü dayanır, amma hədiyyə verilmir — cəhd <b>uğursuz</b> sayılır.</li>
+                            <li>Hədiyyə nə qədər böyükdürsə, sektoru o qədər <b>dardır</b>. Çarxın sürəti də sabit deyil — gah artır, gah azalır, bəzən isə çarx yavaşlayıb <b>əks tərəfə</b> fırlanır. Diqqətlə izləyin!</li>
+                            <li>Sizin <b>{{ $attempts }} cəhdiniz</b> var. "Fırlat" basan kimi cəhd sayılır; hər növbəti cəhddə çarx <b>daha sürətli</b> fırlanır.</li>
+                            <li>Hər cəhddən sonra seçin: <b>Hədiyyəni götür</b> və ya <b>yenidən fırlat</b>. Yenidən fırladanda əvvəlki nəticə itir — risk sizindir!</li>
+                            <li>Böyük hədiyyələrin (50%, 25%, qəlyan) gündəlik sayı məhduddur — bitəndə sektor gün sonunadək <b>bağlanır</b>.</li>
                             <li>Hədiyyəni götürəndə <b>kod</b> yaranır — restoranda ofisianta göstərin. Endirim <b>hazırda oturduğunuz masanın hesabına</b> tətbiq olunur: kod {{ config('games.wheel.code_valid_minutes') }} dəqiqə etibarlıdır, sonra və ya istifadə olunanda qüvvədən düşür. Bütün kodlarınız: <a href="{{ route('prizes') }}">Hədiyyələrim</a>.</li>
-                            <li>Gündə yalnız <b>bir oyunda</b> hədiyyə götürmək olar — Bəxt çarxında və ya Hədiyyə Kranında. Hədiyyə götürdükdən sonra hər iki oyunu əyləncə üçün istədiyiniz qədər oynaya bilərsiniz, amma həmin gün yeni hədiyyə verilmir.</li>
+                            {{-- Hədiyyə Kranı müvəqqəti bağlı olanda bu qayda göstərilmir --}}
+                            @if (config('games.claw.enabled'))
+                            <li>Gündə yalnız <b>bir oyunda</b> hədiyyə götürmək olar — Çarx oyununda və ya Hədiyyə Kranında. Hədiyyə götürdükdən sonra hər iki oyunu əyləncə üçün istədiyiniz qədər oynaya bilərsiniz, amma həmin gün yeni hədiyyə verilmir.</li>
+                            @else
+                            <li>Hədiyyə götürdükdən sonra çarxı əyləncə üçün istədiyiniz qədər fırlada bilərsiniz, amma həmin gün yeni hədiyyə verilmir.</li>
+                            @endif
                         </ul>
                         @unless ($verified)
                             <div class="alert-soft mt-3">
@@ -118,5 +132,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/wheel.js') }}?v=10"></script>
+<script src="{{ asset('js/games/wheel.js') }}?v=14"></script>
 @endsection

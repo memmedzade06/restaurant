@@ -8,7 +8,7 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 /**
- * Hədiyyə Kranı: şarın içindəki hədiyyəni server seçir, gündə 3 cəhd, real kod (Bəxt çarxı kimi).
+ * Hədiyyə Kranı: şarın içindəki hədiyyəni server seçir, gündə 3 cəhd, real kod (Çarx oyunu kimi).
  */
 class ClawTest extends TestCase
 {
@@ -18,6 +18,16 @@ class ClawTest extends TestCase
     {
         parent::setUp();
         config(['games.claw.min_seconds_per_attempt' => 0]); // testdə çəngəlin hərəkətini gözləmirik
+        config(['games.claw.enabled' => true]);              // oyun müvəqqəti bağlı ola bilər — testlərdə açıqdır
+    }
+
+    public function test_disabled_game_is_hidden_and_closed(): void
+    {
+        config(['games.claw.enabled' => false]);
+        $this->get('/oyunlar')->assertOk()->assertDontSee('Rəngli şarı tutub');
+        $this->get('/oyunlar/hediyye-krani')->assertNotFound();
+        $this->postJson('/oyunlar/hediyye-krani/basla')->assertNotFound();
+        $this->actingAs($this->user())->postJson('/oyunlar/hediyye-krani/gotur')->assertNotFound();
     }
 
     private function user(bool $verified = true): User
@@ -106,7 +116,7 @@ class ClawTest extends TestCase
     public function test_prize_only_in_one_game_per_day(): void
     {
         $this->only(true);
-        config(['games.wheel.segments' => [['key' => 'discount_10', 'label' => '10% endirim', 'color' => '#000', 'weight' => 1, 'prize' => true]]]);
+        config(['games.wheel.segments' => [['key' => 'discount_10', 'label' => '10% endirim', 'color' => '#000', 'size' => 360, 'prize' => true]]]);
         $u = $this->user();
 
         // kranda hədiyyə götürdü
@@ -115,18 +125,19 @@ class ClawTest extends TestCase
 
         // çarx: oynamaq olar (əyləncə), xəbərdarlıq var, hədiyyə götürmək olmaz
         // xəbərdarlığı səhifədə JS göstərir — vəziyyətdə əyləncə rejimi var
-        $this->actingAs($u)->get('/oyunlar/bext-carxi')->assertOk()->assertSee('"fun":true', false);
-        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/firlat')->assertOk()
+        $this->actingAs($u)->get('/oyunlar/carx-oyunu')->assertOk()->assertSee('"fun":true', false);
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/firlat')->assertOk()
             ->assertJson(['fun' => true, 'state' => ['blockedBy' => 'Hədiyyə Kranında', 'fun' => true]]);
-        $this->actingAs($u)->postJson('/oyunlar/bext-carxi/gotur')->assertStatus(422);
+        $this->actingAs($u)->postJson('/oyunlar/carx-oyunu/gotur')->assertStatus(422);
         $this->assertSame(0, WheelSpin::where('user_id', $u->id)->where('game', 'wheel')->count());
 
         // tərsinə: çarxda götürən kranda yalnız əyləncə üçün oynayır
         $v = $this->user();
-        $this->actingAs($v)->postJson('/oyunlar/bext-carxi/firlat')->assertOk();
-        $this->actingAs($v)->postJson('/oyunlar/bext-carxi/gotur')->assertOk();
-        $this->actingAs($v)->get('/oyunlar/hediyye-krani')->assertOk()->assertSee('Bəxt çarxında artıq hədiyyə qazanmısınız');
-        $this->attempt($v)->assertOk()->assertJson(['fun' => true, 'state' => ['blockedBy' => 'Bəxt çarxında']]);
+        $this->actingAs($v)->postJson('/oyunlar/carx-oyunu/firlat')->assertOk();
+        $this->actingAs($v)->postJson('/oyunlar/carx-oyunu/dayan', ['ms' => 0])->assertOk();
+        $this->actingAs($v)->postJson('/oyunlar/carx-oyunu/gotur')->assertOk();
+        $this->actingAs($v)->get('/oyunlar/hediyye-krani')->assertOk()->assertSee('Çarx oyununda artıq hədiyyə qazanmısınız');
+        $this->attempt($v)->assertOk()->assertJson(['fun' => true, 'state' => ['blockedBy' => 'Çarx oyununda']]);
         $this->actingAs($v)->postJson('/oyunlar/hediyye-krani/gotur')->assertStatus(422);
         $this->assertSame(0, WheelSpin::where('user_id', $v->id)->where('game', 'claw')->count());
     }

@@ -75,13 +75,13 @@
                     @endunless
 
                     @if ($state['blockedBy'] ?? null)
-                        {{-- bu gün Bəxt çarxında hədiyyə götürülüb: oynamaq olar, götürmək olmaz --}}
+                        {{-- bu gün Çarx oyununda hədiyyə götürülüb: oynamaq olar, götürmək olmaz --}}
                         <div class="rules-note prize-block"><i class="fa fa-exclamation-triangle me-2"></i>{{ $state['blockedMessage'] }}</div>
                     @elseif (($state['funReason'] ?? null) === 'attempts')
                         <div class="rules-note prize-block"><i class="fa fa-exclamation-triangle me-2"></i>Bu günün cəhdləri bitdi — əyləncə üçün istədiyiniz qədər oynaya bilərsiniz, amma hədiyyə verilmir. Sabah yenə {{ $attempts }} cəhdiniz olacaq.</div>
                     @endif
 
-                    <div class="side-card">
+                    <div class="side-card" data-game-rules="Hədiyyə Kranı">
                         <h5><i class="fa fa-book me-2 text-primary"></i>Necə oynanır?</h5>
                         <div class="rules-note"><i class="fa fa-info-circle me-2"></i>Hədiyyədən istifadə üçün minimal masa hesabı <b>30 AZN</b> olmalıdır.</div>
                         <ul class="rules">
@@ -91,7 +91,7 @@
                             <li>Şarın düz ortasından tutun — kənarından tutsanız, yolda sürüşüb düşə bilər.</li>
                             <li>Çıxışa düşən şar açılır və içindən <b>təsadüfi hədiyyə</b> çıxır (bəzən şar boş olur). <b>Hədiyyəni götür</b> seçsəniz, kod yaranır və bu günün oyunu bitir. <b>Davam et</b> seçsəniz, əvvəlki hədiyyə itir — risk sizindir!</li>
                             <li>Kod <b>{{ config('games.claw.code_valid_minutes') }} dəqiqə</b> etibarlıdır — ofisianta göstərin. Bütün kodlarınız: <a href="{{ route('prizes') }}">Hədiyyələrim</a>.</li>
-                            <li>Gündə yalnız <b>bir oyunda</b> hədiyyə götürmək olar — Bəxt çarxında və ya Hədiyyə Kranında. Hədiyyə götürdükdən sonra hər iki oyunu əyləncə üçün istədiyiniz qədər oynaya bilərsiniz, amma həmin gün yeni hədiyyə verilmir.</li>
+                            <li>Gündə yalnız <b>bir oyunda</b> hədiyyə götürmək olar — Çarx oyununda və ya Hədiyyə Kranında. Hədiyyə götürdükdən sonra hər iki oyunu əyləncə üçün istədiyiniz qədər oynaya bilərsiniz, amma həmin gün yeni hədiyyə verilmir.</li>
                         </ul>
                     </div>
 

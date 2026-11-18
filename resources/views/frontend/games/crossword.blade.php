@@ -56,7 +56,7 @@
                         <ol class="cw-list" data-dir="down"></ol>
                     </div>
 
-                    <div class="side-card">
+                    <div class="side-card" data-game-rules="Krossvord">
                         <h5><i class="fa fa-book me-2 text-primary"></i>Necə oynanır?</h5>
                         <ul class="rules">
                             <li>Xanaya toxunun və yazın — hərf avtomatik növbəti xanaya keçir.</li>

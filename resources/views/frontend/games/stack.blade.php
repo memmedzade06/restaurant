@@ -98,11 +98,12 @@
                         @include('frontend.games._leaders', ['leaders' => $leaders])
                     </div>
 
-                    <div class="side-card">
+                    <div class="side-card" data-game-rules="Stəkan qülləsi">
                         <h5><i class="fa fa-book me-2 text-primary"></i>Necə oynanır?</h5>
                         <div class="rules-note"><i class="fa fa-info-circle me-2"></i>Minimal masa hesabı <b>10 AZN</b> olmalıdır.</div>
                         <ul class="rules">
                             <li>Yuxarıda stəkan sağa-sola yellənir.</li>
+                        <li><b>20-ci stəkandan sonra</b> yellənən stəkan daha yuxarıya qalxır — qülləyə daha uzaqdan düşür.</li>
                         <li><b>30-cu stəkandan sonra</b> stəkan daha sürətli yellənir və hər yeni stəkanda daha da sürətlənir. Hər stəkanın sürəti fərqli olur və bəzən yolun ortasında geri dönür. Stəkan titrəyirsə — indi geri dönəcək!</li>
                             <li>Toxunun — stəkan düşüb qüllənin üstünə düşür.</li>
                             <li>Hər stəkan <b>1 xal</b> verir.</li>
@@ -123,5 +124,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/stack.js') }}?v=82"></script>
+<script src="{{ asset('js/games/stack.js') }}?v=87"></script>
 @endsection

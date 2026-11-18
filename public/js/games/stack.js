@@ -37,7 +37,10 @@
     const LW = 400, LH = 560;          // məntiqi ölçü
     const GW = 44, GH = 61;            // stəkanın eni və hündürlüyü (nazik, hündür armudu)
     const BASE_Y = LH - 58;            // ilk stəkanın dibi (nəlbəkinin üstü)
-    const SWING_GAP = 130;             // yellənən stəkanla qüllə arasındakı məsafə
+    const SWING_GAP = 190;             // yellənən stəkanla qüllə arasındakı məsafə (böyük — stəkan ekranda daha yuxarıda yellənir)
+    const RAISE_FROM = 20;             // bu qədər stəkan qoyulandan sonra yellənən stəkan yuxarı qalxır (daha uzağa düşür)
+    const RAISE_BY = 55;               // nə qədər yuxarı qalxır (px)
+    const VISIBLE_GLASSES = 2;         // qüllədən ekranda neçə stəkan görünür (ən üstdəkilər)
     // true — fondakı fotoda əldə tutulan stəkan qüllənin dibidir (Qız qalası fotosu kimi);
     // false — foto sadəcə arxa fondur, qüllə masadakı nəlbəkinin üstündə qurulur
     const PHOTO_IS_BASE = false;
@@ -63,6 +66,7 @@
             puddles: [],
             stains: [],
             camY: 0,
+            gap: SWING_GAP,           // yellənən stəkanla qüllə arasındakı indiki məsafə (RAISE_FROM-dan sonra rəvan artır)
             shake: 0,
             popups: [],
             time: 0,
@@ -74,6 +78,7 @@
             log: [],                  // hər qonan stəkan: [başlanğıcdan keçən ms, stəkanın sapması px] — server yoxlayır
             slosh: {a: 0, v: 0},   // yellənən/düşən stəkandakı çayın meyli
         };
+        startFromRandomSide(); // birinci stəkan da sağdan və ya soldan
         newSwing();
         overlay.hidden = true;
         offer.hidden = true;
@@ -108,6 +113,13 @@
     const rnd = (a, b) => a + Math.random() * (b - a);
 
     /** Yeni yellənən stəkanın xasiyyəti */
+    // Yellənən stəkan sağdan və ya soldan (təsadüfi) çıxır və ekranın o biri tərəfinə doğru hərəkət edir
+    function startFromRandomSide() {
+        const fromLeft = Math.random() < 0.5;
+        g.swing.dir = fromLeft ? 1 : -1;
+        g.swing.x = fromLeft ? GW / 2 + 12 : LW - GW / 2 - 12;
+    }
+
     function newSwing() {
         const tricky = placed() >= BOOST_FROM;
         g.swing.mul = tricky ? rnd(TRICK_SPEED[0], TRICK_SPEED[1]) : 1;
@@ -120,7 +132,7 @@
     }
 
     const topBottomY = () => BASE_Y - (g.tower.length - 1) * GH; // ən üst stəkanın dibi
-    const swingY = () => topBottomY() - GH - SWING_GAP;           // yellənən stəkanın dibi
+    const swingY = () => topBottomY() - GH - g.gap;               // yellənən stəkanın dibi
 
     /* ---------- Səs ---------- */
     // Səslər fayl yükləmədən, Web Audio API ilə yaradılır: stəkan cingiltisi və şüşə sınması.
@@ -345,8 +357,8 @@
 
         g.drop = null;
         g.state = 'swing';
-        // növbəti stəkan kənardan başlasın
-        g.swing.x = g.swing.dir > 0 ? GW / 2 + 12 : LW - GW / 2 - 12;
+        // növbəti stəkan kənardan başlasın — hansı kənardan (sağ/sol), təsadüfi seçilir
+        startFromRandomSide();
         newSwing();
         if (placed() === BOOST_FROM) {
             g.popups.push({text: 'Diqqət! Sürət artdı!', x: LW / 2, y: topBottomY() - GH - 60, life: 2, warn: true});
@@ -761,10 +773,14 @@
 
         updateShards(dt);
 
-        // kamera: qüllənin başı ekranın yuxarı hissəsində qalsın;
+        // kamera: qüllədən ekranda yalnız ən üstdəki VISIBLE_GLASSES stəkan görünsün (aşağısı kadrdan çıxır);
         // qüllə aşanda isə masaya enir ki, stəkanların sınması görünsün
+        // RAISE_FROM stəkandan sonra yellənən stəkan rəvan yuxarı qalxır (qüllə ekranda yerində qalır)
+        const gapWant = SWING_GAP + (g.tower.length - 1 >= RAISE_FROM ? RAISE_BY : 0);
+        if (g.state !== 'drop') g.gap += (gapWant - g.gap) * Math.min(1, dt * 4);
+
         if (g.state !== 'fall' && g.state !== 'over') {
-            const want = Math.max(0, 170 - swingY() + GH);
+            const want = Math.max(0, LH - VISIBLE_GLASSES * GH - g.gap - swingY());
             g.camY += (want - g.camY) * Math.min(1, dt * 4);
         } else {
             g.camY += (0 - g.camY) * Math.min(1, dt * 2.6);
@@ -804,8 +820,10 @@
     // (şəklin eninə və hündürlüyünə nisbətən), PHOTO_TOP — şəklin yuxarı kənarı (dünya koordinatında).
     const BG = {photo: new Image(), cloth: new Image(), logo: new Image()};
     BG.photo.src = root.dataset.bgPhoto;
-    if (root.dataset.logo) BG.logo.src = root.dataset.logo;
-    const LOGO = {x: 34, y: 34, r: 24}; // sol yuxarı küncdəki kiçik yumru loqo: mərkəz və radius
+    const SHOW_LOGO = false; // fonda 50 Qəpik loqosu göstərilmir — sol yuxarı küncdə hesab durur
+    if (SHOW_LOGO && root.dataset.logo) BG.logo.src = root.dataset.logo;
+    const LOGO = {x: 34, y: 34, r: 24}; // sol yuxarı küncdəki kiçik yumru loqo: mərkəz və radius (SHOW_LOGO)
+    const SCORE = {x: 14, y: 50};       // hesabın yeri: sol yuxarı künc (rəqəmin sol-alt nöqtəsi)
     if (root.dataset.cloth) BG.cloth.src = root.dataset.cloth;
     const TABLE_DEPTH = 34;     // masanın üst səthinin görünən dərinliyi (perspektivdə), px
     const BG_DARKEN = 0.35;     // arxa fon şəklinin qaraldılması (0 — olduğu kimi, 1 — tam qara)
@@ -1464,7 +1482,7 @@
         }
 
         // 50 Qəpik loqosu — fon şəklinin üstündə, yuxarıda kiçik yumru nişan (yerində qalır)
-        if (!PHOTO_IS_BASE && BG.logo.complete && BG.logo.naturalWidth) {
+        if (SHOW_LOGO && !PHOTO_IS_BASE && BG.logo.complete && BG.logo.naturalWidth) {
             const cx = LOGO.x, cy = LOGO.y, r = LOGO.r;
             ctx.save();
             ctx.globalAlpha = 1 - h * 0.4; // yuxarı qalxdıqca gecədə bir az solur
@@ -1627,17 +1645,17 @@
 
         weatherFront(); // yağış, qar, uçan yarpaqlar, şimşək — qüllənin önündə
 
-        // hesab
-        ctx.textAlign = 'center';
+        // hesab — sol yuxarı küncdə (əvvəl loqo burada idi)
         ctx.save();
+        ctx.textAlign = 'left';
         ctx.shadowColor = 'rgba(0, 0, 0, .6)';  // tünd fonda oxunsun
         ctx.shadowBlur = 6;
         ctx.fillStyle = '#fff';
         ctx.font = '900 44px Nunito, sans-serif';
-        ctx.fillText(g.score, LW / 2, 58);
+        ctx.fillText(g.score, SCORE.x, SCORE.y);
         ctx.font = '700 13px Nunito, sans-serif';
         ctx.globalAlpha = 0.7;
-        ctx.fillText(`Rekord: ${Math.max(best, g.score)}`, LW / 2, 80);
+        ctx.fillText(`Rekord: ${Math.max(best, g.score)}`, SCORE.x + 2, SCORE.y + 22);
         ctx.restore();
     }
 
@@ -2137,15 +2155,15 @@
                 ctx.shadowBlur = 0;
             }
         }
-        // sol yuxarıda havanın qısa təsviri
+        // yuxarı ortada havanın qısa təsviri (sol küncdə hesab durur)
         const icon = {clear: W.day ? '☀️' : '🌙', clouds: '☁️', rain: '🌧️', storm: '⛈️', snow: '❄️', fog: '🌫️'}[W.kind] || '';
         ctx.save();
-        ctx.textAlign = 'left';
+        ctx.textAlign = 'center';
         ctx.shadowColor = 'rgba(0, 0, 0, .7)';
         ctx.shadowBlur = 4;
         ctx.fillStyle = '#fff';
         ctx.font = '800 13px Nunito, sans-serif';
-        const bx = LOGO.x + LOGO.r + 10; // hava yazısı loqonun sağında
+        const bx = LW / 2;
         ctx.fillText(`${icon}${W.windy ? ' 💨' : ''} Bakı${W.temp !== null ? ` ${W.temp}°C` : ''}`, bx, 30);
         ctx.font = '700 11px Nunito, sans-serif';
         ctx.globalAlpha = 0.85;

@@ -47,7 +47,7 @@ class PrizeAdminTest extends TestCase
         // adi istifadəçi və qonaq görə bilmir
         $this->get('/admin/istifadeciler')->assertRedirect();
         $this->actingAs($player)->get('/admin/istifadeciler')->assertForbidden();
-        $this->actingAs($player)->get('/hesabim')->assertOk()->assertDontSee('Bütün istifadəçilər');
+        $this->actingAs($player)->get('/hesabim')->assertOk()->assertDontSee('İdarəetmə')->assertDontSee(route('admin.users'));
 
         $this->actingAs($admin)->get('/admin/istifadeciler')->assertOk()
             ->assertSee('Siyahıdakı Oyunçu')->assertSee('Təsdiqsiz Yeni')->assertSee('1 kod')->assertSee('indi saytda');
@@ -56,10 +56,59 @@ class PrizeAdminTest extends TestCase
         $this->actingAs($admin)->get('/admin/istifadeciler?q=7778899')->assertOk()
             ->assertSee('Təsdiqsiz Yeni')->assertDontSee('Siyahıdakı Oyunçu');
 
-        // "Hesabım" səhifəsində admin üçün istifadəçilər bölməsi
+        // admin paneli yuxarı menyuda yox, "Hesabım" səhifəsindədir: hədiyyə kodları və istifadəçilər
         $this->actingAs($admin)->get('/hesabim')->assertOk()
-            ->assertSee('Cəmi qeydiyyat')->assertDontSee('Son qeydiyyatdan keçənlər')->assertSee('Bütün istifadəçilər');
+            ->assertSee('İdarəetmə')->assertSee('Cəmi qeydiyyat')
+            ->assertSee(route('admin.prizes'))->assertSee(route('admin.users'));
+        $this->actingAs($admin)->get('/oyunlar')->assertOk()->assertDontSee(route('admin.prizes'));
         $this->assertNotNull($new);
+    }
+
+    public function test_admin_deletes_user_with_their_data(): void
+    {
+        $admin = $this->user(true);
+        $player = $this->user();
+        $prize = $this->prize($player);
+        \App\Models\GameResult::create(['user_id' => $player->id, 'game' => 'stack', 'won' => false, 'points' => 12]);
+        // oyunçunun dəvət etdiyi istifadəçi qalır, sadəcə "dəvət edən" boşalır
+        $invited = $this->user();
+        $invited->forceFill(['referred_by' => $player->id])->save();
+
+        // siyahıda silmə düyməsi var (öz hesabı üçün yoxdur)
+        $this->actingAs($admin)->get('/admin/istifadeciler')->assertOk()
+            ->assertSee(route('admin.users.destroy', $player))
+            ->assertDontSee(route('admin.users.destroy', $admin));
+
+        $this->actingAs($admin)->from('/admin/istifadeciler')->delete("/admin/istifadeciler/{$player->id}")
+            ->assertRedirect('/admin/istifadeciler')->assertSessionHas('success');
+
+        $this->assertNull(User::find($player->id));
+        $this->assertNull(WheelSpin::find($prize->id));
+        $this->assertSame(0, \App\Models\GameResult::where('user_id', $player->id)->count());
+        $this->assertNotNull($invited->fresh());
+        $this->assertNull($invited->fresh()->referred_by);
+    }
+
+    public function test_user_delete_is_admin_only_and_protects_admins(): void
+    {
+        $admin = $this->user(true);
+        $otherAdmin = $this->user(true);
+        $player = $this->user();
+        $victim = $this->user();
+
+        // qonaq və adi istifadəçi silə bilməz
+        $this->delete("/admin/istifadeciler/{$victim->id}")->assertRedirect();
+        $this->actingAs($player)->delete("/admin/istifadeciler/{$victim->id}")->assertForbidden();
+        $this->assertNotNull($victim->fresh());
+
+        // admin özünü və başqa admini silə bilməz
+        $this->actingAs($admin)->delete("/admin/istifadeciler/{$admin->id}")->assertSessionHas('error');
+        $this->actingAs($admin)->delete("/admin/istifadeciler/{$otherAdmin->id}")->assertSessionHas('error');
+        $this->assertNotNull($admin->fresh());
+        $this->assertNotNull($otherAdmin->fresh());
+
+        // olmayan istifadəçi
+        $this->actingAs($admin)->delete('/admin/istifadeciler/999999999')->assertNotFound();
     }
 
     public function test_only_admin_can_open_panel(): void

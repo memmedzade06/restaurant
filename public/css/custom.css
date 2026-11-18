@@ -357,10 +357,125 @@ a.contact-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg)
 .account-list li { display: flex; justify-content: space-between; gap: 12px; padding: 14px 0; border-bottom: 1px solid #f0e6da; }
 .account-list span { color: var(--muted); }
 .account-list b { color: var(--dark); text-align: right; }
+
+/* ---------- Profil (Hesabım): hər bölmə ayrı kartdadır ---------- */
+.account-page { background: var(--cream); }
+.acc-card { background: #fff; border-radius: 20px; padding: 22px 24px; box-shadow: var(--shadow); }
+.acc-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid #f0e6da; }
+.acc-head h5 { margin: 0; font-size: 18px; }
+.acc-ico { flex: none; width: 38px; height: 38px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; background: #fff4e0; color: var(--wine); font-size: 16px; }
+.acc-more { margin-left: auto; font-weight: 800; font-size: 14px; color: var(--wine); text-decoration: none; white-space: nowrap; }
+.acc-more:hover { color: var(--primary); }
+.acc-sub { font-size: 13px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin: 18px 0 10px; }
+.acc-head + .acc-sub { margin-top: 0; }
+.acc-note { color: var(--muted); font-size: 15px; margin-bottom: 14px; }
+.acc-note b { color: var(--dark); }
+.acc-empty { display: flex; align-items: center; gap: 12px; color: var(--muted); margin: 0; padding: 18px; border-radius: 14px; background: #faf5ef; }
+.acc-empty i { font-size: 22px; color: var(--primary); }
+
+/* şəxsi məlumatlar */
+.acc-profile { text-align: center; }
+.acc-avatar { width: 76px; height: 76px; margin: 4px auto 10px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 900; color: #fff; background: linear-gradient(135deg, var(--wine), #b3261e); box-shadow: 0 8px 18px rgba(126, 26, 26, .3); }
+.acc-name { margin: 0 0 6px; font-size: 20px; overflow-wrap: anywhere; }
+.acc-verified { display: inline-block; font-size: 13px; font-weight: 800; color: #1e7b4f; background: #e7f6ee; border-radius: 30px; padding: 4px 12px; }
+.acc-details { text-align: left; margin: 16px 0 18px; }
+.acc-details li { padding: 11px 0; }
+.acc-details span { white-space: nowrap; }
+.acc-details span i { width: 16px; color: var(--primary); }
+.acc-details b { overflow-wrap: anywhere; }
+
+/* rəqəm kartları (oyunlar, idarəetmə) */
+.acc-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.acc-stats.four { grid-template-columns: repeat(4, 1fr); margin-bottom: 16px; }
+.acc-stats > div { background: #faf5ef; border-radius: 14px; padding: 12px 14px; }
+.acc-stats > div.wide { grid-column: 1 / -1; }
+.acc-stats b { display: block; font-size: 24px; font-weight: 900; color: var(--wine); line-height: 1.1; }
+.acc-stats span { font-size: 13px; font-weight: 700; color: var(--muted); }
+.acc-admin-card .account-admin { flex-direction: row; margin: 0; }
+.acc-admin-card .account-admin a { flex: 1; padding: 16px 18px; font-size: 16px; }
+.acc-badge { margin-left: 6px; font-size: 12px; font-weight: 800; color: var(--wine); background: #fff; border-radius: 20px; padding: 2px 8px; }
+
+/* xallar */
+.points-box { display: flex; align-items: center; gap: 24px; }
+.points-balance { flex: none; width: 112px; height: 112px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle at 35% 30%, #f6c66a, var(--primary) 60%, #c9831f); color: #3A0D0D; box-shadow: 0 8px 20px rgba(201, 131, 31, .35), inset 0 0 0 4px rgba(255, 255, 255, .45); }
+.points-num { font-size: 32px; font-weight: 900; line-height: 1; }
+.points-label { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+.points-levels { flex: 1; min-width: 0; margin: 0; }
+.points-levels li { padding: 10px 0; align-items: center; }
+.points-levels li:last-child { border-bottom: 0; }
+.points-levels small { color: var(--muted); font-weight: 600; }
+.points-levels b { white-space: nowrap; }
+.points-levels em { font-style: normal; margin-left: 8px; color: #1e7b4f; background: #e7f6ee; border-radius: 20px; padding: 2px 8px; font-size: 13px; }
+
+/* dəvət: QR + link */
+.ref-share { display: flex; align-items: center; gap: 20px; background: var(--cream); border-radius: 16px; padding: 16px; }
+.ref-qr { flex: none; width: 150px; height: 150px; background: #fff; border-radius: 12px; padding: 4px; border: 1px solid #ead9c2; }
+.ref-qr svg { width: 100%; height: 100%; display: block; }
+.ref-side { flex: 1; min-width: 0; }
+.ref-label { display: block; font-size: 13px; font-weight: 800; color: var(--muted); margin-bottom: 6px; }
+.ref-link { display: flex; gap: 8px; }
+.ref-link input { flex: 1; min-width: 0; border: 1px solid #ead9c2; border-radius: 10px; padding: 10px 12px; font-weight: 700; color: var(--dark); background: #fff; }
+.ref-link .btn { flex: none; white-space: nowrap; }
+.ref-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.ref-list { margin: 0; }
+.ref-list li:last-child { border-bottom: 0; }
+
+/* Hədiyyə marketi */
+.market-balance { display: flex; align-items: center; gap: 20px; }
+.points-balance.small-ball { width: 86px; height: 86px; }
+.points-balance.small-ball .points-num { font-size: 24px; }
+.acc-ico.big { width: 64px; height: 64px; font-size: 26px; border-radius: 18px; }
+.market-bought { text-align: center; border: 2px dashed var(--primary); }
+.market-bought h3 { margin: 6px 0 12px; }
+.market-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.market-item { display: flex; flex-direction: column; background: #fff; border-radius: 20px; padding: 22px 20px; box-shadow: var(--shadow); text-align: center; transition: transform .2s; }
+.market-item:hover { transform: translateY(-3px); }
+.market-item h5 { margin: 12px 0 6px; }
+.market-item p { color: var(--muted); font-size: 14px; flex: 1; margin-bottom: 12px; }
+.market-ico { width: 64px; height: 64px; margin: 0 auto; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; color: var(--wine); background: #fff4e0; }
+.market-price { font-weight: 900; font-size: 18px; color: var(--wine); margin-bottom: 14px; }
+.market-price i { color: var(--primary); }
+.market-item.locked .market-ico { filter: grayscale(.6); opacity: .7; }
+.market-item .btn:disabled { opacity: .7; }
+@media (max-width: 991.98px) { .market-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 479.98px) { .market-grid { grid-template-columns: 1fr; } .market-balance { flex-direction: column; text-align: center; } }
+
+@media (max-width: 767.98px) {
+    .acc-card { padding: 18px 16px; }
+    .acc-stats.four { grid-template-columns: repeat(2, 1fr); }
+    .acc-admin-card .account-admin { flex-direction: column; }
+    .points-box { flex-direction: column; gap: 12px; }
+    .points-levels { width: 100%; }
+    .ref-share { flex-direction: column; align-items: stretch; }
+    .ref-qr { margin: 0 auto; width: 180px; height: 180px; }
+}
+@media (max-width: 575.98px) {
+    .points-levels small { display: block; }
+    .points-levels em { margin-left: 4px; }
+}
+@media (max-width: 400px) {
+    .ref-link { flex-direction: column; }
+}
 .site-nav .nav-user { margin-left: 26px; color: #fff; font-weight: 800; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
 .site-nav .nav-user:hover { color: var(--primary); }
 @media (max-width: 991.98px) { .site-nav .nav-user { margin: 12px 0 0; display: flex; } }
 @media (max-width: 575.98px) { .auth-card { padding: 26px 20px; } }
+
+/* ---------- Oyuna girəndə qaydalar pəncərəsi (js/games/rules.js) ---------- */
+.rules-modal .modal-content { border: 0; border-radius: 22px; box-shadow: var(--shadow-lg); overflow: hidden; }
+.rules-modal .modal-header { justify-content: flex-start; gap: 14px;border-bottom: 1px solid #f0e6da; padding: 20px 24px 16px; background: var(--cream); }
+.rules-modal .modal-header .eyebrow { display: block; font-size: 15px; margin-bottom: 0; }
+.rules-modal .modal-title { margin: 0; font-size: 24px; }
+.rules-modal-ico { flex: none; width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #fff; background: var(--wine); }
+.rules-modal .modal-body { padding: 18px 24px 6px; }
+.rules-modal .modal-body .rules { margin-bottom: 8px; }
+.rules-modal .modal-footer { border-top: 0; padding: 8px 24px 22px; }
+.rules-modal .modal-footer .btn { margin: 0; }
+.modal-backdrop.show { opacity: .7; }
+@media (max-width: 575.98px) {
+    .rules-modal .modal-header, .rules-modal .modal-body, .rules-modal .modal-footer { padding-left: 16px; padding-right: 16px; }
+    .rules-modal .modal-title { font-size: 20px; }
+}
 
 /* ---------- Qeydiyyat təsdiqi pəncərəsi ---------- */
 .success-modal { border: 0; border-radius: 24px; padding: 40px 30px 34px; text-align: center; overflow: hidden; position: relative; box-shadow: var(--shadow-lg); }

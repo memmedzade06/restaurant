@@ -54,6 +54,15 @@ Route::get('/get_items',[MenuController::class,'get_items_by_category'])->name('
 | Qeydiyyat və giriş — telefon Telegram bot ilə təsdiqlənir
 |--------------------------------------------------------------------------
 */
+// Hədiyyə marketi: xalları hədiyyəyə çevirmək (baxmaq hamıya açıqdır, almaq — təsdiqlənmiş istifadəçiyə)
+Route::get('/hediyye-marketi', [\App\Http\Controllers\Frontend\MarketController::class, 'index'])->name('market');
+Route::post('/hediyye-marketi/{key}', [\App\Http\Controllers\Frontend\MarketController::class, 'buy'])
+    ->middleware(['auth', 'phone.verified', 'throttle:10,1'])->name('market.buy');
+
+// Dəvət linki və QR kod (profildə): kodu yadda saxlayıb qeydiyyata aparır
+Route::get('/devet/{code}', [\App\Http\Controllers\Frontend\ReferralController::class, 'visit'])
+    ->where('code', '[A-Za-z0-9]{4,16}')->middleware('throttle:30,1')->name('referral');
+
 Route::middleware('guest')->group(function () {
     Route::get('/qeydiyyat', [RegisterController::class, 'show'])->name('register');
     Route::post('/qeydiyyat', [RegisterController::class, 'store'])->middleware('throttle:6,1');
@@ -123,17 +132,21 @@ Route::prefix('oyunlar')->name('games.')->controller(\App\Http\Controllers\Front
     Route::post('/stekan/hediyye', 'stackPrize')->middleware(['auth', 'phone.verified', 'throttle:10,1'])->name('stack.prize');
     Route::post('/stekan/netice', 'stackResult')->middleware(['auth', 'phone.verified', 'throttle:30,1'])->name('stack.result');
     Route::get('/krossvord', 'crossword')->name('crossword');
-    Route::get('/bext-carxi', 'wheel')->name('wheel');
-    Route::post('/bext-carxi/firlat', 'spin')->middleware('throttle:15,1')->name('wheel.spin');
-    Route::post('/bext-carxi/gotur', 'claim')->middleware(['auth', 'phone.verified', 'throttle:15,1'])->name('wheel.claim');
+    Route::get('/carx-oyunu', 'wheel')->name('wheel');
+    Route::post('/carx-oyunu/firlat', 'spin')->middleware('throttle:30,1')->name('wheel.spin');
+    Route::post('/carx-oyunu/dayan', 'stop')->middleware('throttle:30,1')->name('wheel.stop');
+    Route::post('/carx-oyunu/gotur', 'claim')->middleware(['auth', 'phone.verified', 'throttle:15,1'])->name('wheel.claim');
 });
+// Köhnə ünvan (Bəxt çarxı): QR kodlar və köhnə linklər yeni səhifəyə yönləndirilir
+Route::permanentRedirect('/oyunlar/bext-carxi', '/oyunlar/carx-oyunu');
 
 /*
 |--------------------------------------------------------------------------
 | Hədiyyə Kranı — şarın içindən real hədiyyə (gündə 3 cəhd), qonaqlar üçün sınaq
 |--------------------------------------------------------------------------
 */
-Route::prefix('oyunlar/hediyye-krani')->name('games.claw')->controller(App\Http\Controllers\Frontend\ClawController::class)->group(function () {
+// Müvəqqəti bağlana bilər: .env-də CLAW_ENABLED=false — bütün ünvanlar 404 olur
+Route::prefix('oyunlar/hediyye-krani')->name('games.claw')->middleware('game.enabled:claw')->controller(App\Http\Controllers\Frontend\ClawController::class)->group(function () {
     Route::get('/', 'show');
     Route::post('/basla', 'start')->middleware('throttle:30,1')->name('.start');
     Route::post('/ac', 'open')->middleware('throttle:30,1')->name('.open');
@@ -150,4 +163,5 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/hediyyeler', [\App\Http\Controllers\Admin\PrizeController::class, 'index'])->name('prizes');
     Route::post('/hediyyeler/{prize}/istifade', [\App\Http\Controllers\Admin\PrizeController::class, 'redeem'])->name('prizes.redeem');
     Route::get('/istifadeciler', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('users');
+    Route::delete('/istifadeciler/{user}', [\App\Http\Controllers\Admin\UserController::class, 'destroy'])->name('users.destroy');
 });

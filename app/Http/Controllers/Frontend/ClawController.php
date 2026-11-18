@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 /**
- * Hədiyyə Kranı: tutulan şarın içindən real hədiyyə çıxır (Bəxt çarxı kimi).
+ * Hədiyyə Kranı: tutulan şarın içindən real hədiyyə çıxır (Çarx oyunu kimi).
  *
  * Gedişat (hamısı serverdə — brauzerdə nəticəni dəyişmək və cəhd artırmaq olmur):
  *  1) "basla" — çəngəl düşür: bir cəhd sayılır, bir dəfəlik açar (token) verilir;
@@ -54,7 +54,7 @@ class ClawController extends Controller
             User::whereKey($user->id)->lockForUpdate()->first(); // eyni anda iki cəhd olmasın
             $state = $this->state($user->id);
 
-            // Bu gün hədiyyə artıq götürülüb (kranda və ya Bəxt çarxında) — əyləncə üçün oynaya bilər:
+            // Bu gün hədiyyə artıq götürülüb (kranda və ya Çarx oyununda) — əyləncə üçün oynaya bilər:
             // cəhd sayılmır, şar açılır, amma hədiyyə verilmir
             if ($state['fun']) {
                 $request->session()->put('claw_demo', ['token' => $token, 'at' => microtime(true)]);
@@ -172,7 +172,7 @@ class ClawController extends Controller
             $claimed['expired'] = true;
         }
         $last = $round['last'];
-        // gündə yalnız bir oyunda hədiyyə: bu gün Bəxt çarxında götürübsə, kranda yalnız əyləncə üçün oynayır
+        // gündə yalnız bir oyunda hədiyyə: bu gün Çarx oyununda götürübsə, kranda yalnız əyləncə üçün oynayır
         $blockedBy = $claimed ? null : DailyPrize::claimedElsewhere($userId, 'claw');
 
         $left = $claimed || $blockedBy ? 0 : max(0, $this->attempts() - $round['count']);

@@ -14,101 +14,6 @@
     <div class="container">
         <div class="row g-4">
             <div class="col-md-6 col-lg-4">
-                <a href="{{ route('games.nard') }}" class="game-card">
-                    <div class="game-art nard-art">
-                        {{-- oyundakı lövhənin kiçik surəti: başlanğıc düzülüşü və fırlanan zərlər --}}
-                        <div class="na-board">
-                            <svg viewBox="0 0 300 200" aria-hidden="true">
-                                <defs>
-                                    <linearGradient id="naWood" x1="0" y1="0" x2="1" y2="1">
-                                        <stop offset="0" stop-color="#8a5228"/><stop offset="1" stop-color="#6b3b1c"/>
-                                    </linearGradient>
-                                    <radialGradient id="naW" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#fffdf7"/><stop offset="1" stop-color="#e9dcc3"/></radialGradient>
-                                    <radialGradient id="naB" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#a83232"/><stop offset="1" stop-color="#4a0e0e"/></radialGradient>
-                                </defs>
-                                <rect width="300" height="200" rx="10" fill="#4a250f"/>
-                                <rect x="6" y="6" width="288" height="188" rx="6" fill="url(#naWood)"/>
-                                @for ($i = 0; $i < 12; $i++)
-                                    @php
-                                        $x = $i < 6 ? 10 + $i * 22.5 : 156 + ($i - 6) * 22.5;
-                                        $dark = $i % 2 === 0;
-                                    @endphp
-                                    {{-- yuxarı və aşağı sıranın üçbucaqları (rənglər növbələşir) --}}
-                                    <path d="M{{ $x + 1 }} 10 H{{ $x + 21.5 }} L{{ $x + 11.25 }} 88 Z" fill="{{ $dark ? '#3a0d0d' : '#e8c99b' }}" opacity=".9"/>
-                                    <path d="M{{ $x + 1 }} 190 H{{ $x + 21.5 }} L{{ $x + 11.25 }} 112 Z" fill="{{ $dark ? '#e8c99b' : '#3a0d0d' }}" opacity=".9"/>
-                                @endfor
-                                <rect x="147" y="10" width="6" height="80" rx="3" fill="#4a250f"/>
-                                <rect x="147" y="110" width="6" height="80" rx="3" fill="#4a250f"/>
-                                {{-- başlar: ağ daşlar sağ yuxarıda, qırmızılar sol aşağıda, hərəsi 15 --}}
-                                @for ($k = 0; $k < 5; $k++)
-                                    <circle cx="279.25" cy="{{ 20 + $k * 18 }}" r="10" fill="url(#naW)" stroke="#b79a6a" stroke-width="1.2"/>
-                                    <circle cx="21.25" cy="{{ 180 - $k * 18 }}" r="10" fill="url(#naB)" stroke="#2a0606" stroke-width="1.2"/>
-                                @endfor
-                                <text x="279.25" y="95" text-anchor="middle" font-size="8" font-weight="900" fill="#1E0B0B">15</text>
-                                <text x="21.25" y="111" text-anchor="middle" font-size="8" font-weight="900" fill="#fff">15</text>
-                            </svg>
-                            {{-- zərlər: bir neçə saniyədən bir fırlanıb yeni rəqəm göstərir --}}
-                            <div class="na-dice">
-                                <span class="na-die"></span><span class="na-die"></span><span class="na-double" hidden>×4</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="game-body">
-                        <h4>Uzun nərd</h4>
-                        <p>Dostunuzu dəvət edib oynayın — hər gün ən çox xal toplayanlar endirim qazanır. Kompüterlə də məşq edə bilərsiniz.</p>
-                        <span class="game-go">Oyna <i class="fa fa-arrow-right ms-1"></i></span>
-                    </div>
-                </a>
-            </div>
-            <div class="col-md-6 col-lg-4">
-                <a href="{{ route('games.wheel') }}" class="game-card">
-                    <div class="game-art wheel-art">
-                        {{-- oyundakı çarxın kiçik surəti: sektorlar config('games.wheel.segments')-dən gəlir --}}
-                        @php
-                            $segs = config('games.wheel.segments');
-                            $n = count($segs);
-                            $R = 90; $C = 100;
-                            $pt = fn ($deg, $r) => [round($C + $r * cos(deg2rad($deg)), 2), round($C + $r * sin(deg2rad($deg)), 2)];
-                        @endphp
-                        <svg class="wheel-art-svg" viewBox="0 0 200 200" aria-hidden="true">
-                            <circle cx="100" cy="100" r="97" fill="#E9A23B"/>
-                            <g class="wa-spin">
-                                @foreach ($segs as $i => $s)
-                                    @php
-                                        $mid = -90 + $i * 360 / $n;
-                                        [$x0, $y0] = $pt($mid - 180 / $n, $R);
-                                        [$x1, $y1] = $pt($mid + 180 / $n, $R);
-                                        [$tx, $ty] = $pt($mid, $R * 0.6);
-                                        $words = explode(' ', $s['label']);
-                                        $lines = mb_strlen($s['label']) > 12 && count($words) > 1
-                                            ? [implode(' ', array_slice($words, 0, (int) ceil(count($words) / 2))), implode(' ', array_slice($words, (int) ceil(count($words) / 2)))]
-                                            : [$s['label']];
-                                    @endphp
-                                    <path d="M100 100 L{{ $x0 }} {{ $y0 }} A{{ $R }} {{ $R }} 0 0 1 {{ $x1 }} {{ $y1 }} Z" fill="{{ $s['color'] }}" stroke="#fff" stroke-width="1.2"/>
-                                    <text transform="translate({{ $tx }} {{ $ty }}) rotate({{ $mid + 180 }})" text-anchor="middle" font-size="9" font-weight="800" fill="#fff">
-                                        @foreach ($lines as $l => $line)
-                                            <tspan x="0" dy="{{ $l === 0 ? (count($lines) > 1 ? -2.5 : 3) : 10 }}">{{ $line }}</tspan>
-                                        @endforeach
-                                    </text>
-                                @endforeach
-                                @for ($i = 0; $i < $n * 2; $i++)
-                                    @php [$dx, $dy] = $pt(-90 + $i * 180 / $n, 93.5); @endphp
-                                    <circle cx="{{ $dx }}" cy="{{ $dy }}" r="2.2" fill="#fff"/>
-                                @endfor
-                            </g>
-                            <circle cx="100" cy="100" r="24" fill="#E9A23B" stroke="#fff" stroke-width="3"/>
-                            <text x="100" y="103.5" text-anchor="middle" font-size="9.5" font-weight="900" fill="#fff">FIRLAT</text>
-                            <path d="M91 -2 H109 L100 14 Z" fill="#1e0b0b"/>
-                        </svg>
-                    </div>
-                    <div class="game-body">
-                        <h4>Bəxt çarxı</h4>
-                        <p>Çarxı fırladın: endirimlər və hədiyyə qəlyan qazanın.</p>
-                        <span class="game-go">Fırlat <i class="fa fa-arrow-right ms-1"></i></span>
-                    </div>
-                </a>
-            </div>
-            <div class="col-md-6 col-lg-4">
                 <a href="{{ route('games.stack') }}" class="game-card">
                     <div class="game-art stack-art">
                         {{-- oyundakı kimi: rəsm fonunda xalça süfrəli masa, üstündə qüllə və yellənən stəkan --}}
@@ -174,6 +79,113 @@
                 </a>
             </div>
             <div class="col-md-6 col-lg-4">
+                <a href="{{ route('games.wheel') }}" class="game-card">
+                    <div class="game-art wheel-art">
+                        {{-- oyundakı çarxın kiçik surəti: sektorlar config('games.wheel.segments')-dən gəlir --}}
+                        @php
+                            $segs = array_values(config('games.wheel.segments'));
+                            $n = count($segs);
+                            $sizeSum = array_sum(array_map(fn ($s) => (float) ($s['size'] ?? 1), $segs)) ?: 1;
+                            $R = 90; $C = 100;
+                            $edge = -90 - (float) ($segs[0]['size'] ?? 1) * 180 / $sizeSum; // 0-cı sektorun ortası yuxarıda
+                            $edges = [];
+                            $pt = fn ($deg, $r) => [round($C + $r * cos(deg2rad($deg)), 2), round($C + $r * sin(deg2rad($deg)), 2)];
+                        @endphp
+                        <svg class="wheel-art-svg" viewBox="0 0 200 200" aria-hidden="true">
+                            <circle cx="100" cy="100" r="97" fill="#E9A23B"/>
+                            <g class="wa-spin">
+                                @foreach ($segs as $i => $s)
+                                    @php
+                                        // sektorun eni çarxdakı kimi (config: size) — böyük hədiyyələr dar
+                                        $deg = (float) ($s['size'] ?? 1) * 360 / $sizeSum;
+                                        $edges[] = $edge;
+                                        $mid = $edge + $deg / 2;
+                                        [$x0, $y0] = $pt($edge, $R);
+                                        [$x1, $y1] = $pt($edge + $deg, $R);
+                                        $edge += $deg;
+                                        [$tx, $ty] = $pt($mid, $R * 0.6);
+                                        $arc = $R * 0.6 * deg2rad($deg);
+                                        $text = $arc < 20 ? ($s['short'] ?? $s['label']) : $s['label'];
+                                        $words = explode(' ', $text);
+                                        $lines = mb_strlen($text) > 12 && count($words) > 1
+                                            ? [implode(' ', array_slice($words, 0, (int) ceil(count($words) / 2))), implode(' ', array_slice($words, (int) ceil(count($words) / 2)))]
+                                            : [$text];
+                                        $fs = round(min(9, $arc * 0.75), 2);
+                                    @endphp
+                                    <path d="M100 100 L{{ $x0 }} {{ $y0 }} A{{ $R }} {{ $R }} 0 {{ $deg > 180 ? 1 : 0 }} 1 {{ $x1 }} {{ $y1 }} Z" fill="{{ $s['color'] }}" stroke="#fff" stroke-width="1.2"/>
+                                    <text transform="translate({{ $tx }} {{ $ty }}) rotate({{ $mid + 180 }})" text-anchor="middle" font-size="{{ $fs }}" font-weight="800" fill="#fff">
+                                        @foreach ($lines as $l => $line)
+                                            <tspan x="0" dy="{{ $l === 0 ? (count($lines) > 1 ? -2.5 : 3) : 10 }}">{{ $line }}</tspan>
+                                        @endforeach
+                                    </text>
+                                @endforeach
+                                @foreach ($edges as $e)
+                                    @php [$dx, $dy] = $pt($e, 93.5); @endphp
+                                    <circle cx="{{ $dx }}" cy="{{ $dy }}" r="2.2" fill="#fff"/>
+                                @endforeach
+                            </g>
+                            <circle cx="100" cy="100" r="24" fill="#E9A23B" stroke="#fff" stroke-width="3"/>
+                            <text x="100" y="103.5" text-anchor="middle" font-size="9.5" font-weight="900" fill="#fff">FIRLAT</text>
+                            <path d="M91 -2 H109 L100 14 Z" fill="#1e0b0b"/>
+                        </svg>
+                    </div>
+                    <div class="game-body">
+                        <h4>Çarx oyunu</h4>
+                        <p>Çarxı düz vaxtında dayandırın: hədiyyə böyüdükcə sektor daralır.</p>
+                        <span class="game-go">Oyna <i class="fa fa-arrow-right ms-1"></i></span>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <a href="{{ route('games.nard') }}" class="game-card">
+                    <div class="game-art nard-art">
+                        {{-- oyundakı lövhənin kiçik surəti: başlanğıc düzülüşü və fırlanan zərlər --}}
+                        <div class="na-board">
+                            <svg viewBox="0 0 300 200" aria-hidden="true">
+                                <defs>
+                                    <linearGradient id="naWood" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0" stop-color="#8a5228"/><stop offset="1" stop-color="#6b3b1c"/>
+                                    </linearGradient>
+                                    <radialGradient id="naW" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#fffdf7"/><stop offset="1" stop-color="#e9dcc3"/></radialGradient>
+                                    <radialGradient id="naB" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#a83232"/><stop offset="1" stop-color="#4a0e0e"/></radialGradient>
+                                </defs>
+                                <rect width="300" height="200" rx="10" fill="#4a250f"/>
+                                <rect x="6" y="6" width="288" height="188" rx="6" fill="url(#naWood)"/>
+                                @for ($i = 0; $i < 12; $i++)
+                                    @php
+                                        $x = $i < 6 ? 10 + $i * 22.5 : 156 + ($i - 6) * 22.5;
+                                        $dark = $i % 2 === 0;
+                                    @endphp
+                                    {{-- yuxarı və aşağı sıranın üçbucaqları (rənglər növbələşir) --}}
+                                    <path d="M{{ $x + 1 }} 10 H{{ $x + 21.5 }} L{{ $x + 11.25 }} 88 Z" fill="{{ $dark ? '#3a0d0d' : '#e8c99b' }}" opacity=".9"/>
+                                    <path d="M{{ $x + 1 }} 190 H{{ $x + 21.5 }} L{{ $x + 11.25 }} 112 Z" fill="{{ $dark ? '#e8c99b' : '#3a0d0d' }}" opacity=".9"/>
+                                @endfor
+                                <rect x="147" y="10" width="6" height="80" rx="3" fill="#4a250f"/>
+                                <rect x="147" y="110" width="6" height="80" rx="3" fill="#4a250f"/>
+                                {{-- başlar: ağ daşlar sağ yuxarıda, qırmızılar sol aşağıda, hərəsi 15 --}}
+                                @for ($k = 0; $k < 5; $k++)
+                                    <circle cx="279.25" cy="{{ 20 + $k * 18 }}" r="10" fill="url(#naW)" stroke="#b79a6a" stroke-width="1.2"/>
+                                    <circle cx="21.25" cy="{{ 180 - $k * 18 }}" r="10" fill="url(#naB)" stroke="#2a0606" stroke-width="1.2"/>
+                                @endfor
+                                <text x="279.25" y="95" text-anchor="middle" font-size="8" font-weight="900" fill="#1E0B0B">15</text>
+                                <text x="21.25" y="111" text-anchor="middle" font-size="8" font-weight="900" fill="#fff">15</text>
+                            </svg>
+                            {{-- zərlər: bir neçə saniyədən bir fırlanıb yeni rəqəm göstərir --}}
+                            <div class="na-dice">
+                                <span class="na-die"></span><span class="na-die"></span><span class="na-double" hidden>×4</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="game-body">
+                        <h4>Uzun nərd</h4>
+                        <p>Dostunuzu dəvət edib oynayın — hər gün ən çox xal toplayanlar endirim qazanır. Kompüterlə də məşq edə bilərsiniz.</p>
+                        <span class="game-go">Oyna <i class="fa fa-arrow-right ms-1"></i></span>
+                    </div>
+                </a>
+            </div>
+            {{-- Hədiyyə Kranı müvəqqəti bağlıdır — geri açmaq üçün .env: CLAW_ENABLED=true --}}
+            @if (config('games.claw.enabled'))
+            <div class="col-md-6 col-lg-4">
                 <a href="{{ route('games.claw') }}" class="game-card">
                     <div class="game-art claw-art">
                         {{-- kiçik kran maşını: zolaqlı tente, şüşədə şirniyyatlar, sağa-sola gedən çəngəl --}}
@@ -213,6 +225,7 @@
                     </div>
                 </a>
             </div>
+            @endif
             <div class="col-md-6 col-lg-4">
                 <a href="{{ route('games.crossword') }}" class="game-card">
                     <div class="game-art cw-art">
@@ -247,6 +260,34 @@
                         <h4>Krossvord</h4>
                         <p>Azərbaycan sözləri ilə hər gün yeni krossvord: mətbəx, Novruz, musiqi və şəhərlər.</p>
                         <span class="game-go">Həll et <i class="fa fa-arrow-right ms-1"></i></span>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-6 col-lg-4">
+                <a href="{{ route('market') }}" class="game-card">
+                    <div class="game-art market-art">
+                        {{-- hədiyyə qutusu: qapağı yellənir, ətrafında xal ulduzları --}}
+                        <svg class="market-art-svg" viewBox="0 0 180 160" aria-hidden="true">
+                            <g class="ma-stars" fill="#E9A23B">
+                                <path d="M30 40 l3 7 7 1 -5 5 1 7 -6 -4 -6 4 1 -7 -5 -5 7 -1z"/>
+                                <path d="M148 30 l2.4 5.6 5.6 .8 -4 4 .8 5.6 -4.8 -3.2 -4.8 3.2 .8 -5.6 -4 -4 5.6 -.8z"/>
+                                <path d="M152 100 l2 4.6 4.6 .7 -3.3 3.3 .7 4.6 -4 -2.6 -4 2.6 .7 -4.6 -3.3 -3.3 4.6 -.7z"/>
+                                <path d="M22 108 l2 4.6 4.6 .7 -3.3 3.3 .7 4.6 -4 -2.6 -4 2.6 .7 -4.6 -3.3 -3.3 4.6 -.7z"/>
+                            </g>
+                            <rect x="50" y="78" width="80" height="66" rx="6" fill="#7E1A1A"/>
+                            <rect x="84" y="78" width="12" height="66" fill="#E9A23B"/>
+                            <g class="ma-lid">
+                                <rect x="44" y="62" width="92" height="20" rx="5" fill="#B3261E"/>
+                                <rect x="84" y="62" width="12" height="20" fill="#E9A23B"/>
+                                <path d="M90 62 C78 40 58 46 70 58 C76 63 86 62 90 62 Z" fill="#E9A23B"/>
+                                <path d="M90 62 C102 40 122 46 110 58 C104 63 94 62 90 62 Z" fill="#E9A23B"/>
+                            </g>
+                        </svg>
+                    </div>
+                    <div class="game-body">
+                        <h4>Hədiyyə marketi</h4>
+                        <p>Topladığınız xalları hədiyyəyə çevirin: çay, mürəbbə, qəlyan və endirim kuponları.</p>
+                        <span class="game-go">Hədiyyə seç <i class="fa fa-arrow-right ms-1"></i></span>
                     </div>
                 </a>
             </div>

@@ -6,7 +6,7 @@ use App\Models\WheelSpin;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Bəxt çarxı və Hədiyyə Kranı: gündə yalnız BİR oyunda hədiyyə götürmək olar.
+ * Çarx oyunu və Hədiyyə Kranı: gündə yalnız BİR oyunda hədiyyə götürmək olar.
  * Birində hədiyyə götürən həmin gün o birində hədiyyə ala bilməz (Bakı vaxtı ilə gün).
  *
  * Kupon istifadə olunub və ya vaxtı keçib bazadan silinə bilər — ona görə oyunun günlük
@@ -16,7 +16,7 @@ class DailyPrize
 {
     /** oyun açarı => "...da" forması (mesaj üçün) */
     private const GAMES = [
-        'wheel' => 'Bəxt çarxında',
+        'wheel' => 'Çarx oyununda',
         'claw' => 'Hədiyyə Kranında',
     ];
 

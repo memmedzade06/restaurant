@@ -4,8 +4,10 @@
 |--------------------------------------------------------------------------
 | Oyunların ayarları
 |--------------------------------------------------------------------------
-| Bəxt çarxının sektorları buradan dəyişdirilir. "weight" — düşmə ehtimalı
-| (böyük ədəd = tez-tez düşür). "prize" => false olan sektor hədiyyə vermir.
+| Çarx oyununun sektorları buradan dəyişdirilir. Çarx məharət oyunudur: dayanmadan fırlanır,
+| oyunçu "Dayan" basır, göstəricinin altındakı sektor düşür. "size" — sektorun eni (dərəcə;
+| cəmi 360 olmalıdır, olmasa mütənasib bölünür): dar sektora düşmək çətindir.
+| "prize" => false olan sektor hədiyyə vermir. "short" — dar sektorda görünən qısa yazı.
 | Sektorların sırası çarxdakı sıradır (saat əqrəbi istiqamətində).
 */
 
@@ -20,25 +22,54 @@ return [
         // ya "Hədiyyəni götür" basır (kod yaranır, raund bitir), ya da yenidən fırladır.
         'attempts_per_day' => (int) env('WHEEL_ATTEMPTS_PER_DAY', 3),
         'segments' => [
-            // Böyük endirimlər daha nadir düşür; "Şansını bir daha sına" hədiyyə vermir
-            // Sıra elə seçilib ki, eyni nəticələr nə yan-yana, nə də üzbəüz olmasın
-            // Çəkilər tam ədəd olmalıdır; cəmi 812 — sektorun şansı = weight / 812
-            ['key' => 'discount_10',   'label' => '10% endirim', 'color' => '#7E1A1A', 'weight' => 140, 'prize' => true], // ~17%
-            ['key' => 'discount_15',   'label' => '15% endirim', 'color' => '#C9831F', 'weight' => 80,  'prize' => true], // ~10%
-            ['key' => 'discount_10_b', 'label' => '10% endirim', 'color' => '#7E1A1A', 'weight' => 140, 'prize' => true], // ~17%
-            ['key' => 'free_tea',      'label' => 'Çaynik çay Hədiyyə', 'color' => '#C9831F', 'weight' => 80, 'prize' => true], // ~10%
-            ['key' => 'discount_20',   'label' => '20% endirim', 'color' => '#3A0D0D', 'weight' => 40,  'prize' => true], // ~5%
-            ['key' => 'try_again',     'label' => 'Şansını bir daha sına', 'color' => '#5B6B73', 'weight' => 300, 'prize' => false], // ~37%
-            ['key' => 'discount_50',   'label' => '50% endirim', 'color' => '#B3261E', 'weight' => 2,   'prize' => true], // ~0.25% — ən nadir (təxminən 400 fırlatmada bir)
-            ['key' => 'discount_25',   'label' => '25% endirim', 'color' => '#3A0D0D', 'weight' => 20,  'prize' => true], // ~2.5%
-            ['key' => 'free_hookah',   'label' => 'Qəlyan Hədiyyə', 'color' => '#E9A23B', 'weight' => 10,  'prize' => true], // ~1.2%
+            // Böyük hədiyyə — dar sektor. İki "Çaynik çay" sektoru düz üzbəüzdür (mərkəzləri 42.5° və 222.5°):
+            // ölçüləri dəyişəndə iki çaynik arasındakı sektorların cəmi hər tərəfdə 145° qalmalıdır.
+            // Üç "Şansını bir daha sına" çarxa yayılıb (mərkəzləri 85°, 180°, 310°). 50% və qəlyan boz sektorun
+            // yanındadır — azca səhv edən boşa düşür. Cəmi 360°. Hər hədiyyənin öz rəngi var (eyni rəng — eyni nəticə; boz — boş).
+            ['key' => 'discount_10',   'label' => '10% endirim', 'color' => '#7E1A1A', 'size' => 50, 'prize' => true],     // şərab
+            ['key' => 'free_tea',      'label' => 'Çaynik çay Hədiyyə', 'color' => '#2E6B4F', 'size' => 35, 'prize' => true], // çay yaşılı
+            ['key' => 'try_again',     'label' => 'Şansını bir daha sına', 'short' => 'Yenə sına', 'color' => '#5B6B73', 'size' => 50, 'prize' => false],
+            ['key' => 'free_nuts',     'label' => 'Çərəz Hədiyyə', 'color' => '#8A5A2B', 'size' => 25, 'prize' => true],   // qoz qəhvəyisi
+            ['key' => 'discount_25',   'label' => '25% endirim', 'short' => '25%', 'color' => '#3A0D0D', 'size' => 13, 'prize' => true], // tünd qəhvəyi
+            ['key' => 'free_hookah',   'label' => 'Qəlyan Hədiyyə', 'short' => 'Qəlyan', 'color' => '#5E2750', 'size' => 7, 'prize' => true], // gavalı; dar — nadir düşür
+            ['key' => 'try_again_b',   'label' => 'Şansını bir daha sına', 'short' => 'Yenə sına', 'color' => '#5B6B73', 'size' => 50, 'prize' => false],
+            ['key' => 'free_tea_b',    'label' => 'Çaynik çay Hədiyyə', 'color' => '#2E6B4F', 'size' => 35, 'prize' => true], // birinci çaynikin üzbəüzü
+            ['key' => 'free_jam',      'label' => 'Mürəbbə Hədiyyə', 'color' => '#A8325E', 'size' => 42, 'prize' => true], // moruq
+            ['key' => 'discount_50',   'label' => '50% endirim', 'short' => '50%', 'color' => '#D93A2B', 'size' => 3, 'prize' => true], // parlaq qırmızı; ən dar — ən çətin
+            ['key' => 'try_again_c',   'label' => 'Şansını bir daha sına', 'short' => 'Yenə sına', 'color' => '#5B6B73', 'size' => 50, 'prize' => false],
         ],
+
+        // Bütün oyunçular üçün gündəlik limit: bu qədər götürüləndən sonra sektor gün sonunadək "bağlı" olur
+        // (ora düşən hədiyyə almır). Yaxşı oyunçular çox olsa da, böyük hədiyyələrin sayı nəzarətdə qalır.
+        'daily_caps' => [
+            'discount_50' => (int) env('WHEEL_CAP_50', 1),
+            'discount_25' => (int) env('WHEEL_CAP_25', 3),
+            'free_hookah' => (int) env('WHEEL_CAP_HOOKAH', 3),
+        ],
+
+        // Fırlanma: sürət (dərəcə/saniyə) hər növbəti cəhddə artır; üstəlik sürət "nəfəs alır"
+        // (±wobble), ona görə sabit ritmlə basmaq olmur. Hər fırlatmanın başlanğıc bucağını,
+        // istiqamətini və ritmini server təsadüfi seçir.
+        'speeds' => [480, 600, 720],
+        'speed_jitter' => 0.12,        // sürət ±12% təsadüfi dəyişir
+        'wobble' => 0.35,              // sürət ±35% artıb-azalır
+        'wobble_period' => [1.4, 2.6], // bir "nəfəs" neçə saniyə çəkir
+        'max_seconds' => 5,            // bu müddətdə "Dayan" basılmasa çarx özü dayanır — hədiyyə yoxdur, cəhd uğursuzdur
+        // İstiqamət dəyişməsi: çarx vaxtaşırı yavaşlayıb bir anlıq dayanır və əks tərəfə fırlanır.
+        // Yavaşlama gözlə görünür — diqqətli oyunçu dönüşü qabaqcadan görür (məharət), ritmi əzbərləmək isə olmur.
+        // Dönüş anlarını hər fırlatmada server təsadüfi seçir. 'reversal_gap' => [0, 0] — dönüşsüz.
+        'reversal_first' => [1.0, 3.0], // ilk dönüş fırlatmadan neçə saniyə sonra
+        'reversal_gap' => [1.5, 4.0],   // dönüşlər arası neçə saniyə
+        'reversal_ms' => 500,           // dönüş (yavaşlama + əks tərəfə sürətlənmə) nə qədər çəkir
     ],
 
     // Hədiyyə Kranı: tutulan şarın içindən hədiyyə çıxır. Gündə bu qədər cəhd; hər şar açılandan sonra
     // oyunçu ya "Hədiyyəni götür" basır (kod yaranır, gün bağlanır), ya da yenidən oynayır (əvvəlki hədiyyə itir).
     // Şarın içindəkini server seçir — "weight" düşmə ehtimalıdır (cəmi 812; şans = weight / 812). Boş şar da ola bilər.
     'claw' => [
+        // Müvəqqəti bağlıdır: oyunlar səhifəsində kartı görünmür, ünvanları 404 qaytarır.
+        // Geri açmaq üçün .env-də CLAW_ENABLED=true
+        'enabled' => (bool) env('CLAW_ENABLED', false),
         'attempts_per_day' => (int) env('CLAW_ATTEMPTS_PER_DAY', 3),
         'code_valid_minutes' => 10,
         'min_seconds_per_attempt' => 1.5,   // çəngəl enib-qalxıb çıxışa çatana qədər ən az bu qədər vaxt keçir
