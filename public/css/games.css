@@ -379,7 +379,9 @@ body.st-no-scroll { overflow: hidden; }
 .admin-tabs a.active span { color: rgba(255, 255, 255, .7); }
 .admin-table th { font-size: 13px; color: var(--muted); font-weight: 800; white-space: nowrap; }
 .admin-table code { font-weight: 900; color: var(--wine); }
-.btn-user-delete { width: 36px; height: 36px; border-radius: 10px; border: 1px solid #f1d0cc; background: #fff5f4; color: #b3261e; display: inline-flex; align-items: center; justify-content: center; transition: background .15s, color .15s; }
+.user-points { display: inline-flex; align-items: center; gap: 6px; font-weight: 900; color: var(--wine); background: #fff4e0; border-radius: 20px; padding: 3px 10px; white-space: nowrap; }
+.user-points i { color: var(--primary); font-size: 12px; }
+.btn-user-delete {width: 36px; height: 36px; border-radius: 10px; border: 1px solid #f1d0cc; background: #fff5f4; color: #b3261e; display: inline-flex; align-items: center; justify-content: center; transition: background .15s, color .15s; }
 .btn-user-delete:hover, .btn-user-delete:focus-visible { background: #b3261e; color: #fff; border-color: #b3261e; }
 .admin-table .row-used td, .admin-table .row-expired td { color: #9a948d; }
 .admin-table .row-used code, .admin-table .row-expired code { color: #9a948d; text-decoration: line-through; }

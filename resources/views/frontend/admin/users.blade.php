@@ -48,7 +48,7 @@
                 <div class="table-responsive">
                     <table class="table admin-table align-middle mb-0">
                         <thead>
-                            <tr><th>Ad</th><th>Telefon</th><th>E-poçt</th><th>Qeydiyyat</th><th>Son aktivlik</th><th>Hədiyyələr</th><th>Oyunlar</th><th><span class="visually-hidden">Əməliyyat</span></th></tr>
+                            <tr><th>Ad</th><th>Telefon</th><th>Xallar</th><th>Qeydiyyat</th><th>Son aktivlik</th><th>Hədiyyələr</th><th>Oyunlar</th><th><span class="visually-hidden">Əməliyyat</span></th></tr>
                         </thead>
                         <tbody>
                             @foreach ($users as $u)
@@ -64,7 +64,14 @@
                                             {{ $u->phone_verified_at ? '✔ Telegram ilə təsdiqlənib' : 'təsdiqlənməyib' }}
                                         </small>
                                     </td>
-                                    <td>{{ $u->email ?: '—' }}</td>
+                                    <td>
+                                        {{-- dəvət xalları (balans) — Hədiyyə marketində hədiyyəyə çevrilir --}}
+                                        @if ($u->points > 0)
+                                            <span class="user-points"><i class="fa fa-star"></i>{{ \App\Services\Referrals::format((float) $u->points) }}</span>
+                                        @else
+                                            <span class="text-muted">0</span>
+                                        @endif
+                                    </td>
                                     <td>{{ $u->created_at->timezone('Asia/Baku')->format('d.m.Y H:i') }}</td>
                                     <td>
                                         @if ($online)

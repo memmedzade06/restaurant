@@ -129,6 +129,7 @@ class TelegramRegistrationTest extends TestCase
     {
         // canlı saytda (https) — mesajın altında "Sayta daxil ol" düyməsi
         \Illuminate\Support\Facades\URL::forceRootUrl('https://50qepik.test');
+        \Illuminate\Support\Facades\URL::forceScheme('https');
         $user = $this->register('050 222 11 00');
         $this->get('/tesdiq');
         $this->webhook($this->msg(['text' => '/start ' . $user->fresh()->telegram_token], 501));
@@ -189,6 +190,10 @@ class TelegramRegistrationTest extends TestCase
             'name' => 'Başqası', 'phone' => '+994512223344', 'email' => 'other' . uniqid() . '@example.com',
             'password' => 'secret123', 'password_confirmation' => 'secret123',
         ])->assertSessionHasErrors('phone');
+
+        // giriş formasında yalnız mobil nömrə soruşulur
+        $this->get('/giris')->assertOk()->assertSee('Mobil nömrə')->assertDontSee('e-poçt');
+        $this->post('/giris', ['login' => '0512223344', 'password' => 'wrongpass'])->assertSessionHasErrors(['login' => 'Nömrə və ya şifrə yanlışdır.']);
 
         $this->post('/giris', ['login' => '0512223344', 'password' => 'secret123'])->assertRedirect();
         $this->assertAuthenticatedAs($user);

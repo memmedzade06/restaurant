@@ -40,7 +40,7 @@ class PrizeAdminTest extends TestCase
     {
         $admin = $this->user(true);
         $player = $this->user();
-        $player->forceFill(['name' => 'Siyahıdakı Oyunçu', 'last_seen_at' => now()])->save();
+        $player->forceFill(['name' => 'Siyahıdakı Oyunçu', 'last_seen_at' => now(), 'points' => 2.375])->save();
         $new = User::create(['name' => 'Təsdiqsiz Yeni', 'email' => 'n' . uniqid() . '@example.com', 'phone' => '+994517778899', 'password' => 'secret123']);
         $this->prize($player);
 
@@ -50,7 +50,9 @@ class PrizeAdminTest extends TestCase
         $this->actingAs($player)->get('/hesabim')->assertOk()->assertDontSee('İdarəetmə')->assertDontSee(route('admin.users'));
 
         $this->actingAs($admin)->get('/admin/istifadeciler')->assertOk()
-            ->assertSee('Siyahıdakı Oyunçu')->assertSee('Təsdiqsiz Yeni')->assertSee('1 kod')->assertSee('indi saytda');
+            ->assertSee('Siyahıdakı Oyunçu')->assertSee('Təsdiqsiz Yeni')->assertSee('1 kod')->assertSee('indi saytda')
+            // e-poçt sütunu yoxdur, yerində xal balansı var
+            ->assertSee('<th>Xallar</th>', false)->assertDontSee('<th>E-poçt</th>', false)->assertSee('2,375');
         $this->actingAs($admin)->get('/admin/istifadeciler?filter=unverified')->assertOk()
             ->assertSee('Təsdiqsiz Yeni')->assertDontSee('Siyahıdakı Oyunçu');
         $this->actingAs($admin)->get('/admin/istifadeciler?q=7778899')->assertOk()

@@ -17,7 +17,10 @@ class LoginController extends Controller
         return view('frontend.auth.login');
     }
 
-    /** Telefon, e-poçt və ya istifadəçi adı (admin) + şifrə ilə giriş */
+    /**
+     * Formada yalnız mobil nömrə soruşulur (qeydiyyat nömrə ilədir). Arxada köhnə hesablar üçün
+     * e-poçt və admin üçün istifadəçi adı ilə giriş də işləyir.
+     */
     public function store(Request $request): RedirectResponse
     {
         $request->validate([
@@ -34,7 +37,7 @@ class LoginController extends Controller
         };
 
         if (! Auth::attempt($credentials + ['password' => $request->input('password')], $request->boolean('remember'))) {
-            throw ValidationException::withMessages(['login' => 'Telefon/e-poçt və ya şifrə yanlışdır.']);
+            throw ValidationException::withMessages(['login' => 'Nömrə və ya şifrə yanlışdır.']);
         }
 
         $request->session()->regenerate();
