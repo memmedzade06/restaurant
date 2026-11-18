@@ -31,6 +31,7 @@
                      data-weather='@json($weather)'
                      data-weather-url="{{ route('games.stack.weather') }}"
                      data-logo="{{ asset('img/games/stack-logo.png') }}"
+                     data-music="{{ asset('audio/stack-music.mp3') }}?v=2"
                      data-cloth="{{ asset('img/games/stack-cloth.webp') }}?v=1"
                      data-bg-photo="{{ asset('img/games/stack-bg.jpg') }}?v=6"
                      data-register-url="{{ auth()->check() ? route('verify.telegram') : route('register') }}"
@@ -124,5 +125,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/stack.js') }}?v=95"></script>
+<script src="{{ asset('js/games/stack.js') }}?v=99"></script>
 @endsection

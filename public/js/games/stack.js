@@ -257,10 +257,70 @@
         };
     })();
 
+    /* ---------- Fon musiqisi ---------- */
+    // data-music faylı (mp3) dövrə vuraraq sakit çalınır. Brauzer səsi yalnız toxunuşdan sonra icazə verir —
+    // ona görə fayl oyunçu oyuna başlayanda yüklənir və başlayır (səhifə açılanda yüklənmir).
+    // Səs düyməsi (🔊) musiqini də söndürür; vərəqə gizlənəndə (başqa tab, telefon kilidi) dayanır.
+    const MUSIC_VOLUME = 0.35;
+    const music = (() => {
+        const src = root.dataset.music;
+        let el = null, wanted = false;
+        function sync() {
+            if (!src || !wanted) return;
+            if (sound.muted || document.hidden) { if (el) el.pause(); return; }
+            if (!el) {
+                el = new Audio(src);
+                el.loop = true;
+                el.volume = MUSIC_VOLUME;
+            }
+            if (el.paused) el.play().catch(() => {}); // brauzer icazə verməsə — səssiz davam
+        }
+        document.addEventListener('visibilitychange', sync);
+
+        // Oyun bir neçə vərəqədə açıqdırsa, musiqi yalnız birində çalsın: başlayan vərəqə digərlərinə
+        // xəbər verir, onlar susur (eyni mahnı iki yerdən qarışıq səslənməsin)
+        const channel = 'BroadcastChannel' in window ? new BroadcastChannel('stack-music') : null;
+        if (channel) {
+            channel.onmessage = e => {
+                if (e.data === 'playing' && el && !el.paused) { el.pause(); wanted = false; }
+            };
+        }
+        const announce = () => channel && channel.postMessage('playing');
+
+        let fade = null;
+        return {
+            start() {
+                wanted = true;
+                if (fade) { clearInterval(fade); fade = null; }
+                if (el) el.volume = MUSIC_VOLUME;
+                sync();
+                if (el && !sound.muted && !document.hidden) announce();
+            },
+            // qüllə dağılanda: musiqi yarım saniyəyə yavaşca susur; yeni oyunda əvvəldən başlayır
+            halt() {
+                wanted = false;
+                if (!el || el.paused) return;
+                if (fade) clearInterval(fade);
+                fade = setInterval(() => {
+                    el.volume = Math.max(0, el.volume - MUSIC_VOLUME / 8);
+                    if (el.volume <= 0.001) {
+                        clearInterval(fade); fade = null;
+                        el.pause();
+                        el.currentTime = 0;
+                        el.volume = MUSIC_VOLUME;
+                    }
+                }, 60);
+            },
+            sync,
+            get playing() { return !!el && !el.paused && !fade; },
+        };
+    })();
+
     /* ---------- Hərəkət ---------- */
 
     function tap() {
         if (g.state === 'ready') {
+            music.start(); // oyun başlayanda fon musiqisi başlayır (qüllə dağılandan sonra — əvvəldən)
             g.state = 'swing';
             g.t0 = performance.now();
             startHint.hidden = true;
@@ -315,6 +375,7 @@
         }).filter((f, i) => !(keepBase && i === 0));
         g.tower = [];
         g.state = 'fall';
+        music.halt(); // stəkanlar dağılan kimi musiqi də susur
         g.fallTime = 0;
         g.drop = null;
         g.shake = 8;
@@ -491,7 +552,7 @@
         overlay.hidden = true;
         resumeBtn.hidden = true;
         overlay.querySelector('.st-prize').hidden = true;
-        if (g.state === 'over' && g.tower.length) g.state = 'swing';
+        if (g.state === 'over' && g.tower.length) { g.state = 'swing'; music.start(); }
     }
 
     /* ---------- Sınma: şüşə qırıqları, çay damcıları, masada çay ləkəsi ---------- */
@@ -2330,7 +2391,8 @@
     soundBtn.addEventListener('click', () => {
         sound.toggle();
         paintSound();
-        if (!sound.muted) sound.clink();
+        // musiqi də söndürülür/yandırılır (oyun gedirsə; qüllə dağılıbsa — növbəti oyunda başlayacaq)
+        if (!sound.muted) { sound.clink(); if (['swing', 'drop', 'offer'].includes(g.state)) music.start(); } else music.sync();
         soundBtn.blur();
     });
     paintSound();
@@ -2385,6 +2447,7 @@
     window.__stack = {
         state: () => g, tap, consts: {GW, PERFECT, SUPPORT, BOOST_FROM}, boost, newSwing, stability, checkPrize, continueGame,
         manual: on => { manual = on; },
+        audio: () => ({musicPlaying: music.playing, muted: sound.muted}),
         weather: () => ({W, windX, drops: fx.drops.length, flakes: fx.flakes.length, leaves: fx.leaves.length}),
         step: (dt = 1 / 60) => { if (g.state !== 'over' || g.falling) update(dt); },
         // animasiya dayananda (gizli tab) kadrı əl ilə çəkmək üçün
