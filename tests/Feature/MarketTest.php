@@ -20,7 +20,7 @@ class MarketTest extends TestCase
         config(['market.items' => [
             ['key' => 'market_tea', 'label' => 'Çaynik çay', 'cost' => 5, 'icon' => 'fa-mug-hot', 'desc' => 'Çay'],
             ['key' => 'market_hookah', 'label' => 'Qəlyan', 'cost' => 2.5, 'icon' => 'fa-smoking', 'desc' => 'Qəlyan'],
-        ], 'market.code_valid_days' => 30]);
+        ]]);
     }
 
     private function user(float $points, bool $verified = true): User
@@ -64,7 +64,7 @@ class MarketTest extends TestCase
         $this->assertSame('Çaynik çay', $coupon->prize_label);
         $this->assertMatchesRegularExpression('/^QP-[A-Z0-9]{6}$/', $coupon->code);
         $this->assertTrue($coupon->isActive());
-        $this->assertEqualsWithDelta(now()->addDays(30)->timestamp, $coupon->expires_at->timestamp, 60);
+        $this->assertEqualsWithDelta(now()->addDay()->timestamp, $coupon->expires_at->timestamp, 60);
 
         // alışdan sonra kupon kodu göstərilir, Hədiyyələrim-də də var
         $this->actingAs($u)->get('/hediyye-marketi')->assertSee($coupon->code)->assertSee('Təbriklər');
@@ -74,6 +74,11 @@ class MarketTest extends TestCase
         $this->actingAs($u)->post('/hediyye-marketi/market_hookah')->assertRedirect(route('market'));
         $this->assertEquals(0, $u->fresh()->points);
         $this->assertSame(2, WheelSpin::where('user_id', $u->id)->where('game', 'market')->count());
+
+        // kupon 1 gün (24 saat) etibarlıdır — qaydalarda da belə yazılıb
+        $this->actingAs($u)->get('/hediyye-marketi')->assertSee('1 gün (24 saat)');
+        $this->travel(25)->hours();
+        $this->assertFalse($coupon->fresh()->isActive());
     }
 
     public function test_only_two_gifts_per_day(): void

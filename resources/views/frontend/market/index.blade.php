@@ -30,7 +30,7 @@
                         <span class="eyebrow">Təbriklər 🎉</span>
                         <h3>{{ $bought->prize_label }}</h3>
                         <div class="prize-code">{{ $bought->code }}</div>
-                        <p class="small text-muted mb-0">Kodu restoranda ofisianta göstərin. {{ $bought->expires_at->timezone('Asia/Baku')->format('d.m.Y') }} tarixinədək etibarlıdır.
+                        <p class="small text-muted mb-0">Kodu restoranda ofisianta göstərin. {{ $bought->expires_at->timezone('Asia/Baku')->format('d.m.Y H:i') }} tarixinədək etibarlıdır.
                             Kod <a href="{{ route('prizes') }}">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>
                     </div>
                 @endif
@@ -105,7 +105,10 @@
                         <li>Gündə ən çox <b>{{ $perDay }} hədiyyə</b> almaq olar.</li>
                         <li>Hədiyyə seçəndə qiyməti <b>xal balansınızdan çıxılır</b> və sizə <b>kupon kodu</b> verilir.</li>
                         <li>Kodu restoranda <b>ofisianta göstərin</b>. Hər kod bir dəfə istifadə olunur.</li>
-                        <li>Kupon <b>{{ (int) config('market.code_valid_days', 30) }} gün</b> etibarlıdır. Bütün kodlarınız: <a href="{{ route('prizes') }}">Hədiyyələrim</a>.</li>
+                        @php
+                            $days = max(1, (int) config('market.code_valid_days', 1));
+                        @endphp
+                        <li>Kupon <b>{{ $days === 1 ? '1 gün (24 saat)' : $days . ' gün' }}</b> etibarlıdır — alındığı andan hesablanır, sonra qüvvədən düşür. Bütün kodlarınız: <a href="{{ route('prizes') }}">Hədiyyələrim</a>.</li>
                         <li>Xallar <b>geri qaytarılmır</b> və başqasına ötürülmür.</li>
                         @php
                             $earn = ['hər dost üçün', 'onun dəvət etdikləri üçün', 'onların dəvət etdikləri üçün'];
