@@ -317,7 +317,7 @@ class GamesTest extends TestCase
         $this->assertSame(0, WheelSpin::where('user_id', $u->id)->count()); // yeni kod yaranmayıb
     }
 
-    public function test_prune_deletes_all_expired_coupons(): void
+    public function test_prune_deletes_only_expired_unused_coupons(): void
     {
         $u = $this->user();
         $make = fn (string $key, $expires, $redeemed = null) => WheelSpin::create([
@@ -327,14 +327,14 @@ class GamesTest extends TestCase
         ]);
         $expired = $make('expired', now()->subMinute());
         $active = $make('active', now()->addMinutes(5));
-        $usedExpired = $make('used', now()->subDay(), now()->subDay()->addMinute());   // istifadə olunub, müddəti bitib — silinir
-        $usedActive = $make('used2', now()->addMinutes(5), now());                     // istifadə olunub — silinir
+        $usedExpired = $make('used', now()->subDay(), now()->subDay()->addMinute());   // istifadə olunub, müddəti bitib — QALIR
+        $usedActive = $make('used2', now()->addMinutes(5), now());                     // istifadə olunub — QALIR
 
-        // bazada yalnız aktiv kupon qalır
-        $this->assertSame(3, WheelSpin::pruneExpired());
+        // yalnız istifadə olunmamış, vaxtı keçmiş kupon silinir; istifadə olunmuşlar admin üçün saxlanılır
+        $this->assertSame(1, WheelSpin::pruneExpired());
         $this->assertNull($expired->fresh());
-        $this->assertNull($usedExpired->fresh());
-        $this->assertNull($usedActive->fresh());
+        $this->assertNotNull($usedExpired->fresh());
+        $this->assertNotNull($usedActive->fresh());
         $this->assertNotNull($active->fresh());
 
         // sayt açılanda da silinir (cron olmasa belə), dəqiqədə ən çox bir dəfə
@@ -575,7 +575,7 @@ class GamesTest extends TestCase
         $this->stackPost($u, 'hediyye', 49)->assertStatus(422);
 
         $r = $this->stackPost($u, 'hediyye', 50)->assertOk()
-            ->assertJsonPath('prize.label', 'Çay Hədiyyə');
+            ->assertJsonPath('prize.label', 'Çaynik Çay Hədiyyə');
         $spin = WheelSpin::where('user_id', $u->id)->first();
         $this->assertSame('stack', $spin->game);
         $this->assertSame($r->json('prize.code'), $spin->code);

@@ -37,16 +37,16 @@ class WheelSpin extends Model
     ];
 
     /**
-     * Bazada yalnız aktiv kuponlar qalsın: müddəti bitmiş və istifadə olunmuş kuponları silir.
-     * (İstifadə olunan kod admin paneldə dərhal silinir; bu, köhnə qeydlər üçün ehtiyatdır.)
+     * Müddəti bitmiş, İSTİFADƏ OLUNMAMIŞ kuponları silir. İstifadə olunmuş kuponlar saxlanılır —
+     * admin paneldə "İstifadə olunub" bölməsində görünür (kim, nə vaxt).
      * Nərd qaliblərinin kupona bağlantısı özü boşalır (nullOnDelete). Qaytarır: silinən kuponların sayı.
      */
     public static function pruneExpired(): int
     {
         return static::query()
             ->whereNotNull('code')
-            ->where(fn ($q) => $q->whereNotNull('redeemed_at')
-                ->orWhere(fn ($q) => $q->whereNotNull('expires_at')->where('expires_at', '<=', now())))
+            ->whereNull('redeemed_at')
+            ->whereNotNull('expires_at')->where('expires_at', '<=', now())
             ->delete();
     }
 

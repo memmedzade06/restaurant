@@ -129,18 +129,26 @@ class PrizeAdminTest extends TestCase
         $this->actingAs($admin)->get('/admin/hediyyeler?q=' . strtolower(substr($p->code, 3)))
             ->assertOk()->assertSee($p->code)->assertSee('İstifadə olundu');
 
-        // İstifadə olunan kod bazadan dərhal silinir — bazada yalnız aktiv kuponlar qalır
+        // İstifadə olunan kod silinmir — "istifadə olunub" kimi qeyd olunur (vaxt və admin)
         $this->actingAs($admin)->post("/admin/hediyyeler/{$p->id}/istifade")
-            ->assertSessionHas('success', fn ($m) => str_contains($m, $p->code) && str_contains($m, 'silindi'));
-        $this->assertNull($p->fresh());
+            ->assertSessionHas('success', fn ($m) => str_contains($m, $p->code) && str_contains($m, 'İstifadə olunub'));
+        $this->assertNotNull($p->fresh()->redeemed_at);
+        $this->assertSame($admin->id, $p->fresh()->redeemed_by);
+        // avtomatik təmizləmə də onu silmir
+        WheelSpin::pruneExpired();
+        $this->assertNotNull($p->fresh());
 
-        // İkinci dəfə istifadə etmək olmur — 404 yox, aydın mesaj
+        // İkinci dəfə istifadə etmək olmur — aydın mesaj
         $this->actingAs($admin)->post("/admin/hediyyeler/{$p->id}/istifade")
-            ->assertSessionHas('error', fn ($m) => str_contains($m, 'tapılmadı'));
+            ->assertSessionHas('error', fn ($m) => str_contains($m, 'artıq') && str_contains($m, 'istifadə olunub'));
 
-        // Admin paneldə boş "İstifadə olunub" / "Vaxtı keçib" sekmələri görünmür
+        // Bölmələr ayrıdır: susmaya görə "Aktiv" (kod orada yoxdur), "İstifadə olunub"-da var
         $this->actingAs($admin)->get('/admin/hediyyeler')->assertOk()
-            ->assertSee('Aktiv')->assertDontSee('status=used', false)->assertDontSee('status=expired', false);
+            ->assertSee('status=used', false)->assertDontSee('<td><code>' . $p->code . '</code></td>', false);
+        $this->actingAs($admin)->get('/admin/hediyyeler?status=used')->assertOk()
+            ->assertSee($p->code)->assertSee($admin->name)->assertDontSee('>İstifadə olundu</button>', false);
+        // axtarışda istifadə olunmuş kod da tapılır
+        $this->actingAs($admin)->get('/admin/hediyyeler?q=' . $p->code)->assertOk()->assertSee($p->code)->assertSee('İstifadə olunub');
     }
 
     public function test_expired_code_cannot_be_redeemed(): void
@@ -172,10 +180,11 @@ class PrizeAdminTest extends TestCase
             ->assertSee($active->code)
             ->assertDontSee($other->code);
 
-        // köhnə istifadə olunmuş qeyd də avtomatik təmizlənir, aktiv qalır
+        // istifadə olunmuş kod silinmir, oyunçu onu "Keçmiş hədiyyələr"də görür
         \App\Models\WheelSpin::pruneExpired();
-        $this->assertNull($used->fresh());
+        $this->assertNotNull($used->fresh());
         $this->assertNotNull($active->fresh());
+        $this->actingAs($u)->get('/hediyyelerim')->assertSee($used->code)->assertSee('Keçmiş hədiyyələr');
     }
 
     public function test_make_admin_command(): void

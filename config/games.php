@@ -94,7 +94,7 @@ return [
         'prizes' => (function () {
             $finish = max(1, (int) env('STACK_FINISH_SCORE', 100));
             $prizes = array_filter([
-                50 => ['key' => 'stack_tea', 'label' => 'Çay Hədiyyə'],
+                50 => ['key' => 'stack_tea', 'label' => 'Çaynik Çay Hədiyyə'],
                 60 => ['key' => 'stack_hookah', 'label' => 'Qəlyan Hədiyyə'],
                 70 => ['key' => 'stack_discount_30', 'label' => 'Hesaba 30% endirim'],
             ], fn ($min) => $min < $finish, ARRAY_FILTER_USE_KEY);

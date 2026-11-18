@@ -107,11 +107,13 @@
                             <li>Hər stəkan <b>1 xal</b> verir.</li>
                             @foreach ($prizes as $min => $p)
                                 @if ($loop->last)
-                                    <li><b>{{ $min }} xal — Finiş! 🏁</b> <b>{{ $p['label'] }}</b> qazanırsınız. Hədiyyəni götürdükdən sonra rekord üçün oynamağa davam edə bilərsiniz.</li>
+                                    <li><b>{{ $min }} xal — Finiş! 🏁</b> <b>{{ $p['label'] }}</b></li>
                                 @else
-                                    <li><b>{{ $min }} xal</b> — <b>{{ $p['label'] }}</b>! «Hədiyyəni götür» seçsəniz, kod verilir və yeni oyun başlayır. Davam etsəniz, xal toplamağa davam edirsiniz və növbəti hədiyyəyə şans qazanırsınız — amma qüllə aşsa, hədiyyə yanır.</li>
+                                    <li><b>{{ $min }} xal</b> — <b>{{ $p['label'] }}</b></li>
                                 @endif
                             @endforeach
+                            {{-- hədiyyə seçimi bir dəfə izah olunur (hər hədiyyədə təkrarlanmır) --}}
+                            <li>Hədiyyə xalına çatanda seçin: <b>«Hədiyyəni götür»</b> — kod verilir və yeni oyun başlayır; <b>davam etsəniz</b> — növbəti hədiyyəyə şans qazanırsınız, amma qüllə aşsa, hədiyyə yanır. Finişdə hədiyyəni götürdükdən sonra rekord üçün oynamağa davam edə bilərsiniz.</li>
                         </ul>
                     </div>
                 </div>

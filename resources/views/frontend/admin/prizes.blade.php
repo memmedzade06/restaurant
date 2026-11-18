@@ -29,7 +29,6 @@
                     <i class="fa fa-search"></i>
                     <input type="text" name="q" value="{{ $q }}" placeholder="Kod (QP-AB12CD) və ya telefon" autofocus autocomplete="off">
                 </div>
-                @if ($status)<input type="hidden" name="status" value="{{ $status }}">@endif
                 <button class="btn btn-primary px-4">Axtar</button>
             </form>
 
@@ -61,17 +60,18 @@
         </div>
 
         <div class="side-card">
+            {{-- Bölmələr: Aktiv (susmaya görə) və İstifadə olunub ayrıca; vaxtı keçmiş (istifadəsiz) kuponlar
+                 avtomatik silinir — o bölmə yalnız hələ silinməmiş kupon olanda görünür --}}
             <div class="admin-tabs">
-                <a href="{{ route('admin.prizes', array_filter(['q' => $q])) }}" class="{{ $status ? '' : 'active' }}">Hamısı</a>
                 @foreach (\App\Models\WheelSpin::STATUS_LABELS as $key => $label)
-                    {{-- istifadə olunmuş və vaxtı keçmiş kuponlar bazadan silinir — boş sekmələri göstərmirik --}}
-                    @continue($key !== \App\Models\WheelSpin::ACTIVE && ! $counts[$key] && $status !== $key)
+                    @continue($key === \App\Models\WheelSpin::EXPIRED && ! $counts[$key] && $status !== $key)
                     <a href="{{ route('admin.prizes', array_filter(['q' => $q, 'status' => $key])) }}" class="{{ $status === $key ? 'active' : '' }}">{{ $label }} <span>{{ $counts[$key] }}</span></a>
                 @endforeach
+                <a href="{{ route('admin.prizes', array_filter(['q' => $q, 'status' => 'all'])) }}" class="{{ $status ? '' : 'active' }}">Hamısı</a>
             </div>
 
             @if ($prizes->isEmpty())
-                <p class="text-muted mb-0">Kod yoxdur.</p>
+                <p class="text-muted mb-0">{{ $status === \App\Models\WheelSpin::USED ? 'Hələ istifadə olunmuş kod yoxdur.' : ($status === \App\Models\WheelSpin::ACTIVE ? 'Aktiv kod yoxdur.' : 'Kod yoxdur.') }}</p>
             @else
                 <div class="table-responsive">
                     <table class="table admin-table align-middle mb-0">

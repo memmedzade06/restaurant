@@ -11,17 +11,23 @@ use Illuminate\View\View;
 
 /**
  * Admin: oyunçuların hədiyyə kodlarını yoxlayır və istifadə edir.
- * İstifadə olunan kod bazadan silinir — bir daha istifadə oluna bilməz.
+ * İstifadə olunan kod silinmir — "istifadə olunub" kimi qeyd olunur (kim, nə vaxt) və
+ * ayrıca "İstifadə olunub" bölməsində görünür; bir daha istifadə oluna bilməz.
  */
 class PrizeController extends Controller
 {
     public function index(Request $request): View
     {
-        $status = in_array($request->query('status'), array_keys(WheelSpin::STATUS_LABELS), true) ? $request->query('status') : null;
         $q = trim((string) $request->query('q'));
+        // bölmə: aktiv (susmaya görə), istifadə olunub, vaxtı keçib və ya hamısı ("all").
+        // Axtarışda susmaya görə hamısı — istifadə olunmuş kod da tapılsın.
+        $requested = (string) $request->query('status', $q !== '' ? 'all' : WheelSpin::ACTIVE);
+        $status = in_array($requested, array_keys(WheelSpin::STATUS_LABELS), true) ? $requested : null;
 
         $prizes = WheelSpin::prizes($status)
             ->with(['user:id,name,phone', 'redeemer:id,name'])
+            // istifadə olunmuşlar — ən son istifadə olunan yuxarıda
+            ->when($status === WheelSpin::USED, fn ($query) => $query->orderByDesc('redeemed_at'))
             ->when($q !== '', function ($query) use ($q) {
                 $code = strtoupper($q);
                 $digits = preg_replace('/\D+/', '', $q);
@@ -50,12 +56,14 @@ class PrizeController extends Controller
     }
 
     /**
-     * Kodu istifadə edir: yoxlanılır və bazadan dərhal silinir (bazada yalnız aktiv kuponlar qalır).
-     * $id — model bağlaması yoxdur ki, artıq silinmiş kod 404 yox, aydın mesaj versin.
+     * Kodu istifadə edir: "istifadə olunub" kimi qeyd olunur (vaxt və admin) — silinmir,
+     * "İstifadə olunub" bölməsində qalır. İkinci dəfə istifadə etmək olmur.
+     * $id — model bağlaması yoxdur ki, silinmiş (vaxtı keçmiş) kod 404 yox, aydın mesaj versin.
      */
     public function redeem(Request $request, string $prize): RedirectResponse
     {
-        $result = DB::transaction(function () use ($prize) {
+        $adminId = $request->user()->id;
+        $result = DB::transaction(function () use ($prize, $adminId) {
             $prize = WheelSpin::whereKey($prize)->lockForUpdate()->first(); // iki admin eyni anda bassa belə bir dəfə
 
             if (! $prize) {
@@ -71,9 +79,9 @@ class PrizeController extends Controller
                 return ['error', "{$prize->code} kodunun vaxtı keçib — istifadə etmək olmaz."];
             }
 
-            $prize->delete();
+            $prize->forceFill(['redeemed_at' => now(), 'redeemed_by' => $adminId])->save();
 
-            return ['success', "{$prize->code} — «{$prize->prize_label}» istifadə olundu. Kod qüvvədən düşdü və silindi."];
+            return ['success', "{$prize->code} — «{$prize->prize_label}» istifadə olundu. Kod qüvvədən düşdü və «İstifadə olunub» bölməsinə keçdi."];
         });
 
         return back()->with($result[0], $result[1]);

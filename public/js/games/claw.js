@@ -490,7 +490,9 @@
         var c = server.claimed;
         var body = '<span class="eyebrow">Hədiyyəniz 🎉</span><h3 class="cl-prize">' + esc(c.label) + '</h3>';
         if (c.expired) {
-            body += '<p class="cl-note">Kodun vaxtı <b>' + esc(c.expires) + '</b>-də bitib. Sabah yenə oynayın!</p>';
+            body += c.used
+                ? '<p class="cl-note">Kod restoranda istifadə olunub. Sabah yenə oynayın!</p>'
+                : '<p class="cl-note">Kodun vaxtı <b>' + esc(c.expires) + '</b>-də bitib. Sabah yenə oynayın!</p>';
         } else {
             body += '<div class="prize-code">' + esc(c.code) + '</div>'
                 + '<p class="claimed-at"><i class="fa fa-clock me-1"></i>Götürülüb: <b>' + esc(c.claimed_at) + '</b></p>'

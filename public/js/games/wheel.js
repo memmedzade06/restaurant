@@ -161,7 +161,9 @@
                 (state.claimed.claimed_at ? `<p class="claimed-at"><i class="fa fa-clock me-1"></i>Götürülüb: <b>${esc(state.claimed.claimed_at)}</b></p>` : '') +
                 (state.claimed.expired
                     // kodun vaxtı bitib (bazadan da silinir) — bu gün yenidən fırlatmaq olmur
-                    ? `<p class="small text-muted mb-0">Kodun vaxtı <b>${esc(state.claimed.expires)}</b>-də bitib. Sabah yenə fırladın!</p>`
+                    ? (state.claimed.used
+                        ? '<p class="small text-muted mb-0">Kod restoranda istifadə olunub. Sabah yenə fırladın!</p>'
+                        : `<p class="small text-muted mb-0">Kodun vaxtı <b>${esc(state.claimed.expires)}</b>-də bitib. Sabah yenə fırladın!</p>`)
                     : `<p class="small text-muted mb-0">Kodu ofisianta göstərin. ${esc(state.claimed.expires)} tarixinədək etibarlıdır. Kod <a href="/hediyyelerim">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>`)
                 + fun;
         } else if (state.last) {
