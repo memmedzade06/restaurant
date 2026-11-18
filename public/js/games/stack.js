@@ -37,9 +37,13 @@
     const LW = 400, LH = 560;          // məntiqi ölçü
     const GW = 44, GH = 61;            // stəkanın eni və hündürlüyü (nazik, hündür armudu)
     const BASE_Y = LH - 58;            // ilk stəkanın dibi (nəlbəkinin üstü)
-    const SWING_GAP = 190;             // yellənən stəkanla qüllə arasındakı məsafə (böyük — stəkan ekranda daha yuxarıda yellənir)
-    const RAISE_FROM = 20;             // bu qədər stəkan qoyulandan sonra yellənən stəkan yuxarı qalxır (daha uzağa düşür)
-    const RAISE_BY = 55;               // nə qədər yuxarı qalxır (px)
+    // Yellənən stəkanın hündürlüyü (qüllədən məsafə; böyük — ekranda daha yuxarıda, daha uzağa düşür):
+    // RAISE_FROM stəkana qədər aşağıda (SWING_GAP), sonra hər yeni stəkanda RAISE_STEP qədər tədricən qalxır,
+    // RAISE_MAX-da dayanır (yuxarıdakı hesab və hava yazısına çatmasın).
+    const SWING_GAP = 130;
+    const RAISE_FROM = 20;
+    const RAISE_STEP = 4;              // hər stəkanda neçə px yuxarı (55-ci stəkanda ən yuxarıya çatır)
+    const RAISE_MAX = 270;
     const VISIBLE_GLASSES = 2;         // qüllədən ekranda neçə stəkan görünür (ən üstdəkilər)
     // true — fondakı fotoda əldə tutulan stəkan qüllənin dibidir (Qız qalası fotosu kimi);
     // false — foto sadəcə arxa fondur, qüllə masadakı nəlbəkinin üstündə qurulur
@@ -100,9 +104,13 @@
     const BOOST_FROM = 30;           // neçə stəkan qoyulandan sonra başlasın
     const BOOST = 1.25;              // 30-cu stəkanda sürətə birdəfəlik artım
     const BOOST_STEP = 0.015;        // sonrakı hər stəkanda əlavə artım (40-cı stəkanda ×1.4, 50-cidə ×1.55)
-    const SPEED_CAP = 500;           // sürətin ən yuxarı həddi — 100 xala çatmaq mümkün qalsın
+    const SPEED_CAP = 500;           // sürətin ən yuxarı həddi (~43-cü stəkanda çatır) — 100 xala çatmaq mümkün qalsın
+    // 50-ci stəkandan sonra hədd tədricən qalxır: hər stəkanda +CAP_UP_STEP, ən çoxu SPEED_CAP_MAX (69-cu stəkanda)
+    const CAP_UP_FROM = 50, CAP_UP_STEP = 5, SPEED_CAP_MAX = 600;
     const placed = () => g.tower.length - 1; // oyunçunun qoyduğu stəkan sayı
     const boost = () => placed() < BOOST_FROM ? 1 : BOOST + (placed() - BOOST_FROM) * BOOST_STEP;
+    const speedCap = () => placed() < CAP_UP_FROM ? SPEED_CAP
+        : Math.min(SPEED_CAP_MAX, SPEED_CAP + (placed() - CAP_UP_FROM + 1) * CAP_UP_STEP);
 
     // BOOST_FROM-dan sonra "hiylələr" (indi söndürülüb — stəkan yalnız sürətlənir, qəfil hərəkət etmir):
     //  1) hər stəkan öz sürəti ilə gəlir — TRICK_SPEED = [1, 1] olanda hamısı eyni sürətlə;
@@ -363,7 +371,7 @@
         // növbəti stəkan kənardan başlasın — hansı kənardan (sağ/sol), təsadüfi seçilir
         startFromRandomSide();
         newSwing();
-        if (placed() === BOOST_FROM) {
+        if (placed() === BOOST_FROM || placed() === CAP_UP_FROM) {
             g.popups.push({text: 'Diqqət! Sürət artdı!', x: LW / 2, y: topBottomY() - GH - 60, life: 2, warn: true});
         }
 
@@ -733,7 +741,7 @@
 
         if (g.state === 'swing') {
             const min = GW / 2 + 8, max = LW - GW / 2 - 8;
-            const v = Math.min(SPEED_CAP, speed() * boost() * g.swing.mul);
+            const v = Math.min(speedCap(), speed() * boost() * g.swing.mul);
             g.swing.t += dt;
             const ahead = (g.swing.flipX - g.swing.x) * g.swing.dir; // dönmə nöqtəsinə qalan məsafə (qabaqdadırsa > 0)
             const armed = g.swing.t + TRICK_WARN >= g.swing.flipAfter;
@@ -778,8 +786,8 @@
 
         // kamera: qüllədən ekranda yalnız ən üstdəki VISIBLE_GLASSES stəkan görünsün (aşağısı kadrdan çıxır);
         // qüllə aşanda isə masaya enir ki, stəkanların sınması görünsün
-        // RAISE_FROM stəkandan sonra yellənən stəkan rəvan yuxarı qalxır (qüllə ekranda yerində qalır)
-        const gapWant = SWING_GAP + (g.tower.length - 1 >= RAISE_FROM ? RAISE_BY : 0);
+        // RAISE_FROM stəkandan sonra yellənən stəkan hər stəkanda bir az yuxarı qalxır (qüllə ekranda yerində qalır)
+        const gapWant = Math.min(RAISE_MAX, SWING_GAP + Math.max(0, g.tower.length - 1 - RAISE_FROM) * RAISE_STEP);
         if (g.state !== 'drop') g.gap += (gapWant - g.gap) * Math.min(1, dt * 4);
 
         if (g.state !== 'fall' && g.state !== 'over') {
@@ -824,6 +832,7 @@
     const BG = {photo: new Image(), cloth: new Image(), logo: new Image()};
     BG.photo.src = root.dataset.bgPhoto;
     const SHOW_LOGO = false; // fonda 50 Qəpik loqosu göstərilmir — sol yuxarı küncdə hesab durur
+    const ROOM_WEATHER = false; // hava effektləri (günəş, yağış, qar...) yalnız fondakı pəncərədə — otağın içində yox
     if (SHOW_LOGO && root.dataset.logo) BG.logo.src = root.dataset.logo;
     const LOGO = {x: 34, y: 34, r: 24}; // sol yuxarı küncdəki kiçik yumru loqo: mərkəz və radius (SHOW_LOGO)
     const SCORE = {x: 14, y: 50};       // hesabın yeri: sol yuxarı künc (rəqəmin sol-alt nöqtəsi)
@@ -1047,6 +1056,36 @@
         glassSprite.cv = cv;
         glassSprite.res = res;
         return cv;
+    }
+
+    // İstiqamətverici ox: yellənən stəkanın altından qüllənin başına doğru — stəkanın hara düşəcəyini göstərir.
+    // İlk GUIDE_FULL stəkanda tam görünür, sonra GUIDE_FADE stəkan ərzində tədricən itir.
+    const GUIDE_FULL = 15, GUIDE_FADE = 15; // 15-ə qədər tam, 15-dən 30-a qədər solur, 30-dan sonra yoxdur
+    const guideAlpha = () => {
+        const n = placed();
+        return n < GUIDE_FULL ? 1 : Math.max(0, 1 - (n - GUIDE_FULL + 1) / (GUIDE_FADE + 1));
+    };
+    function drawGuide(x, fromY, toY) {
+        const a = guideAlpha();
+        if (a <= 0) return;
+        const bob = Math.sin(g.time * 4) * 3;    // ox yavaşca enib-qalxır — diqqət çəksin
+        const y0 = fromY + 8, tip = toY - 6 + bob;
+        if (tip - y0 < 20) return;
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.shadowColor = 'rgba(0, 0, 0, .5)';  // tünd fonda da görünsün
+        ctx.shadowBlur = 4;
+        ctx.strokeStyle = 'rgba(246, 207, 107, .9)';
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.setLineDash([6, 7]);
+        ctx.lineDashOffset = -g.time * 24;       // ştrixlər aşağı axır
+        ctx.beginPath();                          // yalnız qırıq xətt — ucluq (üçbucaq) yoxdur
+        ctx.moveTo(x, y0);
+        ctx.lineTo(x, tip);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
     }
 
     function drawGlass(x, y, rot = 0, alpha = 1, tilt = 0) {
@@ -1592,14 +1631,7 @@
 
         // yellənən / düşən / aşan stəkan
         if (g.state === 'swing' || g.state === 'ready') {
-            // hədəf xətti
-            ctx.strokeStyle = 'rgba(126, 26, 26, .18)';
-            ctx.setLineDash([4, 6]);
-            ctx.beginPath();
-            ctx.moveTo(g.swing.x, swingY());
-            ctx.lineTo(g.swing.x, topBottomY() - GH);
-            ctx.stroke();
-            ctx.setLineDash([]);
+            drawGuide(g.swing.x, swingY(), topBottomY() - GH);
             const wobble = g.swing.warn ? Math.sin(g.time * 45) * 0.12 : 0; // geri dönəcək — titrəyir
             drawGlass(g.swing.x, swingY(), wobble, 1, g.slosh.a);
         }
@@ -1762,6 +1794,10 @@
             : k === 'fog' ? 'rgba(200, 205, 210, .18)'
             : k === 'clear' ? 'rgba(255, 196, 110, .08)' : null;
         if (tint) { ctx.fillStyle = tint; ctx.fillRect(0, 0, LW, LH); }
+
+        // Günəş, ay, ulduzlar və duman yalnız çöldə — pəncərənin içində görünür (drawWindow).
+        // Otağın üstünə çəkilməsin; köhnə görünüşü qaytarmaq üçün ROOM_WEATHER = true.
+        if (!ROOM_WEATHER) return;
 
         if (k === 'clear' && W.day) {
             // günəş: isti parıltı, yavaş fırlanan şüalar
@@ -2109,6 +2145,16 @@
 
     function weatherFront() {
         if (!W) return;
+        // Yağış, qar, yarpaqlar və şimşək xətti yalnız pəncərədə (drawWindow) — otağın içində yox.
+        // İldırım çaxanda otaq qısa müddət işıqlanır (pəncərədən düşən işıq) — o qalır.
+        if (!ROOM_WEATHER) {
+            if (fx.flash > 0) {
+                ctx.fillStyle = `rgba(235, 240, 255, ${fx.flash * 0.25})`;
+                ctx.fillRect(0, 0, LW, LH);
+            }
+            weatherLabel();
+            return;
+        }
         if (fx.drops.length) {
             ctx.strokeStyle = 'rgba(205, 222, 255, .55)';
             ctx.lineWidth = 1.2;
@@ -2158,7 +2204,11 @@
                 ctx.shadowBlur = 0;
             }
         }
-        // yuxarı ortada havanın qısa təsviri (sol küncdə hesab durur)
+        weatherLabel();
+    }
+
+    // yuxarı ortada havanın qısa təsviri (sol küncdə hesab durur)
+    function weatherLabel() {
         const icon = {clear: W.day ? '☀️' : '🌙', clouds: '☁️', rain: '🌧️', storm: '⛈️', snow: '❄️', fog: '🌫️'}[W.kind] || '';
         ctx.save();
         ctx.textAlign = 'center';
