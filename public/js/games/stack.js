@@ -30,6 +30,8 @@
         prizes: JSON.parse(root.dataset.prizes || '{}'),
         // bu gün qalan hədiyyə sayı (boş — istifadəçi təsdiqlənməyib)
         prizeLeft: root.dataset.prizeLeft === '' ? null : +root.dataset.prizeLeft,
+        // {score, points, per_day, left} — bu qədər stəkan yığana balansına xal (left — bu gün daha neçə dəfə)
+        bonus: JSON.parse(root.dataset.bonus || 'null'),
         csrf: document.querySelector('meta[name="csrf-token"]')?.content,
     };
 
@@ -469,6 +471,10 @@
         if (placed() === BOOST_FROM || placed() === CAP_UP_FROM) {
             g.popups.push({text: 'Diqqət! Sürət artdı!', x: LW / 2, y: topBottomY() - GH - 60, life: 2, warn: true});
         }
+        // bonus: bu gün hələ alınmayıbsa — xəbər veririk (xal oyun bitəndə server yoxlayıb yazır)
+        if (cfg.canSave && cfg.bonus && cfg.bonus.left > 0 && g.score === cfg.bonus.score) {
+            g.popups.push({text: `🎉 ${cfg.bonus.score} stəkan! +${fmtPoints(cfg.bonus.points)} xal bonus`, x: LW / 2, y: topBottomY() - GH - 90, life: 2.6});
+        }
 
         checkPrize();
     }
@@ -571,7 +577,7 @@
 
         overlay.querySelector('.st-score').textContent = g.score;
         overlay.querySelector('.st-title').textContent = 'Təbriklər! 🎉';
-        overlay.querySelector('.st-note').innerHTML = `<b>${esc(d.prize.label)}</b> qazandınız.`;
+        overlay.querySelector('.st-note').innerHTML = `<b>${esc(d.prize.label)}</b> qazandınız.` + bonusNote(d.bonus);
         const box = overlay.querySelector('.st-prize');
         box.innerHTML = `<div class="prize-code">${esc(d.prize.code)}</div>` +
             `<p class="small text-muted mb-3">Kodu ofisianta göstərin. ${esc(d.prize.expires)} tarixinədək etibarlıdır. ` +
@@ -2330,6 +2336,18 @@
 
     /* ---------- Oyunun sonu ---------- */
 
+    /** 0.5 → "0,5" */
+    function fmtPoints(p) {
+        return String(+(+p).toFixed(3)).replace('.', ',');
+    }
+
+    /** Server bonus yazıbsa — nəticə pəncərəsində göstəririk */
+    function bonusNote(points) {
+        if (!points || points <= 0) return '';
+        if (cfg.bonus) cfg.bonus.left = Math.max(0, cfg.bonus.left - 1);
+        return `<br><span class="st-bonus">⭐ +${fmtPoints(points)} xal bonus balansınıza yazıldı!</span>`;
+    }
+
     async function gameOver(finished = false) {
         g.state = 'over';
         offer.hidden = true;
@@ -2357,7 +2375,7 @@
             const d = await r.json();
             if (r.ok && d.saved) {
                 best = d.best;
-                note.innerHTML = `Ən yaxşı nəticəniz: <b>${d.best}</b>` + (d.record ? '<br>Rekordunuz liderlər cədvəlinə yazıldı!' : '');
+                note.innerHTML = `Ən yaxşı nəticəniz: <b>${d.best}</b>` + (d.record ? '<br>Rekordunuz liderlər cədvəlinə yazıldı!' : '') + bonusNote(d.bonus);
                 const el = document.getElementById('stBest');
                 if (el) el.textContent = d.best;
             }

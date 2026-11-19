@@ -48,6 +48,7 @@ class GameController extends Controller
             'best' => $verified ? $this->stackBest($user->id) : null,
             'prizes' => $this->stackPrizes(),
             'prizeLeft' => $verified ? $this->stackPrizesLeft($user->id) : null,
+            'bonus' => $this->stackBonusConfig() + ['left' => $verified ? $this->stackBonusLeft($user->id) : 0],
             // ?hava=rain kimi baxış rejimi; yoxsa canlı hava səhifə açılandan sonra ayrıca sorğu ilə gəlir
             // (xidmət bir neçə saniyə cavab verə bilər — səhifə bunu gözləməsin)
             'weather' => BakuWeather::preview($request->query('hava')),
@@ -198,8 +199,9 @@ class GameController extends Controller
                 'expires_at' => now()->addDays((int) config('games.stack.code_valid_days', 1)),
             ]);
             $this->countStackPrize($user->id);
+            $bonus = $this->awardStackBonus($user->id, $score);
 
-            return response()->json(['prize' => $this->spinPayload($spin), 'best' => $this->stackBest($user->id)]);
+            return response()->json(['prize' => $this->spinPayload($spin), 'best' => $this->stackBest($user->id), 'bonus' => $bonus]);
         });
     }
 
@@ -231,6 +233,51 @@ class GameController extends Controller
     {
         $key = $this->stackTakenKey($userId);
         Cache::put($key, (int) Cache::get($key, 0) + 1, now('Asia/Baku')->endOfDay());
+    }
+
+    /** ['score' => neçə stəkan, 'points' => neçə xal, 'per_day' => gündə neçə dəfə] */
+    private function stackBonusConfig(): array
+    {
+        return [
+            'score' => max(1, (int) config('games.stack.bonus.score', 40)),
+            'points' => max(0, (float) config('games.stack.bonus.points', 0.5)),
+            'per_day' => max(0, (int) config('games.stack.bonus.per_day', 2)),
+        ];
+    }
+
+    private function stackBonusKey(int $userId): string
+    {
+        return "stack_bonus:{$userId}:" . $this->today();
+    }
+
+    /** Bu gün daha neçə dəfə bonus almaq olar */
+    private function stackBonusLeft(int $userId): int
+    {
+        return max(0, $this->stackBonusConfig()['per_day'] - (int) Cache::get($this->stackBonusKey($userId), 0));
+    }
+
+    /**
+     * Bonus: oyunçu kifayət qədər stəkan yığıbsa və bu günün limiti bitməyibsə — balansına xal yazılır.
+     * Çağıran tərəf oyunun gedişatını artıq yoxlayıb. Qaytarır: yazılan xal (0 — bonus yoxdur).
+     */
+    private function awardStackBonus(int $userId, int $score): float
+    {
+        ['score' => $need, 'points' => $points] = $this->stackBonusConfig();
+        if ($points <= 0 || $score < $need) {
+            return 0;
+        }
+
+        return DB::transaction(function () use ($userId, $points) {
+            User::whereKey($userId)->lockForUpdate()->first(); // eyni anda iki sorğu limiti keçməsin
+            if ($this->stackBonusLeft($userId) <= 0) {
+                return 0;
+            }
+            $key = $this->stackBonusKey($userId);
+            Cache::put($key, (int) Cache::get($key, 0) + 1, now('Asia/Baku')->endOfDay());
+            User::whereKey($userId)->increment('points', $points);
+
+            return $points;
+        });
     }
 
     /** Stəkan qülləsi: oyunun hesabını yazır, ən yaxşı nəticəni qaytarır (yalnız təsdiqlənmiş istifadəçi) */
@@ -266,6 +313,7 @@ class GameController extends Controller
             'saved' => true,
             'best' => max($before, $data['score']),
             'record' => $data['score'] > $before && $data['score'] > 0,
+            'bonus' => $this->awardStackBonus($request->user()->id, (int) $data['score']),
         ]);
     }
 

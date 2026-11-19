@@ -102,6 +102,13 @@ return [
             return $prizes + [$finish => ['key' => 'stack_coupon_30', 'label' => '30 AZN kupon']];
         })(),
         'prizes_per_day' => (int) env('STACK_PRIZES_PER_DAY', 1), // istifadəçiyə gündə neçə hədiyyə
+        // Bonus: bu qədər stəkan yığan təsdiqlənmiş oyunçunun balansına xal yazılır (gündə per_day dəfə).
+        // Xallar Hədiyyə marketində hədiyyəyə çevrilir — ona görə gündəlik limit var.
+        'bonus' => [
+            'score' => (int) env('STACK_BONUS_SCORE', 40),
+            'points' => (float) env('STACK_BONUS_POINTS', 0.5),
+            'per_day' => (int) env('STACK_BONUS_PER_DAY', 2),
+        ],
         // Saxtakarlığa qarşı: oyun başlayandan bəri ən azı (stəkan sayı × bu qədər) saniyə keçməlidir.
         // Hər stəkan 1 xal verdiyi üçün stəkan sayı = xal.
         'min_seconds_per_glass' => 0.8,

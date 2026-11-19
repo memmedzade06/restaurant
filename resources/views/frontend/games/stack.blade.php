@@ -35,6 +35,7 @@
                      data-cloth="{{ asset('img/games/stack-cloth.webp') }}?v=1"
                      data-bg-photo="{{ asset('img/games/stack-bg.jpg') }}?v=6"
                      data-register-url="{{ auth()->check() ? route('verify.telegram') : route('register') }}"
+                     data-bonus='@json($bonus)'
                      data-best="{{ $best ?? 0 }}">
                     <div class="st-stage">
                         <canvas aria-label="Stəkan qülləsi oyunu"></canvas>
@@ -106,6 +107,9 @@
                             <li>Yuxarıda stəkan sağa-sola yellənir.</li>
                             <li>Toxunun — stəkan düşüb qüllənin üstünə düşür.</li>
                             <li>Hər stəkan <b>1 xal</b> verir.</li>
+                            @if ($bonus['points'] > 0)
+                                <li><b>{{ $bonus['score'] }} stəkan</b> — balansınıza <b>+{{ \App\Services\Referrals::format($bonus['points']) }} xal bonus</b> (gündə {{ $bonus['per_day'] }} dəfə)</li>
+                            @endif
                             @foreach ($prizes as $min => $p)
                                 @if ($loop->last)
                                     <li><b>{{ $min }} xal — Finiş! 🏁</b> <b>{{ $p['label'] }}</b></li>
@@ -125,5 +129,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/stack.js') }}?v=102"></script>
+<script src="{{ asset('js/games/stack.js') }}?v=104"></script>
 @endsection

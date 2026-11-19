@@ -568,3 +568,6 @@ html.cl-noscroll, html.cl-noscroll body { overflow: hidden; }
 /* fonun üstündə birbaşa duran yazılar açıq rəngdə olsun */
 .games-scene > .container > .text-muted, .games-scene > .container > p { color: rgba(251, 246, 239, .85) !important; }
 .games-scene > .container > p a { color: #f6cf6b; }
+
+/* 40 stəkan bonusu (nəticə pəncərəsində) */
+.st-bonus { display: inline-block; margin-top: 6px; padding: 4px 12px; border-radius: 999px; background: #fff4e0; color: #8a5a00; font-weight: 800; }

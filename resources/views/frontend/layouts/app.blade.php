@@ -22,7 +22,7 @@
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
     <link href="{{ asset('css/custom.css') }}?v=22" rel="stylesheet">
-    <link href="{{ asset('css/games.css') }}?v=45" rel="stylesheet">
+    <link href="{{ asset('css/games.css') }}?v=46" rel="stylesheet">
     @yield('css')
 </head>
 
