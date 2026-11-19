@@ -42,8 +42,8 @@
     <link href="{{ asset('lib/owlcarousel/assets/owl.carousel.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/custom.css') }}?v=23" rel="stylesheet">
-    <link href="{{ asset('css/games.css') }}?v=50" rel="stylesheet">
+    <link href="{{ asset('css/custom.css') }}?v=25" rel="stylesheet">
+    <link href="{{ asset('css/games.css') }}?v=51" rel="stylesheet">
     @yield('css')
 </head>
 

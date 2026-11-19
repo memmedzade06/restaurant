@@ -327,7 +327,6 @@
                         </svg>
                     </div>
                     <div class="game-body">
-                        <span class="qz-card-tag"><i class="fa fa-list-ol me-1"></i>Test · 3 variant · 5 saniyə</span>
                         <h4>Bilik Yarışı</h4>
                         <p>Azərbaycanı nə qədər tanıyırsınız? Hər suala {{ (int) config('quiz.seconds', 5) }} saniyə, mərhələ keçdikcə artan xallar: <b>+{{ \App\Http\Controllers\Frontend\QuizController::pointsLabel() }}, +{{ \App\Services\Referrals::format(\App\Http\Controllers\Frontend\QuizController::stageReward(2)) }}…</b></p>
                         <span class="game-go">Oyna <i class="fa fa-arrow-right ms-1"></i></span>

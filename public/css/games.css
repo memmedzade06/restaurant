@@ -476,7 +476,9 @@ body.st-no-scroll { overflow: hidden; }
 .qz-timer-bar { display: block; height: 100%; width: 100%; background: var(--primary); transform-origin: left; transition: background .2s; }
 .qz-timer-bar.is-low { background: #e0414f; }
 .qz-time-left { text-align: right; font-size: 12px; font-weight: 800; color: var(--muted); min-height: 16px; }
-.qz-question { font-size: clamp(19px, 2.6vw, 24px); line-height: 1.35; margin: 10px 0 18px; color: var(--dark); }
+.qz-question { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: clamp(19px, 2.6vw, 24px); line-height: 1.4; margin: 10px 0 18px; color: var(--dark); }
+/* Bilik Yarışı: bütün başlıqlar rahat oxunan şriftlə (Playfair-də ə, ı, ş sıx görünür) */
+.qz h3 { font-family: 'Nunito', sans-serif; font-weight: 900; }
 .qz-options { display: grid; gap: 10px; }
 .qz-option { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 14px 16px; border-radius: 16px; border: 2px solid #eadfd3; background: var(--cream); color: var(--dark); font-weight: 700; font-size: 16px; cursor: pointer; transition: border-color .15s, background .15s, transform .1s; }
 .qz-option:hover:not(:disabled) { border-color: var(--primary); background: #fff; }
@@ -523,7 +525,6 @@ body.st-no-scroll { overflow: hidden; }
     .qz-art-svg .qz2-right-letter { fill: #fff; }
     .qz-art-svg .qz2-check { stroke-dashoffset: 0; }
 }
-.qz-card-tag { display: inline-block; margin-bottom: 8px; padding: 3px 10px; border-radius: 999px; background: #fff4e0; color: #8a5a00; font-size: 12px; font-weight: 800; }
 
 /* Hədiyyə marketi — oyun kartlarından fərqli: tam enli, üfüqi, qızılı banner */
 .market-feature { display: flex; align-items: stretch; background: linear-gradient(120deg, #7E1A1A 0%, #a32b2b 55%, #c2412c 100%); color: #fff; box-shadow: 0 18px 40px rgba(126, 26, 26, .35); border: 2px solid rgba(233, 162, 59, .55); }

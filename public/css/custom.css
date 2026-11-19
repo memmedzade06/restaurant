@@ -140,6 +140,8 @@ img { max-width: 100%; }
     content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 60px;
     background: var(--cream); clip-path: ellipse(75% 100% at 50% 100%);
 }
+/* Oyun səhifələrində başlığın altındakı krem dalğa nazik olsun — altdakı tünd xalçalı fonla qalın zolaq yaratmasın */
+.page-hero:has(+ .games-scene)::after { height: 18px; }
 .page-hero h1 { color: #fff; font-size: clamp(36px, 5vw, 56px); margin-bottom: 10px; }
 .page-hero p { color: rgba(255, 255, 255, .8); margin: 0; }
 
@@ -275,6 +277,8 @@ a.contact-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg)
 
 /* ---------- Footer ---------- */
 .site-footer { background: var(--dark); color: rgba(255, 255, 255, .7); padding: 70px 0 0; margin-top: 90px; }
+/* Oyun səhifələrində xalçalı fon birbaşa footer-ə qədər davam etsin — arada krem zolaq qalmasın */
+.games-scene + .site-footer { margin-top: 0; }
 .site-footer h5 { color: #fff; margin-bottom: 18px; font-size: 16px; letter-spacing: 1px; text-transform: uppercase; }
 .site-footer a { color: rgba(255, 255, 255, .75); text-decoration: none; transition: color .2s; }
 .site-footer a:hover { color: var(--primary); }
