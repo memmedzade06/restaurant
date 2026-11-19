@@ -153,12 +153,20 @@ Route::prefix('oyunlar')->name('games.')->controller(\App\Http\Controllers\Front
     Route::post('/stekan/basla', 'stackStart')->middleware(['auth', 'phone.verified', 'throttle:60,1'])->name('stack.start');
     Route::post('/stekan/hediyye', 'stackPrize')->middleware(['auth', 'phone.verified', 'throttle:10,1'])->name('stack.prize');
     Route::post('/stekan/netice', 'stackResult')->middleware(['auth', 'phone.verified', 'throttle:30,1'])->name('stack.result');
-    Route::get('/krossvord', 'crossword')->name('crossword');
     Route::get('/carx-oyunu', 'wheel')->name('wheel');
     Route::post('/carx-oyunu/firlat', 'spin')->middleware('throttle:30,1')->name('wheel.spin');
     Route::post('/carx-oyunu/dayan', 'stop')->middleware('throttle:30,1')->name('wheel.stop');
     Route::post('/carx-oyunu/gotur', 'claim')->middleware(['auth', 'phone.verified', 'throttle:15,1'])->name('wheel.claim');
 });
+// Sual oyunu: oyun serverdə gedir (düz cavab brauzerə getmir), mərhələ keçəndə xal yazılır
+Route::prefix('oyunlar/suallar')->name('games.quiz')->controller(\App\Http\Controllers\Frontend\QuizController::class)->group(function () {
+    Route::get('/', 'show');
+    Route::post('/basla', 'start')->middleware('throttle:30,1')->name('.start');
+    Route::post('/cavab', 'answer')->middleware('throttle:120,1')->name('.answer');
+    Route::post('/novbeti', 'next')->middleware('throttle:120,1')->name('.next');
+});
+// Krossvord ləğv olunub — köhnə linklər Sual oyununa aparır
+Route::permanentRedirect('/oyunlar/krossvord', '/oyunlar/suallar');
 // Köhnə ünvan (Bəxt çarxı): QR kodlar və köhnə linklər yeni səhifəyə yönləndirilir
 Route::permanentRedirect('/oyunlar/bext-carxi', '/oyunlar/carx-oyunu');
 

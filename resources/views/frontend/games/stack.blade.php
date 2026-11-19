@@ -84,7 +84,7 @@
                     @if ($canSave)
                         <div class="side-card">
                             <h5><i class="fa fa-user-circle me-2 text-primary"></i>Sizin rekord</h5>
-                            <p class="mb-0"><b id="stBest" class="st-best">{{ $best }}</b> xal</p>
+                            <p class="mb-0"><b id="stBest" class="st-best">{{ $best }}</b> stəkan</p>
                         </div>
                     @else
                         <div class="side-card side-cta">
@@ -97,7 +97,7 @@
 
                     <div class="side-card">
                         <h5><i class="fa fa-trophy me-2 text-primary"></i>Liderlər</h5>
-                        @include('frontend.games._leaders', ['leaders' => $leaders])
+                        @include('frontend.games._leaders', ['leaders' => $leaders, 'unit' => 'stəkan'])
                     </div>
 
                     <div class="side-card" data-game-rules="Stəkan qülləsi">
@@ -106,19 +106,18 @@
                         <ul class="rules">
                             <li>Yuxarıda stəkan sağa-sola yellənir.</li>
                             <li>Toxunun — stəkan düşüb qüllənin üstünə düşür.</li>
-                            <li>Hər stəkan <b>1 xal</b> verir.</li>
                             @if ($bonus['points'] > 0)
                                 <li><b>{{ $bonus['score'] }} stəkan</b> — balansınıza <b>+{{ \App\Services\Referrals::format($bonus['points']) }} xal bonus</b> (gündə {{ $bonus['per_day'] }} dəfə)</li>
                             @endif
                             @foreach ($prizes as $min => $p)
                                 @if ($loop->last)
-                                    <li><b>{{ $min }} xal — Finiş! 🏁</b> <b>{{ $p['label'] }}</b></li>
+                                    <li><b>{{ $min }} stəkan — Finiş! 🏁</b> <b>{{ $p['label'] }}</b></li>
                                 @else
-                                    <li><b>{{ $min }} xal</b> — <b>{{ $p['label'] }}</b></li>
+                                    <li><b>{{ $min }} stəkan</b> — <b>{{ $p['label'] }}</b></li>
                                 @endif
                             @endforeach
                             {{-- hədiyyə seçimi bir dəfə izah olunur (hər hədiyyədə təkrarlanmır) --}}
-                            <li>Hədiyyə xalına çatanda seçin: <b>«Hədiyyəni götür»</b> — kod verilir və yeni oyun başlayır; <b>davam etsəniz</b> — növbəti hədiyyəyə şans qazanırsınız, amma qüllə aşsa, hədiyyə yanır. Finişdə hədiyyəni götürdükdən sonra rekord üçün oynamağa davam edə bilərsiniz.</li>
+                            <li>Hədiyyə sayına çatanda seçin: <b>«Hədiyyəni götür»</b> — kod verilir və yeni oyun başlayır; <b>davam etsəniz</b> — növbəti hədiyyəyə şans qazanırsınız, amma qüllə aşsa, hədiyyə yanır. Finişdə hədiyyəni götürdükdən sonra rekord üçün oynamağa davam edə bilərsiniz.</li>
                         </ul>
                     </div>
                 </div>
@@ -129,5 +128,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/stack.js') }}?v=104"></script>
+<script src="{{ asset('js/games/stack.js') }}?v=105"></script>
 @endsection

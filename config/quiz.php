@@ -1,0 +1,176 @@
+<?php
+
+/*
+|--------------------------------------------------------------------------
+| Sual oyunu — Azərbaycana aid suallar
+|--------------------------------------------------------------------------
+| Hər sual: 'q' — sual, 'a' — düzgün cavab, 'w' — iki səhv cavab, 'l' — çətinlik (1 asan, 2 orta, 3 çətin).
+| Oyun cavabları özü qarışdırır. Mərhələ irəlilədikcə çətin suallar çoxalır.
+| Yeni sual əlavə etmək üçün sadəcə siyahıya yeni sətir yazın.
+*/
+
+return [
+    'per_stage' => 10, // bir mərhələdə neçə sual
+    'lives' => 3,      // neçə səhv olanda oyun bitir (hər mərhələdə yenidən)
+    'seconds' => (int) env('QUIZ_SECONDS', 5), // hər suala cavab vaxtı; vaxt bitsə — səhv sayılır
+    // Mərhələni keçən təsdiqlənmiş oyunçunun balansına xal (Hədiyyə marketində xərclənir).
+    // Gündəlik limit var ki, oyunu dəfələrlə oynayıb xal yığmaq olmasın.
+    // 1-ci mərhələ stage_points xal verir, hər növbəti mərhələ stage_points_step qədər çox:
+    // 0,25 → 0,5 → 0,75 → 1 ... (gündəlik limitə qədər)
+    'stage_points' => (float) env('QUIZ_STAGE_POINTS', 0.25),
+    'stage_points_step' => (float) env('QUIZ_STAGE_POINTS_STEP', 0.25),
+    'max_points_per_day' => (float) env('QUIZ_MAX_POINTS_PER_DAY', 2),
+
+    // Mərhələlərin çətinliyi: hər mərhələdə neçə [asan, orta, çətin] sual. Sonuncu sətir sonrakı mərhələlərə də aiddir.
+    // Hansısa növ bitəndə yeri qonşu çətinlikdən doldurulur (əvvəlcə daha çətin).
+    'stages' => [
+        [10, 0, 0], // 1-ci: yalnız asan
+        [7, 3, 0],
+        [4, 6, 0],
+        [2, 7, 1],
+        [0, 7, 3],
+        [0, 5, 5],
+        [0, 3, 7],
+        [0, 0, 10],
+    ],
+
+    'questions' => [
+        // ---------- Coğrafiya və təbiət ----------
+        ['q' => 'Azərbaycanın paytaxtı hansı şəhərdir?', 'a' => 'Bakı', 'w' => ['Gəncə', 'Şəki'], 'l' => 1],
+        ['q' => 'Azərbaycan hansı dənizin sahilində yerləşir?', 'a' => 'Xəzər dənizi', 'w' => ['Qara dəniz', 'Aralıq dənizi'], 'l' => 1],
+        ['q' => 'Azərbaycanın ən hündür zirvəsi hansıdır?', 'a' => 'Bazardüzü', 'w' => ['Şahdağ', 'Tufandağ'], 'l' => 1],
+        ['q' => 'Azərbaycandan keçən ən uzun çay hansıdır?', 'a' => 'Kür', 'w' => ['Araz', 'Samur'], 'l' => 1],
+        ['q' => 'Azərbaycanın muxtar respublikası hansıdır?', 'a' => 'Naxçıvan', 'w' => ['Lənkəran', 'Qarabağ'], 'l' => 1],
+        ['q' => 'Bakı hansı yarımadada yerləşir?', 'a' => 'Abşeron', 'w' => ['Krım', 'Kamçatka'], 'l' => 1],
+        ['q' => 'Bakını hansı adla da tanıyırlar?', 'a' => 'Küləklər şəhəri', 'w' => ['Günəş şəhəri', 'Çiçəklər şəhəri'], 'l' => 1],
+        ['q' => 'Azərbaycanı adətən necə adlandırırlar?', 'a' => 'Odlar yurdu', 'w' => ['Göllər yurdu', 'Qartallar yurdu'], 'l' => 1],
+        ['q' => 'Xəzər dənizi əslində nədir?', 'a' => 'Dünyanın ən böyük gölü', 'w' => ['Okeanın körfəzi', 'Böyük çayın mənsəbi'], 'l' => 1],
+        ['q' => 'Çay plantasiyaları ilə məşhur bölgə hansıdır?', 'a' => 'Lənkəran', 'w' => ['Naxçıvan', 'Qazax'], 'l' => 1],
+        ['q' => 'Alma bağları ilə məşhur rayon hansıdır?', 'a' => 'Quba', 'w' => ['Saatlı', 'İmişli'], 'l' => 1],
+        ['q' => 'Nar bayramı hansı şəhərdə keçirilir?', 'a' => 'Göyçay', 'w' => ['Şəmkir', 'Qusar'], 'l' => 1],
+        ['q' => 'Müalicəvi nefti ilə məşhur şəhər hansıdır?', 'a' => 'Naftalan', 'w' => ['Şirvan', 'Siyəzən'], 'l' => 1],
+        ['q' => 'Qusardakı məşhur qış-xizək kurortu hansıdır?', 'a' => 'Şahdağ', 'w' => ['Tufandağ', 'Bazardüzü'], 'l' => 1],
+        ['q' => 'Azərbaycanın əhalisi təxminən nə qədərdir?', 'a' => '10 milyon', 'w' => ['5 milyon', '20 milyon'], 'l' => 1],
+        ['q' => 'Azərbaycanın beynəlxalq telefon kodu hansıdır?', 'a' => '+994', 'w' => ['+998', '+992'], 'l' => 1],
+        ['q' => 'Azərbaycanın internet domeni hansıdır?', 'a' => '.az', 'w' => ['.ab', '.ar'], 'l' => 1],
+        ['q' => 'Bakıda əsən güclü şimal küləyi necə adlanır?', 'a' => 'Xəzri', 'w' => ['Gilavar', 'Sirokko'], 'l' => 2],
+        ['q' => 'Bakıya isti hava gətirən cənub küləyi necə adlanır?', 'a' => 'Gilavar', 'w' => ['Xəzri', 'Mussun'], 'l' => 2],
+        ['q' => 'Mingəçevir su anbarı hansı çay üzərindədir?', 'a' => 'Kür', 'w' => ['Araz', 'Tərtər'], 'l' => 2],
+        ['q' => 'Göygöl hansı şəhərin yaxınlığında yerləşir?', 'a' => 'Gəncə', 'w' => ['Şəki', 'Quba'], 'l' => 2],
+        ['q' => 'Azərbaycan hansı təbiət hadisəsinin sayına görə dünyada öndə gedir?', 'a' => 'Palçıq vulkanları', 'w' => ['Geyzerlər', 'Buzlaqlar'], 'l' => 2],
+        ['q' => 'Min illərdir yanan Yanardağ harada yerləşir?', 'a' => 'Abşeron yarımadasında', 'w' => ['Naxçıvanda', 'Lənkəranda'], 'l' => 2],
+        ['q' => 'Uzunömürlü insanları ilə məşhur dağ rayonu hansıdır?', 'a' => 'Lerik', 'w' => ['Abşeron', 'Sabirabad'], 'l' => 2],
+        ['q' => 'Qəbələdəki xizək kurortu necə adlanır?', 'a' => 'Tufandağ', 'w' => ['Şahdağ', 'Kəpəz'], 'l' => 2],
+        ['q' => 'Şirvan Milli Parkı hansı heyvanı ilə məşhurdur?', 'a' => 'Ceyran', 'w' => ['Bəbir', 'Qonur ayı'], 'l' => 2],
+        ['q' => 'Azərbaycanla quru sərhədi olmayan ölkə hansıdır?', 'a' => 'Türkmənistan', 'w' => ['Gürcüstan', 'Rusiya'], 'l' => 2],
+        ['q' => 'Qubada yerləşən, öz dili olan qədim dağ kəndi hansıdır?', 'a' => 'Xınalıq', 'w' => ['Lahıc', 'İlisu'], 'l' => 2],
+        ['q' => 'Azərbaycanın ən böyük gölü hansıdır?', 'a' => 'Sarısu', 'w' => ['Göygöl', 'Ağgöl'], 'l' => 3],
+        ['q' => 'Azərbaycanın ərazisi təxminən nə qədərdir?', 'a' => '86,6 min km²', 'w' => ['52 min km²', '120 min km²'], 'l' => 3],
+        ['q' => 'Naxçıvan Muxtar Respublikası hansı ölkə ilə həmsərhəd deyil?', 'a' => 'Gürcüstan', 'w' => ['Türkiyə', 'İran'], 'l' => 3],
+        ['q' => 'Talış dağlarındakı qədim relikt meşələr necə adlanır?', 'a' => 'Hirkan meşələri', 'w' => ['Tayqa meşələri', 'Tuqay meşələri'], 'l' => 3],
+        ['q' => 'Badamlı mineral suyu hansı bölgədən çıxır?', 'a' => 'Naxçıvan', 'w' => ['Quba', 'Lənkəran'], 'l' => 3],
+
+        // ---------- Tarix və dövlət ----------
+        ['q' => 'Azərbaycan Xalq Cümhuriyyəti hansı ildə qurulub?', 'a' => '1918', 'w' => ['1920', '1991'], 'l' => 1],
+        ['q' => '28 May Azərbaycanda hansı gün kimi qeyd olunur?', 'a' => 'Müstəqillik Günü', 'w' => ['Konstitusiya Günü', 'Milli Qurtuluş Günü'], 'l' => 1],
+        ['q' => 'Zəfər Günü hansı tarixdə qeyd olunur?', 'a' => '8 noyabr', 'w' => ['9 may', '18 oktyabr'], 'l' => 1],
+        ['q' => 'Şuşa şəhəri hansı tarixdə azad edilib?', 'a' => '8 noyabr 2020', 'w' => ['27 sentyabr 2020', '10 noyabr 2020'], 'l' => 1],
+        ['q' => 'Hansı şəhər "Qarabağın tacı" adlanır?', 'a' => 'Şuşa', 'w' => ['Ağdam', 'Laçın'], 'l' => 1],
+        ['q' => 'Azərbaycan bayrağında hansı rənglər var?', 'a' => 'Mavi, qırmızı, yaşıl', 'w' => ['Qırmızı, ağ, yaşıl', 'Mavi, sarı, qırmızı'], 'l' => 1],
+        ['q' => 'Bayrağımızdakı ulduzun neçə guşəsi var?', 'a' => '8', 'w' => ['5', '6'], 'l' => 1],
+        ['q' => 'Dövlət himninin musiqisini kim bəstələyib?', 'a' => 'Üzeyir Hacıbəyli', 'w' => ['Qara Qarayev', 'Fikrət Əmirov'], 'l' => 1],
+        ['q' => 'Azərbaycan dili hansı dil ailəsinə aiddir?', 'a' => 'Türk dilləri', 'w' => ['Slavyan dilləri', 'Roman dilləri'], 'l' => 1],
+        ['q' => 'Azərbaycan Xalq Cümhuriyyətinin ilk paytaxtı hansı şəhər olub?', 'a' => 'Gəncə', 'w' => ['Bakı', 'Şuşa'], 'l' => 2],
+        ['q' => 'Müstəqilliyin Bərpası Günü hansı tarixdədir?', 'a' => '18 oktyabr', 'w' => ['28 may', '15 iyun'], 'l' => 2],
+        ['q' => 'Konstitusiya Günü hansı tarixdə qeyd olunur?', 'a' => '12 noyabr', 'w' => ['9 noyabr', '31 dekabr'], 'l' => 2],
+        ['q' => 'Milli Qurtuluş Günü hansı tarixdədir?', 'a' => '15 iyun', 'w' => ['26 iyun', '28 may'], 'l' => 2],
+        ['q' => 'Dövlət Bayrağı Günü hansı tarixdə qeyd olunur?', 'a' => '9 noyabr', 'w' => ['8 noyabr', '12 noyabr'], 'l' => 2],
+        ['q' => 'Dövlət gerbinin mərkəzində nə təsvir olunub?', 'a' => 'Alov', 'w' => ['Aslan', 'Qartal'], 'l' => 2],
+        ['q' => 'Dövlət himninin sözlərinin müəllifi kimdir?', 'a' => 'Əhməd Cavad', 'w' => ['Səməd Vurğun', 'Mikayıl Müşfiq'], 'l' => 2],
+        ['q' => 'Azərbaycan Xalq Cümhuriyyətinin Milli Şurasının sədri kim olub?', 'a' => 'Məhəmməd Əmin Rəsulzadə', 'w' => ['Nəriman Nərimanov', 'Hüseyn Cavid'], 'l' => 2],
+        ['q' => 'Ərəb xilafətinə qarşı mübarizə aparan məşhur sərkərdə kimdir?', 'a' => 'Babək', 'w' => ['Koroğlu', 'Qaçaq Nəbi'], 'l' => 2],
+        ['q' => 'Səfəvilər dövlətinin qurucusu kimdir?', 'a' => 'Şah İsmayıl', 'w' => ['Nadir şah', 'Uzun Həsən'], 'l' => 2],
+        ['q' => 'Azərbaycan əlifbasında neçə hərf var?', 'a' => '32', 'w' => ['29', '33'], 'l' => 2],
+        ['q' => 'Hansı hərf Azərbaycan əlifbasında var, türk əlifbasında yoxdur?', 'a' => 'Ə', 'w' => ['Ş', 'Ç'], 'l' => 2],
+        ['q' => '"BTC" neft kəmərindəki "C" hansı şəhəri bildirir?', 'a' => 'Ceyhan', 'w' => ['Ceyranbatan', 'Cəlilabad'], 'l' => 2],
+        ['q' => 'Şah İsmayıl hansı təxəllüslə şeirlər yazırdı?', 'a' => 'Xətai', 'w' => ['Füzuli', 'Vaqif'], 'l' => 3],
+        ['q' => 'Səfəvilər dövlətinin ilk paytaxtı hansı şəhər olub?', 'a' => 'Təbriz', 'w' => ['Ərdəbil', 'Qəzvin'], 'l' => 3],
+        ['q' => 'Şirvanşahların uzun müddət paytaxtı olmuş şəhər hansıdır?', 'a' => 'Şamaxı', 'w' => ['Şəki', 'Gəncə'], 'l' => 3],
+        ['q' => 'Qəbələ qədimdə hansı dövlətin paytaxtı olub?', 'a' => 'Qafqaz Albaniyası', 'w' => ['Səfəvilər', 'Şirvanşahlar'], 'l' => 3],
+        ['q' => 'Çaldıran döyüşü hansı ildə olub?', 'a' => '1514', 'w' => ['1501', '1555'], 'l' => 3],
+        ['q' => 'Azərbaycan BMT-yə hansı ildə üzv olub?', 'a' => '1992', 'w' => ['1991', '1995'], 'l' => 3],
+        ['q' => 'Müstəqil Azərbaycanın Konstitusiyası hansı ildə qəbul edilib?', 'a' => '1995', 'w' => ['1991', '1998'], 'l' => 3],
+        ['q' => 'Bakı metrosu hansı ildə açılıb?', 'a' => '1967', 'w' => ['1955', '1980'], 'l' => 3],
+        ['q' => '1846-cı ildə dünyanın ilk mexaniki üsulla neft quyusu harada qazılıb?', 'a' => 'Bibiheybətdə', 'w' => ['Balaxanıda', 'Suraxanıda'], 'l' => 3],
+
+        // ---------- Mədəniyyət, ədəbiyyat, musiqi ----------
+        ['q' => 'UNESCO siyahısına daxil edilən Azərbaycan musiqi janrı hansıdır?', 'a' => 'Muğam', 'w' => ['Fado', 'Flamenko'], 'l' => 1],
+        ['q' => '"Arşın mal alan" operettasının müəllifi kimdir?', 'a' => 'Üzeyir Hacıbəyli', 'w' => ['Qara Qarayev', 'Niyazi'], 'l' => 1],
+        ['q' => '"Xəmsə" kimin əsəridir?', 'a' => 'Nizami Gəncəvi', 'w' => ['Məhəmməd Füzuli', 'İmadəddin Nəsimi'], 'l' => 1],
+        ['q' => 'Nizami Gəncəvi hansı şəhərdə doğulub?', 'a' => 'Gəncə', 'w' => ['Təbriz', 'Şamaxı'], 'l' => 1],
+        ['q' => 'Qıratı ilə məşhur xalq qəhrəmanı kimdir?', 'a' => 'Koroğlu', 'w' => ['Dədə Qorqud', 'Babək'], 'l' => 1],
+        ['q' => 'Tar hansı növ musiqi alətidir?', 'a' => 'Simli', 'w' => ['Nəfəsli', 'Zərb'], 'l' => 1],
+        ['q' => 'Nağara hansı növ musiqi alətidir?', 'a' => 'Zərb', 'w' => ['Simli', 'Nəfəsli'], 'l' => 1],
+        ['q' => 'Ənənəvi ipək qadın baş örtüyü necə adlanır?', 'a' => 'Kəlağayı', 'w' => ['Araqçın', 'Papaq'], 'l' => 1],
+        ['q' => 'Binası bükülmüş xalça formasında olan muzey hansıdır?', 'a' => 'Xalça Muzeyi', 'w' => ['Heydər Əliyev Mərkəzi', 'Nizami Muzeyi'], 'l' => 1],
+        ['q' => 'Bakıda alov dillərinə bənzəyən üç göydələn necə adlanır?', 'a' => 'Alov qüllələri', 'w' => ['Dəniz qüllələri', 'Külək qüllələri'], 'l' => 1],
+        ['q' => 'Bakının qədim tarixi hissəsi necə adlanır?', 'a' => 'İçərişəhər', 'w' => ['Bayıl', 'Sabunçu'], 'l' => 1],
+        ['q' => 'Qız qalası hansı şəhərdədir?', 'a' => 'Bakı', 'w' => ['Şəki', 'Gəncə'], 'l' => 1],
+        ['q' => 'Qədim qayaüstü rəsmləri ilə məşhur qoruq hansıdır?', 'a' => 'Qobustan', 'w' => ['Göygöl', 'Şahdağ'], 'l' => 1],
+        ['q' => 'Şuşanın simvolu sayılan çiçək hansıdır?', 'a' => 'Xarıbülbül', 'w' => ['Lalə', 'Qərənfil'], 'l' => 1],
+        ['q' => 'Azərbaycanın məşhur at cinsi hansıdır?', 'a' => 'Qarabağ atı', 'w' => ['Axaltəkə', 'Ərəb atı'], 'l' => 1],
+        ['q' => 'Müsəlman Şərqinin ilk operası hansıdır?', 'a' => '"Leyli və Məcnun"', 'w' => ['"Koroğlu"', '"Şah İsmayıl"'], 'l' => 2],
+        ['q' => '"Koroğlu" operasının bəstəkarı kimdir?', 'a' => 'Üzeyir Hacıbəyli', 'w' => ['Müslüm Maqomayev', 'Fikrət Əmirov'], 'l' => 2],
+        ['q' => '"Yeddi gözəl" baletinin bəstəkarı kimdir?', 'a' => 'Qara Qarayev', 'w' => ['Üzeyir Hacıbəyli', 'Niyazi'], 'l' => 2],
+        ['q' => 'Klassik muğam üçlüyü hansı alətlərdən ibarətdir?', 'a' => 'Tar, kamança, qaval', 'w' => ['Saz, balaban, nağara', 'Tar, tütək, zurna'], 'l' => 2],
+        ['q' => 'Balaban hansı növ musiqi alətidir?', 'a' => 'Nəfəsli', 'w' => ['Simli', 'Zərb'], 'l' => 2],
+        ['q' => '"Kitabi-Dədə Qorqud" hansı janrda əsərdir?', 'a' => 'Dastan', 'w' => ['Roman', 'Komediya'], 'l' => 2],
+        ['q' => '"Molla Nəsrəddin" jurnalının naşiri kim olub?', 'a' => 'Cəlil Məmmədquluzadə', 'w' => ['Mirzə Ələkbər Sabir', 'Həsən bəy Zərdabi'], 'l' => 2],
+        ['q' => 'İlk Azərbaycan qəzeti "Əkinçi"nin naşiri kim olub?', 'a' => 'Həsən bəy Zərdabi', 'w' => ['Mirzə Ələkbər Sabir', 'Üzeyir Hacıbəyli'], 'l' => 2],
+        ['q' => '"Hophopnamə" kimin əsəridir?', 'a' => 'Mirzə Ələkbər Sabir', 'w' => ['Cəlil Məmmədquluzadə', 'Səməd Vurğun'], 'l' => 2],
+        ['q' => '"Leyli və Məcnun" poemasını XVI əsrdə Azərbaycan türkcəsində yazan şair kimdir?', 'a' => 'Məhəmməd Füzuli', 'w' => ['Molla Pənah Vaqif', 'Səməd Vurğun'], 'l' => 2],
+        ['q' => 'Şair Xurşidbanu Natəvanın vətəni hansı şəhərdir?', 'a' => 'Şuşa', 'w' => ['Gəncə', 'Şamaxı'], 'l' => 2],
+        ['q' => 'Heydər Əliyev Mərkəzinin memarı kimdir?', 'a' => 'Zaha Hadid', 'w' => ['Norman Foster', 'Santyaqo Kalatrava'], 'l' => 2],
+        ['q' => 'Pəncərələri şəbəkə sənəti ilə bəzədilmiş məşhur saray hansıdır?', 'a' => 'Şəki Xan sarayı', 'w' => ['Şirvanşahlar sarayı', 'Gülüstan sarayı'], 'l' => 2],
+        ['q' => 'Şirvanşahlar sarayı hansı şəhərdədir?', 'a' => 'Bakı', 'w' => ['Şamaxı', 'Dərbənd'], 'l' => 2],
+        ['q' => 'Atəşgah məbədi hansı qəsəbədədir?', 'a' => 'Suraxanı', 'w' => ['Mərdəkan', 'Buzovna'], 'l' => 2],
+        ['q' => 'Misgərlik sənəti ilə məşhur dağ qəsəbəsi hansıdır?', 'a' => 'Lahıc', 'w' => ['Basqal', 'Ordubad'], 'l' => 2],
+        ['q' => '"Arşın mal alan" filmində (1945) Əsgər rolunu kim oynayıb?', 'a' => 'Rəşid Behbudov', 'w' => ['Bülbül', 'Müslüm Maqomayev'], 'l' => 2],
+        ['q' => 'Novruzdan əvvəl neçə çərşənbə qeyd olunur?', 'a' => '4', 'w' => ['3', '7'], 'l' => 1],
+        ['q' => 'Novruz xonçasının ortasına qoyulan yaşıllıq nədir?', 'a' => 'Səməni', 'w' => ['Nanə', 'Reyhan'], 'l' => 1],
+        ['q' => 'Novruz bayramı hansı ayda qeyd olunur?', 'a' => 'Mart', 'w' => ['Aprel', 'Fevral'], 'l' => 1],
+        ['q' => 'Novruzdan əvvəlki sonuncu çərşənbə hansıdır?', 'a' => 'Torpaq çərşənbəsi', 'w' => ['Su çərşənbəsi', 'Od çərşənbəsi'], 'l' => 2],
+        ['q' => '"Vaqif" dramının müəllifi kimdir?', 'a' => 'Səməd Vurğun', 'w' => ['Hüseyn Cavid', 'Cəfər Cabbarlı'], 'l' => 3],
+        ['q' => 'Azərbaycan dramaturgiyasının banisi sayılan yazıçı kimdir?', 'a' => 'Mirzə Fətəli Axundzadə', 'w' => ['Cəlil Məmmədquluzadə', 'Əbdürrəhim bəy Haqverdiyev'], 'l' => 3],
+        ['q' => '"Şur" simfonik muğamının bəstəkarı kimdir?', 'a' => 'Fikrət Əmirov', 'w' => ['Qara Qarayev', 'Arif Məlikov'], 'l' => 3],
+        ['q' => 'Naxçıvandakı Möminə xatın türbəsinin memarı kimdir?', 'a' => 'Əcəmi Naxçıvani', 'w' => ['Memar Əhməd', 'Sinan'], 'l' => 3],
+        ['q' => 'Kəlağayı istehsalı ilə məşhur qəsəbə hansıdır?', 'a' => 'Basqal', 'w' => ['Lahıc', 'Xınalıq'], 'l' => 3],
+        ['q' => 'Qarabağ xanlığının vəziri olmuş şair kimdir?', 'a' => 'Molla Pənah Vaqif', 'w' => ['Qasım bəy Zakir', 'Seyid Əzim Şirvani'], 'l' => 3],
+
+        // ---------- Mətbəx ----------
+        ['q' => 'Yarpaq dolması hansı yarpaqla hazırlanır?', 'a' => 'Üzüm yarpağı', 'w' => ['Kələm yarpağı', 'İspanaq yarpağı'], 'l' => 1],
+        ['q' => 'Azərbaycanda çay ənənəvi olaraq hansı stəkanda içilir?', 'a' => 'Armudu stəkanda', 'w' => ['Fincanda', 'Kasada'], 'l' => 1],
+        ['q' => 'Dovğa nədən hazırlanır?', 'a' => 'Qatıqdan', 'w' => ['Pomidor suyundan', 'Ət bulyonundan'], 'l' => 1],
+        ['q' => 'Kiçik xəmir bükmələri ilə bişən şorba hansıdır?', 'a' => 'Düşbərə', 'w' => ['Piti', 'Bozbaş'], 'l' => 1],
+        ['q' => 'Qiymədən şişə çəkilən kabab necə adlanır?', 'a' => 'Lülə kabab', 'w' => ['Tikə kabab', 'Basdırma'], 'l' => 1],
+        ['q' => 'Təndirdə bişən nazik çörək hansıdır?', 'a' => 'Lavaş', 'w' => ['Kökə', 'Bulka'], 'l' => 1],
+        ['q' => 'Novruzda bişən romb formalı şirniyyat hansıdır?', 'a' => 'Paxlava', 'w' => ['Şəkərbura', 'Qoğal'], 'l' => 1],
+        ['q' => 'Hansı şirniyyat Şəki şəhəri ilə məşhurdur?', 'a' => 'Halva', 'w' => ['Qoğal', 'Mütəkkə'], 'l' => 1],
+        ['q' => 'Hansı şəhərin pitisi xüsusilə məşhurdur?', 'a' => 'Şəki', 'w' => ['Lənkəran', 'Quba'], 'l' => 1],
+        ['q' => 'Şah plov nəyin içində bişirilir?', 'a' => 'Lavaşın', 'w' => ['Kələm yarpağının', 'Üzüm yarpağının'], 'l' => 2],
+        ['q' => 'Qutab nədə bişirilir?', 'a' => 'Sacda', 'w' => ['Təndirdə', 'Qazanda suda'], 'l' => 2],
+        ['q' => 'Piti hansı qabda bişirilir?', 'a' => 'Saxsı küpədə', 'w' => ['Sacda', 'Təndirdə'], 'l' => 2],
+        ['q' => 'Küftə bozbaşın əsas tərkibi nədir?', 'a' => 'Ət və noxud', 'w' => ['Balıq və düyü', 'Göbələk və kartof'], 'l' => 2],
+        ['q' => 'Ləvəngi hansı bölgənin yeməyidir?', 'a' => 'Lənkəran', 'w' => ['Şəki', 'Naxçıvan'], 'l' => 2],
+        ['q' => 'Şəkərbura hansı formada olur?', 'a' => 'Yarımay', 'w' => ['Romb', 'Kvadrat'], 'l' => 2],
+
+        // ---------- İdman və müasir dövr ----------
+        ['q' => 'İlk Avropa Oyunları (2015) hansı şəhərdə keçirilib?', 'a' => 'Bakı', 'w' => ['Minsk', 'Krakov'], 'l' => 1],
+        ['q' => 'Bakıda küçələrdə keçirilən məşhur avtomobil yarışı hansıdır?', 'a' => 'Formula 1', 'w' => ['NASCAR', 'Dakar rallisi'], 'l' => 1],
+        ['q' => 'Azərbaycan "Eurovision" mahnı müsabiqəsində hansı ildə qalib gəlib?', 'a' => '2011', 'w' => ['2009', '2013'], 'l' => 1],
+        ['q' => 'Bakıda doğulmuş 13-cü dünya şahmat çempionu kimdir?', 'a' => 'Qarri Kasparov', 'w' => ['Anatoli Karpov', 'Vladimir Kramnik'], 'l' => 2],
+        ['q' => 'Bakıda doğulmuş, fizika üzrə Nobel mükafatı laureatı kimdir?', 'a' => 'Lev Landau', 'w' => ['Lütfi Zadə', 'Qarri Kasparov'], 'l' => 3],
+        ['q' => 'Qeyri-səlis məntiqin (fuzzy logic) banisi olan azərbaycanlı alim kimdir?', 'a' => 'Lütfi Zadə', 'w' => ['Lev Landau', 'Mstislav Rostropoviç'], 'l' => 3],
+        ['q' => 'Bakıda doğulmuş dünyaca məşhur violonçel ifaçısı kimdir?', 'a' => 'Mstislav Rostropoviç', 'w' => ['Lev Landau', 'Niyazi'], 'l' => 3],
+    ],
+];

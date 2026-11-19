@@ -1,0 +1,97 @@
+@extends('frontend.layouts.app')
+@section('title', 'Sual oyunu - 50 Qəpik Oyunlar')
+
+@section('content')
+<section class="page-hero page-hero-sm">
+    <div class="container">
+        <span class="eyebrow">Oyunlar</span>
+        <h1>Sual oyunu</h1>
+        <p>Azərbaycanı nə qədər tanıyırsınız? Hər suala {{ $quiz['seconds'] }} saniyə!</p>
+    </div>
+</section>
+
+<section class="section pt-4 games-scene">
+    <div class="container">
+        <a href="{{ route('games.index') }}" class="back-link"><i class="fa fa-arrow-left"></i> Oyunlara qayıt</a>
+
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <div id="quiz" class="qz" data-quiz='@json($quiz)'>
+                    {{-- Başlanğıc --}}
+                    <div class="qz-screen qz-intro">
+                        <div class="qz-badge"><i class="fa fa-question"></i></div>
+                        <h3>Hazırsınız?</h3>
+                        <p>Hər mərhələdə <b>{{ $quiz['perStage'] }} sual</b>. Hər suala <b>{{ $quiz['seconds'] }} saniyə</b> vaxt var.<br>
+                            <b>{{ $quiz['lives'] }} səhv</b> etsəniz, oyun bitir.</p>
+                        @if ($quiz['stagePoints'] > 0)
+                            <p class="qz-earn"><i class="fa fa-star me-1"></i>1-ci mərhələ: <b>+{{ \App\Services\Referrals::format($quiz['stagePoints']) }} xal</b>@if ($quiz['stageStep'] > 0), hər növbəti mərhələdə <b>+{{ \App\Services\Referrals::format($quiz['stageStep']) }}</b> çox @endif
+                                @if ($quiz['canEarn'] && $quiz['pointsLeft'] <= 0)
+                                    <br><small>Bu günün xal limiti bitib — sabah yenə qazanın.</small>
+                                @elseif (! $quiz['canEarn'])
+                                    <br><small><a href="{{ $quiz['registerUrl'] }}">{{ auth()->check() ? 'Profilinizi təsdiqləyin' : 'Qeydiyyatdan keçin' }}</a> ki, xal qazanasınız.</small>
+                                @endif
+                            </p>
+                        @endif
+                        <p class="qz-record" hidden></p>
+                        <button type="button" class="btn btn-primary qz-start px-5 py-3">Başla <i class="fa fa-play ms-2"></i></button>
+                    </div>
+
+                    {{-- Sual --}}
+                    <div class="qz-screen qz-play" hidden>
+                        <div class="qz-top">
+                            <span class="qz-stage">1-ci mərhələ</span>
+                            <span class="qz-count">Sual 1 / {{ $quiz['perStage'] }}</span>
+                            <span class="qz-lives" aria-label="Qalan can"></span>
+                        </div>
+                        <div class="qz-timer" aria-hidden="true"><span class="qz-timer-bar"></span></div>
+                        <div class="qz-time-left" aria-live="off"></div>
+                        <h3 class="qz-question" aria-live="polite"></h3>
+                        <div class="qz-options"></div>
+                        <p class="qz-feedback" aria-live="polite"></p>
+                    </div>
+
+                    {{-- Mərhələ bitdi --}}
+                    <div class="qz-screen qz-stage-done" hidden>
+                        <div class="qz-badge qz-badge-ok"><i class="fa fa-flag-checkered"></i></div>
+                        <h3 class="qz-stage-title"></h3>
+                        <p class="qz-stage-note"></p>
+                        <button type="button" class="btn btn-primary qz-next-stage px-5 py-3">Növbəti mərhələ <i class="fa fa-arrow-right ms-2"></i></button>
+                    </div>
+
+                    {{-- Oyun bitdi --}}
+                    <div class="qz-screen qz-over" hidden>
+                        <div class="qz-badge qz-badge-end"><i class="fa fa-trophy"></i></div>
+                        <h3 class="qz-over-title">Oyun bitdi</h3>
+                        <p class="qz-over-note"></p>
+                        <button type="button" class="btn btn-primary qz-again px-5 py-3">Yenidən oyna <i class="fa fa-redo ms-2"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="side-card" data-game-rules="Sual oyunu">
+                    <h5><i class="fa fa-book me-2 text-primary"></i>Necə oynanır?</h5>
+                    <ul class="rules">
+                        <li>Azərbaycanın tarixi, coğrafiyası, mədəniyyəti və mətbəxinə aid suallar verilir.</li>
+                        <li>Hər sualın <b>3 cavabı</b> var, yalnız biri düzdür.</li>
+                        <li>Hər suala <b>{{ $quiz['seconds'] }} saniyə</b> vaxt var — vaxt bitsə, cavab səhv sayılır.</li>
+                        <li>Bir mərhələ <b>{{ $quiz['perStage'] }} sualdır</b>. <b>{{ $quiz['lives'] }} səhv</b> etsəniz, oyun bitir.</li>
+                        <li>{{ $quiz['perStage'] }} sualı keçəndə növbəti mərhələ başlayır, canlar yenilənir. Birinci mərhələ asandır, sonra suallar getdikcə çətinləşir.</li>
+                        @if ($quiz['stagePoints'] > 0)
+                            <li>Hər keçilən mərhələ üçün balansınıza xal yazılır və mərhələ artdıqca xal da artır:
+                                @for ($s = 1; $s <= 4; $s++)
+                                    <b>{{ $s }}-{{ [1 => 'ci', 2 => 'ci', 3 => 'cü', 4 => 'cü'][$s] }} — +{{ \App\Services\Referrals::format(\App\Http\Controllers\Frontend\QuizController::stageReward($s)) }}</b>{{ $s < 4 ? ',' : ' …' }}
+                                @endfor
+                                (gündə ən çox <b>{{ \App\Services\Referrals::format($quiz['maxPerDay']) }} xal</b>). Xalları Hədiyyə marketində hədiyyəyə çevirə bilərsiniz.</li>
+                        @endif
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+@endsection
+
+@section('js')
+<script src="{{ asset('js/games/quiz.js') }}?v=5"></script>
+@endsection

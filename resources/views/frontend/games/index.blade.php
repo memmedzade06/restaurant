@@ -237,39 +237,28 @@
             </div>
             @endif
             <div class="col-md-6 col-lg-4">
-                <a href="{{ route('games.crossword') }}" class="game-card">
-                    <div class="game-art cw-art">
-                        {{-- kiçik krossvord: PLOV (üfüqi), LİMON (şaquli), NAR (üfüqi) — hərflər növbə ilə yazılır --}}
-                        <svg class="cw-art-svg" viewBox="0 0 180 160" aria-hidden="true">
-                            <rect class="ca-cell" x="30" y="8" width="30" height="30"/>
-                            <text x="33" y="17" font-size="7">1</text>
-                            <text class="ca-pop" style="animation-delay:0.00s" x="45" y="30" font-size="16" text-anchor="middle">P</text>
-                            <rect class="ca-cell" x="60" y="8" width="30" height="30"/>
-                            <text x="63" y="17" font-size="7">2</text>
-                            <text class="ca-pop" style="animation-delay:0.22s" x="75" y="30" font-size="16" text-anchor="middle">L</text>
-                            <rect class="ca-cell" x="90" y="8" width="30" height="30"/>
-                            <text class="ca-pop" style="animation-delay:0.44s" x="105" y="30" font-size="16" text-anchor="middle">O</text>
-                            <rect class="ca-cell" x="120" y="8" width="30" height="30"/>
-                            <text class="ca-pop" style="animation-delay:0.66s" x="135" y="30" font-size="16" text-anchor="middle">V</text>
-                            <rect class="ca-cell" x="60" y="38" width="30" height="30"/>
-                            <text class="ca-pop" style="animation-delay:0.88s" x="75" y="60" font-size="16" text-anchor="middle">İ</text>
-                            <rect class="ca-cell ca-hl" x="60" y="68" width="30" height="30"/>
-                            <text class="ca-pop" style="animation-delay:1.10s" x="75" y="90" font-size="16" text-anchor="middle">M</text>
-                            <rect class="ca-cell" x="60" y="98" width="30" height="30"/>
-                            <text class="ca-pop" style="animation-delay:1.32s" x="75" y="120" font-size="16" text-anchor="middle">O</text>
-                            <rect class="ca-cell" x="60" y="128" width="30" height="30"/>
-                            <text x="63" y="137" font-size="7">3</text>
-                            <text class="ca-pop" style="animation-delay:1.54s" x="75" y="150" font-size="16" text-anchor="middle">N</text>
-                            <rect class="ca-cell" x="90" y="128" width="30" height="30"/>
-                            <text class="ca-pop" style="animation-delay:1.76s" x="105" y="150" font-size="16" text-anchor="middle">A</text>
-                            <rect class="ca-cell" x="120" y="128" width="30" height="30"/>
-                            <text class="ca-pop" style="animation-delay:1.98s" x="135" y="150" font-size="16" text-anchor="middle">R</text>
+                <a href="{{ route('games.quiz') }}" class="game-card">
+                    <div class="game-art qz-art">
+                        {{-- sual qabarcığı və 3 cavab — düz cavab yaşıl yanır --}}
+                        <svg class="qz-art-svg" viewBox="0 0 200 160" aria-hidden="true">
+                            <rect x="28" y="8" width="144" height="46" rx="14" fill="#e9a23b"/>
+                            <path d="M88 54 L100 68 L106 54 Z" fill="#e9a23b"/>
+                            <text x="100" y="40" font-size="26" text-anchor="middle" fill="#fff">?</text>
+                            <rect class="qa-opt" x="34" y="78" width="132" height="22" rx="11"/>
+                            <circle cx="48" cy="89" r="7" fill="#e9a23b"/><text x="48" y="93" font-size="10" text-anchor="middle" fill="#fff">1</text>
+                            <rect class="qa-mark" x="62" y="86" width="70" height="6" rx="3" opacity=".25"/>
+                            <rect class="qa-opt qa-right" x="34" y="106" width="132" height="22" rx="11"/>
+                            <circle cx="48" cy="117" r="7" fill="#e9a23b"/><text x="48" y="121" font-size="10" text-anchor="middle" fill="#fff">2</text>
+                            <rect class="qa-mark" x="62" y="114" width="86" height="6" rx="3" opacity=".25"/>
+                            <rect class="qa-opt" x="34" y="134" width="132" height="22" rx="11"/>
+                            <circle cx="48" cy="145" r="7" fill="#e9a23b"/><text x="48" y="149" font-size="10" text-anchor="middle" fill="#fff">3</text>
+                            <rect class="qa-mark" x="62" y="142" width="58" height="6" rx="3" opacity=".25"/>
                         </svg>
                     </div>
                     <div class="game-body">
-                        <h4>Krossvord</h4>
-                        <p>Azərbaycan sözləri ilə hər gün yeni krossvord: mətbəx, Novruz, musiqi və şəhərlər.</p>
-                        <span class="game-go">Həll et <i class="fa fa-arrow-right ms-1"></i></span>
+                        <h4>Sual oyunu</h4>
+                        <p>Azərbaycanı nə qədər tanıyırsınız? Hər suala {{ (int) config('quiz.seconds', 5) }} saniyə, mərhələ keçdikcə artan xallar: <b>+{{ \App\Http\Controllers\Frontend\QuizController::pointsLabel() }}, +{{ \App\Services\Referrals::format(\App\Http\Controllers\Frontend\QuizController::stageReward(2)) }}…</b></p>
+                        <span class="game-go">Oyna <i class="fa fa-arrow-right ms-1"></i></span>
                     </div>
                 </a>
             </div>
@@ -314,7 +303,7 @@
             <div class="col-md-6">
                 <div class="side-card h-100">
                     <h5><i class="fa fa-trophy me-2 text-primary"></i>Stəkan qülləsi liderləri</h5>
-                    @include('frontend.games._leaders', ['leaders' => $stackLeaders])
+                    @include('frontend.games._leaders', ['leaders' => $stackLeaders, 'unit' => 'stəkan'])
                 </div>
             </div>
         </div>

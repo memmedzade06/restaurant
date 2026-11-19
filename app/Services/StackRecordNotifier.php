@@ -61,8 +61,8 @@ class StackRecordNotifier
 
         $chatId = $oldLeader->telegram_chat_id;
         $text = "⚠️ <b>Rekordunuz qırıldı!</b>\n\n"
-            . '🏆 <b>' . e($winner->short_name) . "</b> Stəkan qülləsində <b>{$score} xal</b> yığıb birinci yerə çıxdı.\n"
-            . "Sizin rekordunuz: {$oldBest} xal.\n"
+            . '🏆 <b>' . e($winner->short_name) . "</b> Stəkan qülləsində <b>{$score} stəkan</b> yığıb birinci yerə çıxdı.\n"
+            . "Sizin rekordunuz: {$oldBest} stəkan.\n"
             . ($prize ? '🎁 Qazandığı: <b>' . e($prize) . "</b>\n" : '')
             . "\nBirinciliyi geri almaq üçün gəlin oynayın 😉\n" . route('games.stack');
 
