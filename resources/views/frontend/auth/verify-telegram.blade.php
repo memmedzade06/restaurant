@@ -33,6 +33,10 @@
             <p class="tg-wait" id="tgWait"><span class="dot"></span> Təsdiq gözlənilir…</p>
             <p class="hint mb-0">Link {{ \App\Services\TelegramVerification::TOKEN_TTL_MINUTES }} dəqiqə etibarlıdır. Vaxtı keçsə, səhifəni yeniləyin.</p>
 
+            @include('frontend.partials.google-button', ['href' => route('verify.google'), 'label' => 'Google ilə təsdiqlə', 'dividerFirst' => true])
+            @error('google') <small class="err text-center mt-2">{{ $message }}</small> @enderror
+
+
             <form method="POST" action="{{ route('logout') }}" class="mt-3">
                 @csrf
                 <button type="submit" class="btn-link-plain">Başqa nömrə ilə qeydiyyat — çıxış</button>

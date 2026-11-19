@@ -21,7 +21,7 @@
     <link href="{{ asset('lib/owlcarousel/assets/owl.carousel.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/custom.css') }}?v=20" rel="stylesheet">
+    <link href="{{ asset('css/custom.css') }}?v=21" rel="stylesheet">
     <link href="{{ asset('css/games.css') }}?v=45" rel="stylesheet">
     @yield('css')
 </head>
@@ -55,6 +55,34 @@
     </nav>
 
     @yield('content')
+
+    {{-- Təsdiqlənməmiş profil: hər səhifədə aşağıda xəbərdarlıq (təsdiq səhifələrinin özündə yox) --}}
+    @auth
+        @if (! auth()->user()->isVerified() && ! request()->routeIs('verify.*'))
+            <div class="verify-bar" id="verifyBar" role="status" hidden>
+                <i class="fa fa-exclamation-circle verify-bar-ico"></i>
+                <div class="verify-bar-text">
+                    <b>Profiliniz təsdiqlənməyib.</b>
+                    <span>Xal, hədiyyə və liderlər cədvəli üçün profilinizi təsdiqləyin.</span>
+                </div>
+                <a href="{{ route(auth()->user()->verificationRoute()) }}" class="btn btn-primary verify-bar-btn">Profili təsdiqlə</a>
+                <button type="button" class="verify-bar-close" aria-label="Bağla">&times;</button>
+            </div>
+            <script>
+                (function () {
+                    var bar = document.getElementById('verifyBar');
+                    try { if (sessionStorage.getItem('verifyBarClosed')) return; } catch (e) {}
+                    bar.hidden = false;
+                    document.body.classList.add('has-verify-bar');
+                    bar.querySelector('.verify-bar-close').addEventListener('click', function () {
+                        bar.hidden = true;
+                        document.body.classList.remove('has-verify-bar');
+                        try { sessionStorage.setItem('verifyBarClosed', '1'); } catch (e) {}
+                    });
+                })();
+            </script>
+        @endif
+    @endauth
 
     {{-- Footer --}}
     <footer class="site-footer">

@@ -31,6 +31,10 @@
             <p class="tg-wait"><span class="dot"></span> Təsdiq gözlənilir…</p>
             <p class="hint mb-0">Məktubu görmürsünüzsə, <b>Spam</b> qovluğuna baxın. Link {{ \App\Services\EmailVerification::LINK_TTL_MINUTES }} dəqiqə etibarlıdır.</p>
 
+            @include('frontend.partials.google-button', ['href' => route('verify.google'), 'label' => 'Google ilə təsdiqlə', 'dividerFirst' => true])
+            @error('google') <small class="err text-center mt-2">{{ $message }}</small> @enderror
+
+
             <form method="POST" action="{{ route('verify.email.resend') }}" class="mt-3">
                 @csrf
                 <button type="submit" class="btn-link-plain" id="resendBtn" data-wait="{{ $resendWait }}" @disabled($resendWait > 0)>Məktubu yenidən göndər</button>

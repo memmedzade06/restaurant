@@ -72,7 +72,6 @@ Route::middleware('guest')->group(function () {
 
     // Google ilə davam et (qeydiyyat və giriş)
     Route::get('/auth/google', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'redirect'])->middleware('throttle:20,1')->name('google.redirect');
-    Route::get('/auth/google/callback', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'callback'])->middleware('throttle:20,1')->name('google.callback');
     Route::post('/giris', [LoginController::class, 'store'])->middleware('throttle:10,1');
 
     // Şifrəmi unutdum: nömrə → Telegram ilə təsdiq (və ya e-poçt → link) → yeni şifrə
@@ -88,6 +87,9 @@ Route::middleware('guest')->group(function () {
     });
 });
 
+// Google-dan qayıdış: həm giriş/qeydiyyat (qonaq), həm də "Google ilə təsdiqlə" (daxil olmuş) üçün
+Route::get('/auth/google/callback', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'callback'])->middleware('throttle:20,1')->name('google.callback');
+
 // E-poçtdakı təsdiq linki: imzalıdır, girişsiz də (məs. telefonda) açıla bilər
 Route::get('/tesdiq/e-poct/{user}/{hash}', [EmailVerifyController::class, 'confirm'])
     ->middleware(['signed', 'throttle:10,1'])->where('user', '\d+')->name('verify.email.confirm');
@@ -97,6 +99,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/tesdiq', [TelegramVerifyController::class, 'show'])->name('verify.telegram');
     Route::get('/tesdiq/status', [TelegramVerifyController::class, 'status'])->middleware('throttle:60,1')->name('verify.telegram.status');
     // E-poçt ilə qeydiyyat: məktubdakı "Təsdiqlə" düyməsi
+    // Təsdiqlənməmiş profil Google hesabını bağlayıb təsdiqləyir
+    Route::get('/tesdiq/google', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'link'])->middleware('throttle:20,1')->name('verify.google');
     Route::get('/tesdiq/e-poct', [EmailVerifyController::class, 'show'])->name('verify.email');
     Route::get('/tesdiq/e-poct/status', [EmailVerifyController::class, 'status'])->middleware('throttle:60,1')->name('verify.email.status');
     Route::post('/tesdiq/e-poct/yeniden', [EmailVerifyController::class, 'resend'])->middleware('throttle:3,1')->name('verify.email.resend');

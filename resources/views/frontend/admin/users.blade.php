@@ -61,7 +61,15 @@
                                     <td>
                                         {{ \App\Support\Phone::format($u->phone) ?: ($u->email ?: '—') }}
                                         <br><small class="{{ $u->isVerified() ? 'text-success' : 'text-muted' }}">
-                                            {{ $u->phone_verified_at ? '✔ Telegram ilə təsdiqlənib' : ($u->email_verified_at ? '✔ E-poçt ilə təsdiqlənib' : 'təsdiqlənməyib') }}
+                                            @if ($u->phone_verified_at)
+                                                <i class="fab fa-telegram-plane me-1"></i>Telegram ilə təsdiqlənib
+                                            @elseif ($u->google_id)
+                                                <i class="fab fa-google me-1"></i>Google ilə təsdiqlənib
+                                            @elseif ($u->email_verified_at)
+                                                <i class="fa fa-envelope me-1"></i>E-poçt ilə təsdiqlənib
+                                            @else
+                                                təsdiqlənməyib
+                                            @endif
                                         </small>
                                     </td>
                                     <td>

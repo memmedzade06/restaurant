@@ -34,13 +34,32 @@ class GoogleAuthController extends Controller
         return $this->driver()->redirect();
     }
 
+    /** Daxil olmuş, amma təsdiqlənməmiş istifadəçi: Google hesabını öz profilinə bağlayıb təsdiqləyir */
+    public function link(Request $request): SymfonyRedirect
+    {
+        abort_unless(self::enabled(), 404);
+
+        if ($request->user()->isVerified()) {
+            return redirect()->route('games.index');
+        }
+
+        return $this->driver()->redirect();
+    }
+
     public function callback(Request $request): RedirectResponse
     {
         abort_unless(self::enabled(), 404);
 
+        $current = $request->user(); // daxil olubsa — bu, "Google ilə təsdiqlə"dir
+        if ($current?->isVerified()) {
+            return redirect()->route('games.index');
+        }
+        $back = $current ? route($current->verificationRoute()) : route('login');
+        $errorKey = $current ? 'google' : 'login';
+
         // İstifadəçi Google pəncərəsində "Ləğv et" basıb
         if ($request->has('error')) {
-            return redirect()->route('login');
+            return redirect($back);
         }
 
         try {
@@ -48,12 +67,16 @@ class GoogleAuthController extends Controller
         } catch (\Throwable $e) {
             Log::warning('Google ilə giriş alınmadı: ' . $e->getMessage());
 
-            return redirect()->route('login')->withErrors(['login' => 'Google ilə giriş alınmadı. Yenidən cəhd edin.']);
+            return redirect($back)->withErrors([$errorKey => 'Google ilə əlaqə alınmadı. Yenidən cəhd edin.']);
         }
 
         $email = strtolower((string) $google->getEmail());
         if ($email === '' || ! ($google->user['email_verified'] ?? true)) {
-            return redirect()->route('login')->withErrors(['login' => 'Google hesabınızın e-poçtu təsdiqlənməyib.']);
+            return redirect($back)->withErrors([$errorKey => 'Google hesabınızın e-poçtu təsdiqlənməyib.']);
+        }
+
+        if ($current) {
+            return $this->linkToCurrent($request, $current, $google->getId(), $email);
         }
 
         $user = User::where('google_id', $google->getId())->first()
@@ -93,6 +116,35 @@ class GoogleAuthController extends Controller
         }
 
         return redirect()->intended(route('games.index'));
+    }
+
+    /**
+     * Google hesabını daxil olmuş istifadəçinin profilinə bağlayır və profili təsdiqləyir.
+     * Bu Google hesabı / e-poçt başqa profildədirsə — bağlamırıq (iki hesab qarışmasın).
+     */
+    private function linkToCurrent(Request $request, User $user, string $googleId, string $email): RedirectResponse
+    {
+        $taken = User::whereKeyNot($user->id)
+            ->where(fn ($q) => $q->where('google_id', $googleId)->orWhere('email', $email))
+            ->exists();
+
+        if ($taken) {
+            return redirect()->route($user->verificationRoute())
+                ->withErrors(['google' => 'Bu Google hesabı başqa profilə bağlıdır. Başqa Google hesabı seçin və ya hesabınızı əvvəlki üsulla təsdiqləyin.']);
+        }
+
+        // Nömrə ilə qeydiyyatda e-poçt yox idi; e-poçtla qeydiyyatda isə yazılan ünvan heç vaxt təsdiqlənməyib —
+        // hər iki halda profilə Google-un təsdiqlədiyi ünvan yazılır
+        $user->forceFill([
+            'google_id' => $googleId,
+            'email' => $email,
+            'email_verified_at' => now(),
+        ])->save();
+
+        Referrals::reward($user); // dəvət linki ilə gəlibsə — dəvət edənə xal
+        $request->session()->flash('registered', true);
+
+        return redirect()->route('games.index');
     }
 
     /** Qayıdış ünvanı cari domenə görə (lokal və real sayt üçün eyni kod) */

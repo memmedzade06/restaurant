@@ -356,6 +356,27 @@ a.contact-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg)
 .tg-wait { margin: 18px 0 6px; font-weight: 800; color: var(--wine); display: inline-flex; align-items: center; gap: 10px; }
 .tg-wait .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); animation: pulseDot 1.2s infinite; }
 @keyframes pulseDot { 50% { opacity: .25; transform: scale(.7); } }
+/* Təsdiqlənməmiş profil: aşağıda üzən xəbərdarlıq */
+.verify-bar { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 1040; width: calc(100% - 32px); max-width: 760px; display: flex; align-items: center; gap: 14px; padding: 14px 14px 14px 18px; border-radius: 18px; background: #fff; border: 1.5px solid var(--primary); box-shadow: 0 14px 40px rgba(43, 26, 18, .25); animation: verifyBarIn .35s ease-out; }
+.verify-bar[hidden] { display: none; }
+.verify-bar-ico { font-size: 26px; color: var(--primary); flex-shrink: 0; }
+.verify-bar-text { flex: 1; min-width: 0; line-height: 1.35; font-size: 14px; color: var(--text); }
+.verify-bar-text b { display: block; color: var(--dark); font-size: 15px; }
+.verify-bar-btn { flex-shrink: 0; padding: 10px 18px; border-radius: 999px; white-space: nowrap; }
+.verify-bar-close { flex-shrink: 0; width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
+.verify-bar-close:hover, .verify-bar-close:focus-visible { background: #fff4e0; color: var(--wine); outline: none; }
+body.has-verify-bar .back-to-top { bottom: 110px; }
+body.has-verify-bar .site-footer { padding-bottom: 110px; }
+@keyframes verifyBarIn { from { transform: translate(-50%, 12px); } to { transform: translate(-50%, 0); } }
+@media (max-width: 575.98px) {
+    .verify-bar { flex-wrap: wrap; gap: 10px; padding: 12px 12px 12px 14px; bottom: 12px; }
+    .verify-bar-text { flex-basis: calc(100% - 80px); }
+    .verify-bar-btn { width: 100%; order: 3; }
+    .verify-bar-close { position: absolute; top: 6px; right: 6px; }
+    body.has-verify-bar .back-to-top { bottom: 150px; }
+    body.has-verify-bar .site-footer { padding-bottom: 150px; }
+}
+
 /* Məxfilik siyasəti */
 .legal-card { max-width: 820px; margin: 0 auto; background: #fff; border-radius: 22px; padding: 36px 34px; box-shadow: var(--shadow-lg); color: var(--text); line-height: 1.7; }
 .legal-card h2 { font-size: 20px; font-weight: 800; color: var(--dark); margin: 28px 0 10px; }
