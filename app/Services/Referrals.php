@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
  * Dəvət (referal) sistemi:
  *  1. Kimsə dəvət linkini və ya QR kodu açır — kod cookie-də yadda saxlanılır (config referral.cookie_days).
  *  2. Qeydiyyatdan keçəndə yeni istifadəçiyə "kim dəvət edib" yazılır.
- *  3. Yeni istifadəçi nömrəsini Telegram ilə təsdiqləyəndə dəvət edənin balansına xal yazılır (bir dəfə).
+ *  3. Yeni istifadəçi hesabını təsdiqləyəndə (Telegram, e-poçt və ya Google ilə) dəvət edənin balansına xal yazılır (bir dəfə).
  */
 class Referrals
 {

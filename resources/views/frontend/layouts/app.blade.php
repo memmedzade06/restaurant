@@ -21,7 +21,7 @@
     <link href="{{ asset('lib/owlcarousel/assets/owl.carousel.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/custom.css') }}?v=19" rel="stylesheet">
+    <link href="{{ asset('css/custom.css') }}?v=20" rel="stylesheet">
     <link href="{{ asset('css/games.css') }}?v=45" rel="stylesheet">
     @yield('css')
 </head>
@@ -90,7 +90,7 @@
                 </div>
             </div>
             <div class="copy d-flex flex-wrap justify-content-between gap-2">
-                <span>&copy; {{ date('Y') }} 50 Qəpik. Bütün hüquqlar qorunur.</span>
+                <span>&copy; {{ date('Y') }} 50 Qəpik. Bütün hüquqlar qorunur. · <a href="{{ route('privacy') }}">Məxfilik siyasəti</a></span>
                 <a href="{{ route('menu') }}">Menyuya bax <i class="fa fa-arrow-right ms-1"></i></a>
             </div>
         </div>

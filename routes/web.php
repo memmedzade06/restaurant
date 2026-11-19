@@ -45,6 +45,7 @@ Route::get('/menu', function () {
     return redirect()->away($url);
 })->name('menu');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
+Route::view('/mexfilik', 'frontend.legal.privacy')->name('privacy'); // Məxfilik siyasəti (Google girişi üçün tələb olunur)
 
 
 Route::get('/get_items',[MenuController::class,'get_items_by_category'])->name('get_items_by_category');
@@ -68,6 +69,10 @@ Route::middleware('guest')->group(function () {
     Route::get('/qeydiyyat', [RegisterController::class, 'show'])->name('register');
     Route::post('/qeydiyyat', [RegisterController::class, 'store'])->middleware('throttle:6,1');
     Route::get('/giris', [LoginController::class, 'show'])->name('login');
+
+    // Google ilə davam et (qeydiyyat və giriş)
+    Route::get('/auth/google', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'redirect'])->middleware('throttle:20,1')->name('google.redirect');
+    Route::get('/auth/google/callback', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'callback'])->middleware('throttle:20,1')->name('google.callback');
     Route::post('/giris', [LoginController::class, 'store'])->middleware('throttle:10,1');
 
     // Şifrəmi unutdum: nömrə → Telegram ilə təsdiq (və ya e-poçt → link) → yeni şifrə

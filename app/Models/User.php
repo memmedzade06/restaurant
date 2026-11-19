@@ -33,6 +33,7 @@ class User extends Authenticatable
         'password',
         'remember_token',
         'telegram_token',
+        'google_id',
     ];
 
     /**

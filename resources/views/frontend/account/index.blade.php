@@ -71,7 +71,7 @@
                 <div class="acc-card acc-profile">
                     <div class="acc-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($me->name, 0, 1)) }}</div>
                     <h4 class="acc-name">{{ $me->name }}</h4>
-                    <span class="acc-verified"><i class="fa fa-check-circle me-1"></i>{{ $me->phone_verified_at ? 'Telegram ilə təsdiqlənib' : 'E-poçt ilə təsdiqlənib' }}</span>
+                    <span class="acc-verified"><i class="fa fa-check-circle me-1"></i>{{ $me->phone_verified_at ? 'Telegram ilə təsdiqlənib' : ($me->google_id ? 'Google ilə təsdiqlənib' : 'E-poçt ilə təsdiqlənib') }}</span>
                     <ul class="account-list acc-details">
                         @if ($me->phone)
                             <li><span><i class="fa fa-phone-alt me-2"></i>Telefon</span><b>{{ \App\Support\Phone::format($me->phone) }}</b></li>

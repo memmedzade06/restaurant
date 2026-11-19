@@ -17,6 +17,8 @@
                 <div class="alert-ok"><i class="fa fa-check-circle me-2"></i>{{ session('status') }}</div>
             @endif
 
+            @include('frontend.partials.google-button')
+
             <form method="POST" action="{{ route('login') }}" novalidate>
                 @csrf
 
