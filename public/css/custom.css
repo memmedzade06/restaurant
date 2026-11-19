@@ -356,6 +356,15 @@ a.contact-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg)
 .tg-wait { margin: 18px 0 6px; font-weight: 800; color: var(--wine); display: inline-flex; align-items: center; gap: 10px; }
 .tg-wait .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); animation: pulseDot 1.2s infinite; }
 @keyframes pulseDot { 50% { opacity: .25; transform: scale(.7); } }
+/* Oyunlar səhifəsi: xal balansı */
+.hero-points { display: inline-flex; align-items: center; gap: 10px; margin-top: 18px; padding: 6px 8px 6px 6px; border-radius: 999px; background: rgba(255, 255, 255, .12); border: 1px solid rgba(255, 255, 255, .25); color: #fff; text-decoration: none; backdrop-filter: blur(6px); transition: background .2s, transform .2s; max-width: 100%; }
+.hero-points:hover, .hero-points:focus-visible { background: rgba(255, 255, 255, .2); color: #fff; transform: translateY(-1px); outline: none; }
+.hero-points-ico { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--primary); color: #fff; flex-shrink: 0; }
+.hero-points-text { font-size: 15px; white-space: nowrap; }
+.hero-points-text b { color: #ffd28a; font-size: 17px; }
+.hero-points-go { padding: 6px 14px; border-radius: 999px; background: #fff; color: var(--wine); font-weight: 800; font-size: 13px; white-space: nowrap; }
+@media (max-width: 420px) { .hero-points-go { display: none; } .hero-points { padding-right: 16px; } }
+
 /* Təsdiqlənməmiş profil: aşağıda üzən xəbərdarlıq */
 .verify-bar { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 1040; width: calc(100% - 32px); max-width: 760px; display: flex; align-items: center; gap: 14px; padding: 14px 14px 14px 18px; border-radius: 18px; background: #fff; border: 1.5px solid var(--primary); box-shadow: 0 14px 40px rgba(43, 26, 18, .25); animation: verifyBarIn .35s ease-out; }
 .verify-bar[hidden] { display: none; }

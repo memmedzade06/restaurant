@@ -7,6 +7,16 @@
         <span class="eyebrow">50 Qəpik</span>
         <h1>Oyunlar</h1>
         <p>Yeməyinizi gözləyərkən əylənin — hədiyyələr və xallar qazanın</p>
+        @auth
+            @if (auth()->user()->isVerified())
+                {{-- Balans: dəvət və oyun bonuslarından toplanan xallar (Hədiyyə marketində hədiyyəyə çevrilir) --}}
+                <a href="{{ route('market') }}" class="hero-points" title="Hədiyyə marketinə keç">
+                    <span class="hero-points-ico"><i class="fa fa-star"></i></span>
+                    <span class="hero-points-text">Balansınız: <b>{{ \App\Services\Referrals::format((float) auth()->user()->points) }} xal</b></span>
+                    <span class="hero-points-go">Hədiyyə marketi <i class="fa fa-arrow-right ms-1"></i></span>
+                </a>
+            @endif
+        @endauth
     </div>
 </section>
 
