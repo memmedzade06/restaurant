@@ -4,25 +4,31 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\EmailPasswordReset;
 use App\Services\TelegramPasswordReset;
 use App\Support\Phone;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
- * Şifrəmi unutdum: nömrə → Telegram ilə təsdiq → yeni şifrə.
+ * Şifrəmi unutdum: nömrə → Telegram ilə təsdiq → yeni şifrə;
+ * e-poçt → məktubdakı imzalı link → yeni şifrə (e-poçtla qeydiyyatdan keçənlər üçün).
  * Bərpa kodu bu brauzerin sessiyasında saxlanılır — başqa cihazdan yeni şifrə təyin etmək olmur.
  */
 class ForgotPasswordController extends Controller
 {
     private const SESSION_KEY = 'pw_reset_token';
 
-    public function __construct(private readonly TelegramPasswordReset $reset)
+    public function __construct(
+        private readonly TelegramPasswordReset $reset,
+        private readonly EmailPasswordReset $emailReset,
+    )
     {
     }
 
@@ -34,20 +40,60 @@ class ForgotPasswordController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $request->validate(['phone' => ['required', 'string']], ['phone.required' => 'Telefon nömrənizi yazın.']);
+        $request->validate(['login' => ['required', 'string']], ['login.required' => 'Nömrənizi və ya e-poçtunuzu yazın.']);
+        $login = trim($request->input('login'));
 
-        $phone = Phone::normalize($request->input('phone'));
+        // E-poçt: e-poçtla qeydiyyatdan keçənlərə bərpa linki göndərilir
+        if (str_contains($login, '@')) {
+            $user = $this->emailReset->findUser($login);
+            if (! $user) {
+                throw ValidationException::withMessages(['login' => 'Bu e-poçt ilə təsdiqlənmiş hesab tapılmadı.']);
+            }
+
+            try {
+                $this->emailReset->send($user);
+            } catch (\Throwable $e) {
+                Log::error('Şifrə bərpası məktubu göndərilmədi: ' . $e->getMessage());
+                throw ValidationException::withMessages(['login' => 'Məktub göndərilmədi. Bir az sonra yenidən cəhd edin.']);
+            }
+
+            return redirect()->route('password.email.sent')->with('reset_email', $user->email);
+        }
+
+        // Nömrə: Telegram ilə bərpa
+        $phone = Phone::normalize($login);
         $user = $phone ? User::where('phone', $phone)->whereNotNull('phone_verified_at')->first() : null;
 
         if (! $user) {
             throw ValidationException::withMessages([
-                'phone' => $phone ? 'Bu nömrə ilə təsdiqlənmiş hesab tapılmadı.' : 'Nömrəni düzgün yazın, məsələn: 050 123 45 67.',
+                'login' => $phone ? 'Bu nömrə ilə təsdiqlənmiş hesab tapılmadı.' : 'Nömrəni (məs. 050 123 45 67) və ya e-poçtu düzgün yazın.',
             ]);
         }
 
         $request->session()->put(self::SESSION_KEY, $this->reset->start($user));
 
         return redirect()->route('password.telegram');
+    }
+
+    /** E-poçt: "məktub göndərildi" səhifəsi */
+    public function emailSent(Request $request): View|RedirectResponse
+    {
+        $email = $request->session()->get('reset_email');
+
+        return $email ? view('frontend.auth.forgot-email', ['email' => $email]) : redirect()->route('password.request');
+    }
+
+    /** E-poçtdakı imzalı link: təsdiqlənmiş bərpa kodu yaradılır və yeni şifrə formu açılır */
+    public function emailConfirm(Request $request, User $user, string $hash): RedirectResponse
+    {
+        if (! $this->emailReset->valid($user, $hash)) {
+            return redirect()->route('password.request')
+                ->withErrors(['login' => 'Bu link artıq istifadə olunub və ya etibarsızdır. Yenidən cəhd edin.']);
+        }
+
+        $request->session()->put(self::SESSION_KEY, $this->reset->startConfirmed($user));
+
+        return redirect()->route('password.reset');
     }
 
     /** 2-ci addım: Telegram ilə təsdiq */
@@ -89,7 +135,10 @@ class ForgotPasswordController extends Controller
             return $this->expired();
         }
 
-        return view('frontend.auth.reset', ['phone' => $user->phone]);
+        return view('frontend.auth.reset', [
+            'label' => $user->phone ? Phone::format($user->phone) : $user->email,
+            'viaEmail' => ! $user->phone,
+        ]);
     }
 
     public function update(Request $request): RedirectResponse
@@ -116,7 +165,7 @@ class ForgotPasswordController extends Controller
         $request->session()->forget(self::SESSION_KEY);
 
         return redirect()->route('login')
-            ->withInput(['login' => Phone::format($user->phone)])
+            ->withInput(['login' => $user->phone ? Phone::format($user->phone) : $user->email])
             ->with('status', 'Şifrəniz dəyişdirildi. İndi yeni şifrə ilə daxil olun.');
     }
 
@@ -125,6 +174,6 @@ class ForgotPasswordController extends Controller
         session()->forget(self::SESSION_KEY);
 
         return redirect()->route('password.request')
-            ->withErrors(['phone' => 'Bərpa linkinin vaxtı keçib. Nömrənizi yenidən yazın.']);
+            ->withErrors(['login' => 'Bərpa linkinin vaxtı keçib. Yenidən cəhd edin.']);
     }
 }

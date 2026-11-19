@@ -92,7 +92,7 @@ class TelegramVerification
 
         $this->bot->sendMessage(
             $chatId,
-            'Salam, <b>' . e($user->name) . "</b>! 👋\n50 Qəpik saytında qeydiyyatı təsdiqləmək üçün aşağıdakı <b>📱 Nömrəmi paylaş</b> düyməsini basın.\n\nQeydiyyat nömrəsi: " . Phone::format($user->phone),
+            'Salam, <b>' . e($user->name) . "</b>! 👋\n50 Qəpik saytında qeydiyyatı təsdiqləmək üçün aşağıdakı <b>✅ Təsdiqlə</b> düyməsini basın.\n\nQeydiyyat nömrəsi: " . Phone::format($user->phone),
             TelegramBot::contactKeyboard()
         );
     }
@@ -103,7 +103,7 @@ class TelegramVerification
 
         // Başqasının kontaktını göndərməyin qarşısını alır
         if (($contact['user_id'] ?? null) !== ($message['from']['id'] ?? false)) {
-            $this->bot->sendMessage($chatId, 'Zəhmət olmasa, başqasının yox, <b>öz</b> nömrənizi düymə ilə paylaşın.', TelegramBot::contactKeyboard());
+            $this->bot->sendMessage($chatId, 'Zəhmət olmasa, aşağıdakı <b>✅ Təsdiqlə</b> düyməsini basın.', TelegramBot::contactKeyboard());
             return;
         }
 

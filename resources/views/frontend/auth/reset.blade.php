@@ -6,7 +6,7 @@
     <div class="container">
         <span class="eyebrow">Şifrə bərpası</span>
         <h1>Yeni şifrə təyin edin</h1>
-        <p>{{ \App\Support\Phone::format($phone) }}</p>
+        <p>{{ $label }}</p>
     </div>
 </section>
 
@@ -14,8 +14,8 @@
     <div class="container">
         <div class="auth-card">
             <ol class="pw-steps">
-                <li class="done"><span><i class="fa fa-check"></i></span>Nömrə</li>
-                <li class="done"><span><i class="fa fa-check"></i></span>Telegram</li>
+                <li class="done"><span><i class="fa fa-check"></i></span>Hesab</li>
+                <li class="done"><span><i class="fa fa-check"></i></span>{{ $viaEmail ? 'E-poçt' : 'Telegram' }}</li>
                 <li class="active"><span>3</span>Yeni şifrə</li>
             </ol>
 

@@ -14,7 +14,7 @@
     <div class="container">
         <div class="auth-card text-center">
             <ol class="pw-steps">
-                <li class="done"><span><i class="fa fa-check"></i></span>Nömrə</li>
+                <li class="done"><span><i class="fa fa-check"></i></span>Hesab</li>
                 <li class="active"><span>2</span>Telegram</li>
                 <li><span>3</span>Yeni şifrə</li>
             </ol>
@@ -23,7 +23,7 @@
 
             <ol class="tg-steps">
                 <li>Aşağıdakı düyməni basın — Telegram açılacaq.</li>
-                <li>Botda <b>Start</b> basın. Bot istəsə, <b>📱 Nömrəmi paylaş</b> düyməsini də basın.</li>
+                <li>Botda <b>Start</b> basın. Bot istəsə, <b>✅ Təsdiqlə</b> düyməsini də basın.</li>
                 <li>Bu səhifə özü yeni şifrə formuna keçəcək.</li>
             </ol>
 

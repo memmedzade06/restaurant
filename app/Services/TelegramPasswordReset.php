@@ -34,6 +34,15 @@ class TelegramPasswordReset
         return $token;
     }
 
+    /** Başqa yolla (e-poçt linki) artıq təsdiqlənmiş bərpa kodu — dərhal yeni şifrə formuna keçmək olar */
+    public function startConfirmed(User $user): string
+    {
+        $token = Str::random(32);
+        Cache::put($this->key($token), ['user_id' => $user->id, 'confirmed' => true], now()->addMinutes(self::TTL_MINUTES));
+
+        return $token;
+    }
+
     public function link(string $token): string
     {
         return 'https://t.me/' . config('services.telegram.bot_username') . '?start=' . self::PREFIX . $token;
@@ -89,7 +98,7 @@ class TelegramPasswordReset
         Cache::put($this->chatKey($chatId), $token, now()->addMinutes(self::TTL_MINUTES));
         $this->bot->sendMessage(
             $chatId,
-            "Şifrəni bərpa etmək üçün aşağıdakı <b>📱 Nömrəmi paylaş</b> düyməsini basın.\n\nHesabın nömrəsi: " . Phone::format($user->phone),
+            "Şifrəni bərpa etmək üçün aşağıdakı <b>✅ Təsdiqlə</b> düyməsini basın.\n\nHesabın nömrəsi: " . Phone::format($user->phone),
             TelegramBot::contactKeyboard()
         );
     }
@@ -107,7 +116,7 @@ class TelegramPasswordReset
 
         $contact = $message['contact'];
         if (($contact['user_id'] ?? null) !== ($message['from']['id'] ?? false)) {
-            $this->bot->sendMessage($chatId, 'Zəhmət olmasa, başqasının yox, <b>öz</b> nömrənizi düymə ilə paylaşın.', TelegramBot::contactKeyboard());
+            $this->bot->sendMessage($chatId, 'Zəhmət olmasa, aşağıdakı <b>✅ Təsdiqlə</b> düyməsini basın.', TelegramBot::contactKeyboard());
             return true;
         }
 

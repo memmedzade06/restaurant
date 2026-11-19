@@ -35,7 +35,7 @@ class TelegramBot
     public static function contactKeyboard(): array
     {
         return ['reply_markup' => [
-            'keyboard' => [[['text' => '📱 Nömrəmi paylaş', 'request_contact' => true]]],
+            'keyboard' => [[['text' => '✅ Təsdiqlə', 'request_contact' => true]]],
             'resize_keyboard' => true,
             'one_time_keyboard' => true,
         ]];

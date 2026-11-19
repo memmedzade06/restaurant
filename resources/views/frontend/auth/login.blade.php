@@ -6,7 +6,7 @@
     <div class="container">
         <span class="eyebrow">Xoş gəlmisiniz</span>
         <h1>Giriş</h1>
-        <p>Mobil nömrəniz və şifrənizlə daxil olun</p>
+        <p>Nömrəniz və ya e-poçtunuz və şifrənizlə daxil olun</p>
     </div>
 </section>
 

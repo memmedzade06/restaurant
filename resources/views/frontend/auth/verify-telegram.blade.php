@@ -17,7 +17,7 @@
 
             <ol class="tg-steps">
                 <li>Aşağıdakı düyməni basın — Telegram açılacaq.</li>
-                <li>Botda <b>Start</b>, sonra <b>📱 Nömrəmi paylaş</b> düyməsini basın.</li>
+                <li>Botda <b>Start</b>, sonra <b>✅ Təsdiqlə</b> düyməsini basın.</li>
                 <li>Bu səhifə özü yenilənəcək.</li>
             </ol>
 

@@ -6,7 +6,7 @@
     <div class="container">
         <span class="eyebrow">Şifrə bərpası</span>
         <h1>Şifrəmi unutdum</h1>
-        <p>Telegram ilə təsdiqləyin və yeni şifrə təyin edin</p>
+        <p>Nömrə ilə — Telegram vasitəsilə, e-poçt ilə — məktub vasitəsilə bərpa edin</p>
     </div>
 </section>
 
@@ -14,8 +14,8 @@
     <div class="container">
         <div class="auth-card">
             <ol class="pw-steps">
-                <li class="active"><span>1</span>Nömrə</li>
-                <li><span>2</span>Telegram</li>
+                <li class="active"><span>1</span>Hesab</li>
+                <li><span>2</span>Təsdiq</li>
                 <li><span>3</span>Yeni şifrə</li>
             </ol>
 
@@ -23,13 +23,13 @@
                 @csrf
 
                 <div class="field">
-                    <label for="phone">Qeydiyyatdakı telefon nömrəniz</label>
+                    <label for="login">Qeydiyyatdakı nömrə və ya e-poçt</label>
                     <div class="input-icon">
-                        <i class="fa fa-phone"></i>
-                        <input id="phone" name="phone" type="tel" value="{{ old('phone') }}" placeholder="050 123 45 67" autocomplete="tel" required autofocus class="@error('phone') is-invalid @enderror">
+                        <i class="fa fa-user"></i>
+                        <input id="login" name="login" type="text" value="{{ old('login') }}" placeholder="050 123 45 67 və ya ad@gmail.com" autocomplete="username" required autofocus class="@error('login') is-invalid @enderror">
                     </div>
-                    @error('phone') <small class="err">{{ $message }}</small> @enderror
-                    <small class="hint">Sonrakı addımda Telegram botumuz bu nömrənin sizə aid olduğunu təsdiqləyəcək.</small>
+                    @error('login') <small class="err">{{ $message }}</small> @enderror
+                    <small class="hint">Nömrə ilə qeydiyyatdan keçmisinizsə — Telegram, e-poçt ilə keçmisinizsə — e-poçtunuza göndərilən məktub təsdiqləyəcək.</small>
                 </div>
 
                 <button type="submit" class="btn btn-primary w-100 py-3 mt-2">Davam et <i class="fa fa-arrow-right ms-2"></i></button>
