@@ -160,14 +160,16 @@ Route::prefix('oyunlar')->name('games.')->controller(\App\Http\Controllers\Front
     Route::post('/carx-oyunu/gotur', 'claim')->middleware(['auth', 'phone.verified', 'throttle:15,1'])->name('wheel.claim');
 });
 // Bilik Yarışı (sual oyunu): oyun serverdə gedir (düz cavab brauzerə getmir), mərhələ keçəndə xal yazılır
-Route::prefix('oyunlar/suallar')->name('games.quiz')->controller(\App\Http\Controllers\Frontend\QuizController::class)->group(function () {
+Route::prefix('oyunlar/bilik-yarisi')->name('games.quiz')->controller(\App\Http\Controllers\Frontend\QuizController::class)->group(function () {
     Route::get('/', 'show');
     Route::post('/basla', 'start')->middleware('throttle:30,1')->name('.start');
     Route::post('/cavab', 'answer')->middleware('throttle:120,1')->name('.answer');
     Route::post('/novbeti', 'next')->middleware('throttle:120,1')->name('.next');
 });
 // Krossvord ləğv olunub — köhnə linklər Bilik Yarışına aparır
-Route::permanentRedirect('/oyunlar/krossvord', '/oyunlar/suallar');
+Route::permanentRedirect('/oyunlar/krossvord', '/oyunlar/bilik-yarisi');
+// Köhnə ünvan (Sual oyunu) — linklər və əlfəcinlər yeni səhifəyə aparır
+Route::permanentRedirect('/oyunlar/suallar', '/oyunlar/bilik-yarisi');
 // Köhnə ünvan (Bəxt çarxı): QR kodlar və köhnə linklər yeni səhifəyə yönləndirilir
 Route::permanentRedirect('/oyunlar/bext-carxi', '/oyunlar/carx-oyunu');
 

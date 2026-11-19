@@ -495,13 +495,35 @@ body.st-no-scroll { overflow: hidden; }
 
 /* Oyunlar səhifəsində Sual oyunu kartı: sual qabarcığı və 3 cavab */
 .qz-art { background: radial-gradient(circle at 50% 40%, #4a1d18, #2b0f0d); }
-.qz-art-svg { height: 168px; width: auto; filter: drop-shadow(0 8px 14px rgba(0, 0, 0, .35)); }
+.qz-art-svg { height: 178px; width: auto; filter: drop-shadow(0 8px 14px rgba(0, 0, 0, .35)); }
 .qz-art-svg text { font-family: 'Nunito', sans-serif; font-weight: 900; }
-.qz-art-svg .qa-opt { fill: #fffaf0; }
-.qz-art-svg .qa-right { animation: qaRight 3s ease-in-out infinite; }
-.qz-art-svg .qa-mark { fill: #3A0D0D; }
-@keyframes qaRight { 0%, 40% { fill: #fffaf0; } 55%, 90% { fill: #7ee2a8; } 100% { fill: #fffaf0; } }
-@media (prefers-reduced-motion: reduce) { .qz-art-svg .qa-right { animation: none; fill: #7ee2a8; } }
+/* üzən sual işarələri */
+.qz-art-svg .qz2-float { fill: rgba(233, 162, 59, .4); animation: qz2Float 4s ease-in-out infinite; }
+.qz-art-svg .qz2-float-b { animation-delay: -1.3s; }
+.qz-art-svg .qz2-float-c { animation-delay: -2.6s; fill: rgba(255, 255, 255, .3); }
+@keyframes qz2Float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+/* taymer halqası tükənir, cavab seçiləndə yaşıl olur; dövr 4 saniyə */
+.qz-art-svg .qz2-timer { stroke-dasharray: 88; animation: qz2Timer 4s linear infinite; }
+@keyframes qz2Timer { 0% { stroke-dashoffset: 0; stroke: #e9a23b; } 45% { stroke-dashoffset: 40; stroke: #e9a23b; } 55%, 100% { stroke-dashoffset: 40; stroke: #2ecc71; } }
+/* düz cavab (B): toxunuş, sonra yaşıl və ✓ */
+.qz-art-svg .qz2-right { fill: #f5ece2; animation: qz2Right 4s ease-in-out infinite; }
+.qz-art-svg .qz2-right-key { fill: #fff; stroke: #eadfd3; animation: qz2Key 4s ease-in-out infinite; }
+.qz-art-svg .qz2-right-letter { fill: #7E1A1A; animation: qz2Letter 4s ease-in-out infinite; }
+.qz-art-svg .qz2-check { stroke-dasharray: 20; stroke-dashoffset: 20; animation: qz2Check 4s ease-in-out infinite; }
+.qz-art-svg .qz2-tap { opacity: 0; transform-box: fill-box; transform-origin: center; animation: qz2Tap 4s ease-in-out infinite; }
+@keyframes qz2Right { 0%, 45% { fill: #f5ece2; } 52%, 90% { fill: #c8f1d8; } 100% { fill: #f5ece2; } }
+@keyframes qz2Key { 0%, 45% { fill: #fff; } 52%, 90% { fill: #2ecc71; } 100% { fill: #fff; } }
+@keyframes qz2Letter { 0%, 45% { fill: #7E1A1A; } 52%, 90% { fill: #fff; } 100% { fill: #7E1A1A; } }
+@keyframes qz2Check { 0%, 50% { stroke-dashoffset: 20; } 60%, 90% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 20; } }
+@keyframes qz2Tap { 0%, 32% { opacity: 0; transform: scale(1.6); } 42% { opacity: 1; transform: scale(1); } 50%, 100% { opacity: 0; transform: scale(.8); } }
+@media (prefers-reduced-motion: reduce) {
+    .qz-art-svg * { animation: none !important; }
+    .qz-art-svg .qz2-right { fill: #c8f1d8; }
+    .qz-art-svg .qz2-right-key { fill: #2ecc71; }
+    .qz-art-svg .qz2-right-letter { fill: #fff; }
+    .qz-art-svg .qz2-check { stroke-dashoffset: 0; }
+}
+.qz-card-tag { display: inline-block; margin-bottom: 8px; padding: 3px 10px; border-radius: 999px; background: #fff4e0; color: #8a5a00; font-size: 12px; font-weight: 800; }
 
 /* Hədiyyə marketi — oyun kartlarından fərqli: tam enli, üfüqi, qızılı banner */
 .market-feature { display: flex; align-items: stretch; background: linear-gradient(120deg, #7E1A1A 0%, #a32b2b 55%, #c2412c 100%); color: #fff; box-shadow: 0 18px 40px rgba(126, 26, 26, .35); border: 2px solid rgba(233, 162, 59, .55); }

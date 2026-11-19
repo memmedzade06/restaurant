@@ -272,23 +272,62 @@
             <div class="col-md-6 col-lg-4">
                 <a href="{{ route('games.quiz') }}" class="game-card">
                     <div class="game-art qz-art">
-                        {{-- sual qabarcığı və 3 cavab — düz cavab yaşıl yanır --}}
-                        <svg class="qz-art-svg" viewBox="0 0 200 160" aria-hidden="true">
-                            <rect x="28" y="8" width="144" height="46" rx="14" fill="#e9a23b"/>
-                            <path d="M88 54 L100 68 L106 54 Z" fill="#e9a23b"/>
-                            <text x="100" y="40" font-size="26" text-anchor="middle" fill="#fff">?</text>
-                            <rect class="qa-opt" x="34" y="78" width="132" height="22" rx="11"/>
-                            <circle cx="48" cy="89" r="7" fill="#e9a23b"/><text x="48" y="93" font-size="10" text-anchor="middle" fill="#fff">1</text>
-                            <rect class="qa-mark" x="62" y="86" width="70" height="6" rx="3" opacity=".25"/>
-                            <rect class="qa-opt qa-right" x="34" y="106" width="132" height="22" rx="11"/>
-                            <circle cx="48" cy="117" r="7" fill="#e9a23b"/><text x="48" y="121" font-size="10" text-anchor="middle" fill="#fff">2</text>
-                            <rect class="qa-mark" x="62" y="114" width="86" height="6" rx="3" opacity=".25"/>
-                            <rect class="qa-opt" x="34" y="134" width="132" height="22" rx="11"/>
-                            <circle cx="48" cy="145" r="7" fill="#e9a23b"/><text x="48" y="149" font-size="10" text-anchor="middle" fill="#fff">3</text>
-                            <rect class="qa-mark" x="62" y="142" width="58" height="6" rx="3" opacity=".25"/>
+                        {{-- test ekranı: sual, A/B/C variantları, 5 saniyəlik taymer, canlar — "B" (düz cavab) yaşıl yanır --}}
+                        <svg class="qz-art-svg" viewBox="0 0 260 170" aria-hidden="true">
+                            {{-- arxada üzən sual işarələri --}}
+                            <text class="qz2-float" x="14" y="56" font-size="30">?</text>
+                            <text class="qz2-float qz2-float-b" x="230" y="136" font-size="26">?</text>
+                            <text class="qz2-float qz2-float-c" x="232" y="40" font-size="18">!</text>
+
+                            {{-- test kartı, yuxarıda bayraq rəngləri --}}
+                            <clipPath id="qz2Card"><rect x="40" y="8" width="180" height="156" rx="16"/></clipPath>
+                            <rect x="40" y="8" width="180" height="156" rx="16" fill="#fffaf0"/>
+                            <g clip-path="url(#qz2Card)">
+                                <rect x="40" y="8" width="60" height="5" fill="#00b5e2"/>
+                                <rect x="100" y="8" width="60" height="5" fill="#ef3340"/>
+                                <rect x="160" y="8" width="60" height="5" fill="#509e2f"/>
+                            </g>
+
+                            {{-- başlıq: sual nömrəsi, canlar, taymer --}}
+                            <text x="54" y="30" font-size="9" fill="#9a8478" letter-spacing=".6">SUAL 3 / 10</text>
+                            <g fill="#e0414f" transform="translate(54 36) scale(.42)">
+                                <path d="M10 18 C-4 8 2 -2 10 4 C18 -2 24 8 10 18Z"/>
+                                <path transform="translate(26 0)" d="M10 18 C-4 8 2 -2 10 4 C18 -2 24 8 10 18Z"/>
+                                <path transform="translate(52 0)" fill="#eadfd3" d="M10 18 C-4 8 2 -2 10 4 C18 -2 24 8 10 18Z"/>
+                            </g>
+                            <circle cx="198" cy="32" r="14" fill="none" stroke="#f3ebe2" stroke-width="4"/>
+                            <circle class="qz2-timer" cx="198" cy="32" r="14" fill="none" stroke="#e9a23b" stroke-width="4" stroke-linecap="round" transform="rotate(-90 198 32)"/>
+                            <text x="198" y="36.5" font-size="12" text-anchor="middle" fill="#7E1A1A">5</text>
+
+                            {{-- sual --}}
+                            <text x="54" y="70" font-size="13" fill="#2b1a12">Azərbaycanın paytaxtı?</text>
+
+                            {{-- variantlar --}}
+                            <rect x="54" y="80" width="152" height="22" rx="11" fill="#f5ece2"/>
+                            <circle cx="66" cy="91" r="7" fill="#fff" stroke="#eadfd3"/>
+                            <text x="66" y="94.5" font-size="9" text-anchor="middle" fill="#7E1A1A">A</text>
+                            <text x="80" y="95" font-size="11" fill="#5a4a44">Gəncə</text>
+
+                            <rect class="qz2-right" x="54" y="107" width="152" height="22" rx="11"/>
+                            <circle class="qz2-right-key" cx="66" cy="118" r="7"/>
+                            <text class="qz2-right-letter" x="66" y="121.5" font-size="9" text-anchor="middle">B</text>
+                            <text x="80" y="122" font-size="11" fill="#2b1a12">Bakı</text>
+                            <path class="qz2-check" d="M186 118 l4 4 l8 -9" fill="none" stroke="#1e9e57" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+                            <rect x="54" y="134" width="152" height="22" rx="11" fill="#f5ece2"/>
+                            <circle cx="66" cy="145" r="7" fill="#fff" stroke="#eadfd3"/>
+                            <text x="66" y="148.5" font-size="9" text-anchor="middle" fill="#7E1A1A">C</text>
+                            <text x="80" y="149" font-size="11" fill="#5a4a44">Şəki</text>
+
+                            {{-- toxunuş --}}
+                            <g class="qz2-tap">
+                                <circle cx="150" cy="118" r="9" fill="#e9a23b" opacity=".35"/>
+                                <circle cx="150" cy="118" r="4" fill="#e9a23b"/>
+                            </g>
                         </svg>
                     </div>
                     <div class="game-body">
+                        <span class="qz-card-tag"><i class="fa fa-list-ol me-1"></i>Test · 3 variant · 5 saniyə</span>
                         <h4>Bilik Yarışı</h4>
                         <p>Azərbaycanı nə qədər tanıyırsınız? Hər suala {{ (int) config('quiz.seconds', 5) }} saniyə, mərhələ keçdikcə artan xallar: <b>+{{ \App\Http\Controllers\Frontend\QuizController::pointsLabel() }}, +{{ \App\Services\Referrals::format(\App\Http\Controllers\Frontend\QuizController::stageReward(2)) }}…</b></p>
                         <span class="game-go">Oyna <i class="fa fa-arrow-right ms-1"></i></span>
