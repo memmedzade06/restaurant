@@ -118,7 +118,7 @@
                             <div class="alert-soft mt-3">
                                 Qonaq kimi yalnız <b>sınaq</b> fırlatması edə bilərsiniz.
                                 Real hədiyyə üçün
-                                @auth <a href="{{ route('verify.telegram') }}">nömrənizi təsdiqləyin</a>
+                                @auth <a href="{{ route('verify.telegram') }}">profilinizi təsdiqləyin</a>
                                 @else <a href="{{ route('register') }}">qeydiyyatdan keçin</a> və ya <a href="{{ route('login') }}">daxil olun</a>
                                 @endauth.
                             </div>

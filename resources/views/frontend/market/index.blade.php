@@ -58,7 +58,7 @@
                         <div>
                             <h5 class="mb-1">Hədiyyə almaq üçün daxil olun</h5>
                             <p class="mb-0 text-muted">Xallar yalnız Telegram ilə təsdiqlənmiş hesablarda toplanır.
-                                @auth <a href="{{ route('verify.telegram') }}" class="fw-bold">Nömrənizi təsdiqləyin</a>
+                                @auth <a href="{{ route('verify.telegram') }}" class="fw-bold">Profilinizi təsdiqləyin</a>
                                 @else <a href="{{ route('login') }}" class="fw-bold">Daxil olun</a> və ya <a href="{{ route('register') }}" class="fw-bold">qeydiyyatdan keçin</a>
                                 @endauth
                             </p>

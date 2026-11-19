@@ -69,7 +69,7 @@
                         <div class="side-card side-cta">
                             <h5>Real hədiyyə qazanın!</h5>
                             <p>İndi <b>sınaq</b> rejimindəsiniz — şardan çıxan hədiyyə üçün kod verilmir. Qeydiyyatdan keçib nömrənizi Telegram ilə təsdiqləyin: gündə {{ $attempts }} cəhd, real kod.</p>
-                            <a href="{{ auth()->check() ? route('verify.telegram') : route('register') }}" class="btn btn-primary w-100 mb-2">{{ auth()->check() ? 'Nömrəni təsdiqlə' : 'Qeydiyyat' }}</a>
+                            <a href="{{ auth()->check() ? route('verify.telegram') : route('register') }}" class="btn btn-primary w-100 mb-2">{{ auth()->check() ? 'Profili təsdiqlə' : 'Qeydiyyat' }}</a>
                             @guest <a href="{{ route('login') }}" class="btn btn-ghost-dark w-100">Daxil ol</a> @endguest
                         </div>
                     @endunless

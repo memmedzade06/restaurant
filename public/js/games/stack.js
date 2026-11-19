@@ -516,7 +516,7 @@
         cont.hidden = false;
 
         if (!cfg.canSave) {
-            note.innerHTML = `Hədiyyə kodu almaq üçün <a href="${cfg.registerUrl}">qeydiyyatdan keçin</a> və nömrənizi təsdiqləyin.`;
+            note.innerHTML = `Hədiyyə kodu almaq üçün <a href="${cfg.registerUrl}">qeydiyyatdan keçin</a> və profilinizi təsdiqləyin.`;
             accept.hidden = true;
         } else {
             accept.hidden = false;

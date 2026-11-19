@@ -106,7 +106,7 @@
                         <div class="side-card side-cta">
                             <h5>Dostlarınızla oynayın</h5>
                             <p>Dostlarınızı dəvət edib xal toplamaq və günün qalibi olmaq üçün daxil olun və ya qeydiyyatdan keçin.</p>
-                            <a href="{{ auth()->check() ? route('verify.telegram') : route('register') }}" class="btn btn-primary w-100 mb-2">{{ auth()->check() ? 'Nömrəni təsdiqlə' : 'Qeydiyyat' }}</a>
+                            <a href="{{ auth()->check() ? route('verify.telegram') : route('register') }}" class="btn btn-primary w-100 mb-2">{{ auth()->check() ? 'Profili təsdiqlə' : 'Qeydiyyat' }}</a>
                             @guest <a href="{{ route('login') }}" class="btn btn-ghost-dark w-100">Daxil ol</a> @endguest
                         </div>
                     @endif
