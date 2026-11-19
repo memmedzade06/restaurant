@@ -1,5 +1,5 @@
 /**
- * Sual oyunu (brauzer tərəfi). Oyun serverdə gedir: suallar bir-bir gəlir, düz cavabı
+ * Bilik Yarışı (brauzer tərəfi). Oyun serverdə gedir: suallar bir-bir gəlir, düz cavabı
  * server yalnız cavab veriləndən sonra bildirir, vaxtı da server yoxlayır.
  * Burada yalnız ekran, taymer zolağı və düymələr var.
  */

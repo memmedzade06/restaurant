@@ -43,7 +43,7 @@
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
     <link href="{{ asset('css/custom.css') }}?v=23" rel="stylesheet">
-    <link href="{{ asset('css/games.css') }}?v=48" rel="stylesheet">
+    <link href="{{ asset('css/games.css') }}?v=49" rel="stylesheet">
     @yield('css')
 </head>
 
@@ -180,7 +180,7 @@
         });
     })();
 </script>
-@if (auth()->user()->isVerified())
+@if (auth()->user()->isVerified() && config('games.nard.enabled'))
 {{-- Nərd dəvətləri: saytın istənilən səhifəsində gələn dəvət görünür, qəbul olunan dəvət oyuna aparır --}}
 <div id="nardInbox" class="nard-inbox" aria-live="polite"
      data-url="{{ route('games.nard.inbox') }}"

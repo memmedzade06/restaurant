@@ -170,16 +170,18 @@
                 <div class="acc-card h-100">
                     <div class="acc-head"><span class="acc-ico"><i class="fa fa-gamepad"></i></span><h5>Oyunlar</h5>
                         <a href="{{ route('games.index') }}" class="acc-more">Oyna <i class="fa fa-arrow-right ms-1"></i></a></div>
-                    <h6 class="acc-sub"><i class="fa fa-dice me-2"></i>Nərd (dostla oyun) — bu gün</h6>
-                    <div class="acc-stats">
-                        <div><b>{{ $nardToday['points'] }}</b><span>xal</span></div>
-                        <div><b>{{ $nardToday['wins'] }}</b><span>qələbə</span></div>
-                        <div><b>{{ $nardToday['games'] }}</b><span>oyun</span></div>
-                        <div><b>{{ $nardWins }}</b><span>dəfə günün qalibi</span></div>
-                    </div>
+                    @if (config('games.nard.enabled'))
+                        <h6 class="acc-sub"><i class="fa fa-dice me-2"></i>Nərd (dostla oyun) — bu gün</h6>
+                        <div class="acc-stats">
+                            <div><b>{{ $nardToday['points'] }}</b><span>xal</span></div>
+                            <div><b>{{ $nardToday['wins'] }}</b><span>qələbə</span></div>
+                            <div><b>{{ $nardToday['games'] }}</b><span>oyun</span></div>
+                            <div><b>{{ $nardWins }}</b><span>dəfə günün qalibi</span></div>
+                        </div>
+                    @endif
                     <h6 class="acc-sub"><i class="fa fa-layer-group me-2"></i>Stəkan qülləsi</h6>
                     <div class="acc-stats">
-                        <div class="wide"><b>{{ $stackBest }}</b><span>xal — rekordunuz</span></div>
+                        <div class="wide"><b>{{ $stackBest }}</b><span>stəkan — rekordunuz</span></div>
                     </div>
                 </div>
             </div>

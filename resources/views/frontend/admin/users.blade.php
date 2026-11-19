@@ -100,8 +100,10 @@
                                     </td>
                                     <td>
                                         <small>
-                                            Stəkan rekordu: <b>{{ (int) $u->stack_best }}</b><br>
-                                            Nərd bu gün: <b>{{ (int) $u->nard_today }} xal</b>
+                                            Stəkan rekordu: <b>{{ (int) $u->stack_best }}</b>
+                                            @if (config('games.nard.enabled'))
+                                                <br>Nərd bu gün: <b>{{ (int) $u->nard_today }} xal</b>
+                                            @endif
                                         </small>
                                     </td>
                                     <td class="text-end">

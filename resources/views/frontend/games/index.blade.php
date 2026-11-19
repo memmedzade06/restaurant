@@ -23,6 +23,36 @@
 <section class="section pt-4 games-scene">
     <div class="container">
         <div class="row g-4">
+            {{-- Hədiyyə marketi ən əvvəldə, oyunlardan fərqli: tam enli üfüqi banner --}}
+            <div class="col-12">
+                <a href="{{ route('market') }}" class="game-card market-feature">
+                    <div class="game-art market-art">
+                        {{-- hədiyyə qutusu: qapağı yellənir, ətrafında xal ulduzları --}}
+                        <svg class="market-art-svg" viewBox="0 0 180 160" aria-hidden="true">
+                            <g class="ma-stars" fill="#E9A23B">
+                                <path d="M30 40 l3 7 7 1 -5 5 1 7 -6 -4 -6 4 1 -7 -5 -5 7 -1z"/>
+                                <path d="M148 30 l2.4 5.6 5.6 .8 -4 4 .8 5.6 -4.8 -3.2 -4.8 3.2 .8 -5.6 -4 -4 5.6 -.8z"/>
+                                <path d="M152 100 l2 4.6 4.6 .7 -3.3 3.3 .7 4.6 -4 -2.6 -4 2.6 .7 -4.6 -3.3 -3.3 4.6 -.7z"/>
+                                <path d="M22 108 l2 4.6 4.6 .7 -3.3 3.3 .7 4.6 -4 -2.6 -4 2.6 .7 -4.6 -3.3 -3.3 4.6 -.7z"/>
+                            </g>
+                            <rect x="50" y="78" width="80" height="66" rx="6" fill="#7E1A1A"/>
+                            <rect x="84" y="78" width="12" height="66" fill="#E9A23B"/>
+                            <g class="ma-lid">
+                                <rect x="44" y="62" width="92" height="20" rx="5" fill="#B3261E"/>
+                                <rect x="84" y="62" width="12" height="20" fill="#E9A23B"/>
+                                <path d="M90 62 C78 40 58 46 70 58 C76 63 86 62 90 62 Z" fill="#E9A23B"/>
+                                <path d="M90 62 C102 40 122 46 110 58 C104 63 94 62 90 62 Z" fill="#E9A23B"/>
+                            </g>
+                        </svg>
+                    </div>
+                    <div class="game-body">
+                        <span class="market-feature-tag"><i class="fa fa-star me-1"></i>Xallarınızı xərcləyin</span>
+                        <h4>Hədiyyə marketi</h4>
+                        <p>Oyunlarda və dəvətlərlə topladığınız xalları hədiyyəyə çevirin: çay, mürəbbə, qəlyan və endirim kuponları.</p>
+                        <span class="game-go market-feature-go">Hədiyyə seç <i class="fa fa-arrow-right ms-1"></i></span>
+                    </div>
+                </a>
+            </div>
             <div class="col-md-6 col-lg-4">
                 <a href="{{ route('games.stack') }}" class="game-card">
                     <div class="game-art stack-art">
@@ -146,6 +176,8 @@
                     </div>
                 </a>
             </div>
+            {{-- Nərd müvəqqəti gizlədilə bilər — geri açmaq üçün .env: NARD_ENABLED=true --}}
+            @if (config('games.nard.enabled'))
             <div class="col-md-6 col-lg-4">
                 <a href="{{ route('games.nard') }}" class="game-card">
                     <div class="game-art nard-art">
@@ -193,6 +225,7 @@
                     </div>
                 </a>
             </div>
+            @endif
             {{-- Hədiyyə Kranı müvəqqəti bağlıdır — geri açmaq üçün .env: CLAW_ENABLED=true --}}
             @if (config('games.claw.enabled'))
             <div class="col-md-6 col-lg-4">
@@ -256,43 +289,16 @@
                         </svg>
                     </div>
                     <div class="game-body">
-                        <h4>Sual oyunu</h4>
+                        <h4>Bilik Yarışı</h4>
                         <p>Azərbaycanı nə qədər tanıyırsınız? Hər suala {{ (int) config('quiz.seconds', 5) }} saniyə, mərhələ keçdikcə artan xallar: <b>+{{ \App\Http\Controllers\Frontend\QuizController::pointsLabel() }}, +{{ \App\Services\Referrals::format(\App\Http\Controllers\Frontend\QuizController::stageReward(2)) }}…</b></p>
                         <span class="game-go">Oyna <i class="fa fa-arrow-right ms-1"></i></span>
-                    </div>
-                </a>
-            </div>
-            <div class="col-md-6 col-lg-4">
-                <a href="{{ route('market') }}" class="game-card">
-                    <div class="game-art market-art">
-                        {{-- hədiyyə qutusu: qapağı yellənir, ətrafında xal ulduzları --}}
-                        <svg class="market-art-svg" viewBox="0 0 180 160" aria-hidden="true">
-                            <g class="ma-stars" fill="#E9A23B">
-                                <path d="M30 40 l3 7 7 1 -5 5 1 7 -6 -4 -6 4 1 -7 -5 -5 7 -1z"/>
-                                <path d="M148 30 l2.4 5.6 5.6 .8 -4 4 .8 5.6 -4.8 -3.2 -4.8 3.2 .8 -5.6 -4 -4 5.6 -.8z"/>
-                                <path d="M152 100 l2 4.6 4.6 .7 -3.3 3.3 .7 4.6 -4 -2.6 -4 2.6 .7 -4.6 -3.3 -3.3 4.6 -.7z"/>
-                                <path d="M22 108 l2 4.6 4.6 .7 -3.3 3.3 .7 4.6 -4 -2.6 -4 2.6 .7 -4.6 -3.3 -3.3 4.6 -.7z"/>
-                            </g>
-                            <rect x="50" y="78" width="80" height="66" rx="6" fill="#7E1A1A"/>
-                            <rect x="84" y="78" width="12" height="66" fill="#E9A23B"/>
-                            <g class="ma-lid">
-                                <rect x="44" y="62" width="92" height="20" rx="5" fill="#B3261E"/>
-                                <rect x="84" y="62" width="12" height="20" fill="#E9A23B"/>
-                                <path d="M90 62 C78 40 58 46 70 58 C76 63 86 62 90 62 Z" fill="#E9A23B"/>
-                                <path d="M90 62 C102 40 122 46 110 58 C104 63 94 62 90 62 Z" fill="#E9A23B"/>
-                            </g>
-                        </svg>
-                    </div>
-                    <div class="game-body">
-                        <h4>Hədiyyə marketi</h4>
-                        <p>Topladığınız xalları hədiyyəyə çevirin: çay, mürəbbə, qəlyan və endirim kuponları.</p>
-                        <span class="game-go">Hədiyyə seç <i class="fa fa-arrow-right ms-1"></i></span>
                     </div>
                 </a>
             </div>
         </div>
 
         <div class="row g-4 mt-1">
+            @if (config('games.nard.enabled'))
             <div class="col-md-6">
                 <div class="side-card h-100">
                     <h5><i class="fa fa-trophy me-2 text-primary"></i>Nərd — bu günün liderləri</h5>
@@ -300,7 +306,8 @@
                     @include('frontend.games._nard_winners', ['winners' => $lastWinners])
                 </div>
             </div>
-            <div class="col-md-6">
+            @endif
+            <div class="{{ config('games.nard.enabled') ? 'col-md-6' : 'col-12' }}">
                 <div class="side-card h-100">
                     <h5><i class="fa fa-trophy me-2 text-primary"></i>Stəkan qülləsi liderləri</h5>
                     @include('frontend.games._leaders', ['leaders' => $stackLeaders, 'unit' => 'stəkan'])

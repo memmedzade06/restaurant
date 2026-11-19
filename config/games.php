@@ -133,6 +133,9 @@ return [
     // Nərd: xal YALNIZ dostla (iki nəfərlik) oyunda verilir, kompüterə qarşı oyun xalsızdır.
     // Gün gecə 00:00-da (Bakı vaxtı) başlayır; günün ən çox xal toplayanları qalib olur.
     'nard' => [
+        // Müvəqqəti gizlədilib: kartı, liderlər cədvəli, nəticələri və dəvətləri görünmür, ünvanları 404 qaytarır.
+        // Kod və məlumatlar silinmir. Geri açmaq üçün .env-də NARD_ENABLED=true
+        'enabled' => (bool) env('NARD_ENABLED', false),
         'points_win' => 1,        // adi qələbə
         'points_mars' => 2,       // mars (rəqib heç daş çıxara bilməyib)
         'pair_daily_limit' => 3,  // eyni iki oyunçu arasında gündə neçə oyun xal verir (iki hesabla xal yığmağın qarşısını alır)

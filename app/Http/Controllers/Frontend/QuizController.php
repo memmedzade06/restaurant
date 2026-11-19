@@ -13,7 +13,7 @@ use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 /**
- * Sual oyunu. Oyun serverdə gedir: düz cavablar brauzerə göndərilmir, vaxtı da server sayır.
+ * Bilik Yarışı. Oyun serverdə gedir: düz cavablar brauzerə göndərilmir, vaxtı da server sayır.
  *  - basla: yeni oyun, ilk sual;
  *  - cavab: seçilən variant (və ya vaxt bitdi) yoxlanılır, nəticə qaytarılır;
  *  - novbeti: növbəti sual (mərhələ bitibsə — yeni mərhələ).

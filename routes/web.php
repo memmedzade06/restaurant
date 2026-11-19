@@ -124,7 +124,7 @@ Route::get('/oyunlar/onlayn', [\App\Http\Controllers\Frontend\PresenceController
 | İki nəfərlik nərd: dəvətlər və oyun (yalnız təsdiqlənmiş istifadəçilər).
 | Brauzer vəziyyəti tez-tez soruşduğu üçün limitlər yüksəkdir.
 */
-Route::prefix('oyunlar/nerd')->name('games.nard.')->middleware(['auth', 'phone.verified'])
+Route::prefix('oyunlar/nerd')->name('games.nard.')->middleware(['game.enabled:nard', 'auth', 'phone.verified'])
     ->controller(\App\Http\Controllers\Frontend\NardOnlineController::class)->group(function () {
         Route::get('/oyuncular', 'players')->middleware('throttle:poll')->name('players');
         Route::post('/devet', 'invite')->middleware('throttle:game-action')->name('invite');
@@ -146,8 +146,9 @@ Route::prefix('oyunlar/nerd')->name('games.nard.')->middleware(['auth', 'phone.v
 */
 Route::prefix('oyunlar')->name('games.')->controller(\App\Http\Controllers\Frontend\GameController::class)->group(function () {
     Route::get('/', 'index')->name('index');
-    Route::get('/nerd', 'nard')->name('nard');
-    Route::post('/nerd/netice', 'nardResult')->middleware(['auth', 'phone.verified', 'throttle:20,1'])->name('nard.result');
+    // Nərd müvəqqəti gizlədilə bilər (.env: NARD_ENABLED)
+    Route::get('/nerd', 'nard')->middleware('game.enabled:nard')->name('nard');
+    Route::post('/nerd/netice', 'nardResult')->middleware(['game.enabled:nard', 'auth', 'phone.verified', 'throttle:20,1'])->name('nard.result');
     Route::get('/stekan', 'stack')->name('stack');
     Route::get('/stekan/hava', 'stackWeather')->middleware('throttle:30,1')->name('stack.weather');
     Route::post('/stekan/basla', 'stackStart')->middleware(['auth', 'phone.verified', 'throttle:60,1'])->name('stack.start');
@@ -158,14 +159,14 @@ Route::prefix('oyunlar')->name('games.')->controller(\App\Http\Controllers\Front
     Route::post('/carx-oyunu/dayan', 'stop')->middleware('throttle:30,1')->name('wheel.stop');
     Route::post('/carx-oyunu/gotur', 'claim')->middleware(['auth', 'phone.verified', 'throttle:15,1'])->name('wheel.claim');
 });
-// Sual oyunu: oyun serverdə gedir (düz cavab brauzerə getmir), mərhələ keçəndə xal yazılır
+// Bilik Yarışı (sual oyunu): oyun serverdə gedir (düz cavab brauzerə getmir), mərhələ keçəndə xal yazılır
 Route::prefix('oyunlar/suallar')->name('games.quiz')->controller(\App\Http\Controllers\Frontend\QuizController::class)->group(function () {
     Route::get('/', 'show');
     Route::post('/basla', 'start')->middleware('throttle:30,1')->name('.start');
     Route::post('/cavab', 'answer')->middleware('throttle:120,1')->name('.answer');
     Route::post('/novbeti', 'next')->middleware('throttle:120,1')->name('.next');
 });
-// Krossvord ləğv olunub — köhnə linklər Sual oyununa aparır
+// Krossvord ləğv olunub — köhnə linklər Bilik Yarışına aparır
 Route::permanentRedirect('/oyunlar/krossvord', '/oyunlar/suallar');
 // Köhnə ünvan (Bəxt çarxı): QR kodlar və köhnə linklər yeni səhifəyə yönləndirilir
 Route::permanentRedirect('/oyunlar/bext-carxi', '/oyunlar/carx-oyunu');

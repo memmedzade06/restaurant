@@ -2,7 +2,7 @@
 
 /*
 |--------------------------------------------------------------------------
-| Sual oyunu — Azərbaycana aid suallar
+| Bilik Yarışı — Azərbaycana aid suallar
 |--------------------------------------------------------------------------
 | Hər sual: 'q' — sual, 'a' — düzgün cavab, 'w' — iki səhv cavab, 'l' — çətinlik (1 asan, 2 orta, 3 çətin).
 | Oyun cavabları özü qarışdırır. Mərhələ irəlilədikcə çətin suallar çoxalır.

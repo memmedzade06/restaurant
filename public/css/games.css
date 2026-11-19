@@ -503,6 +503,23 @@ body.st-no-scroll { overflow: hidden; }
 @keyframes qaRight { 0%, 40% { fill: #fffaf0; } 55%, 90% { fill: #7ee2a8; } 100% { fill: #fffaf0; } }
 @media (prefers-reduced-motion: reduce) { .qz-art-svg .qa-right { animation: none; fill: #7ee2a8; } }
 
+/* Hədiyyə marketi — oyun kartlarından fərqli: tam enli, üfüqi, qızılı banner */
+.market-feature { display: flex; align-items: stretch; background: linear-gradient(120deg, #7E1A1A 0%, #a32b2b 55%, #c2412c 100%); color: #fff; box-shadow: 0 18px 40px rgba(126, 26, 26, .35); border: 2px solid rgba(233, 162, 59, .55); }
+.market-feature:hover { color: #fff; box-shadow: 0 22px 48px rgba(126, 26, 26, .45); }
+.market-feature .game-art { flex: 0 0 300px; height: auto; min-height: 190px; background: radial-gradient(circle at 50% 50%, rgba(255, 210, 138, .25), transparent 70%); }
+.market-feature .game-body { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 26px 34px; }
+.market-feature .game-body h4 { color: #fff; font-size: 28px; }
+.market-feature .game-body p { color: rgba(255, 255, 255, .85); font-size: 16px; max-width: 560px; }
+.market-feature-tag { align-self: flex-start; margin-bottom: 8px; padding: 4px 12px; border-radius: 999px; background: rgba(255, 210, 138, .2); color: #ffd28a; font-size: 13px; font-weight: 800; }
+.market-feature-go { align-self: flex-start; padding: 10px 22px; border-radius: 999px; background: #E9A23B; color: #fff; transition: background .2s, transform .2s; }
+.market-feature:hover .market-feature-go { background: #f0b153; transform: translateX(3px); }
+@media (max-width: 767.98px) {
+    .market-feature { flex-direction: column; }
+    .market-feature .game-art { flex-basis: auto; height: 170px; }
+    .market-feature .game-body { padding: 20px 22px 24px; }
+    .market-feature .game-body h4 { font-size: 24px; }
+}
+
 /* Oyunlar səhifəsində Hədiyyə marketinin kartı: qapağı yellənən hədiyyə qutusu */
 .market-art { background: radial-gradient(circle at 50% 40%, #4a1d18, #2b0f0d); }
 .market-art-svg { height: 168px; width: auto; overflow: visible; filter: drop-shadow(0 8px 14px rgba(0, 0, 0, .35)); }

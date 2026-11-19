@@ -1,11 +1,11 @@
 @extends('frontend.layouts.app')
-@section('title', 'Sual oyunu - 50 Qəpik Oyunlar')
+@section('title', 'Bilik Yarışı - 50 Qəpik Oyunlar')
 
 @section('content')
 <section class="page-hero page-hero-sm">
     <div class="container">
         <span class="eyebrow">Oyunlar</span>
-        <h1>Sual oyunu</h1>
+        <h1>Bilik Yarışı</h1>
         <p>Azərbaycanı nə qədər tanıyırsınız? Hər suala {{ $quiz['seconds'] }} saniyə!</p>
     </div>
 </section>
@@ -84,7 +84,7 @@
             </div>
 
             <div class="col-lg-5">
-                <div class="side-card" data-game-rules="Sual oyunu">
+                <div class="side-card" data-game-rules="Bilik Yarışı">
                     <h5><i class="fa fa-book me-2 text-primary"></i>Necə oynanır?</h5>
                     <ul class="rules">
                         <li>Azərbaycanın tarixi, coğrafiyası, mədəniyyəti və mətbəxinə aid suallar verilir.</li>
