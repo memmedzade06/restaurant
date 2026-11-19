@@ -6,7 +6,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Bağla"></button>
                 <div class="success-ico"><i class="fa fa-check"></i></div>
                 <h3 id="registeredTitle">Qeydiyyatınız təsdiqləndi!</h3>
-                <p>Telefon nömrəniz Telegram vasitəsilə uğurla təsdiqləndi. 50 Qəpik ailəsinə xoş gəlmisiniz — oyunlar sizi gözləyir!</p>
+                <p>{{ auth()->user()?->phone_verified_at ? 'Telefon nömrəniz Telegram vasitəsilə' : 'E-poçt ünvanınız' }} uğurla təsdiqləndi. 50 Qəpik ailəsinə xoş gəlmisiniz — oyunlar sizi gözləyir!</p>
                 <button type="button" class="btn btn-primary px-5 py-2" data-bs-dismiss="modal">Oynamağa başla</button>
                 <span class="success-bar"></span>
             </div>

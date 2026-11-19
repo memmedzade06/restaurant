@@ -59,9 +59,9 @@
                                         @if ($u->is_admin)<span class="status-pill status-used ms-1">admin</span>@endif
                                     </td>
                                     <td>
-                                        {{ \App\Support\Phone::format($u->phone) ?: '—' }}
-                                        <br><small class="{{ $u->phone_verified_at ? 'text-success' : 'text-muted' }}">
-                                            {{ $u->phone_verified_at ? '✔ Telegram ilə təsdiqlənib' : 'təsdiqlənməyib' }}
+                                        {{ \App\Support\Phone::format($u->phone) ?: ($u->email ?: '—') }}
+                                        <br><small class="{{ $u->isVerified() ? 'text-success' : 'text-muted' }}">
+                                            {{ $u->phone_verified_at ? '✔ Telegram ilə təsdiqlənib' : ($u->email_verified_at ? '✔ E-poçt ilə təsdiqlənib' : 'təsdiqlənməyib') }}
                                         </small>
                                     </td>
                                     <td>

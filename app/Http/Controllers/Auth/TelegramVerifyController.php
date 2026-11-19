@@ -19,8 +19,11 @@ class TelegramVerifyController extends Controller
     public function show(Request $request)
     {
         $user = $request->user();
-        if ($user->hasVerifiedPhone()) {
+        if ($user->isVerified()) {
             return redirect()->route('games.index');
+        }
+        if ($user->verificationRoute() !== 'verify.telegram') {
+            return redirect()->route($user->verificationRoute()); // e-poçt ilə qeydiyyat
         }
 
         return view('frontend.auth.verify-telegram', [
@@ -33,7 +36,7 @@ class TelegramVerifyController extends Controller
     /** Səhifə bu ünvanı yoxlayır — təsdiq olunanda avtomatik keçid edir */
     public function status(Request $request): JsonResponse
     {
-        $verified = $request->user()->fresh()->hasVerifiedPhone();
+        $verified = $request->user()->fresh()->isVerified();
 
         // Təsdiqdən sonra Oyunlar səhifəsi açılır; orada "qeydiyyat təsdiqləndi" pəncərəsi bir dəfə göstərilir
         if ($verified) {

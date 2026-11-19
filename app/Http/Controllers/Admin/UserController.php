@@ -84,8 +84,8 @@ class UserController extends Controller
     private function applyFilter($query, string $filter, $todayStart)
     {
         return match ($filter) {
-            'verified' => $query->whereNotNull('phone_verified_at'),
-            'unverified' => $query->whereNull('phone_verified_at'),
+            'verified' => $query->verified(),
+            'unverified' => $query->whereNull('phone_verified_at')->whereNull('email_verified_at'),
             'online' => $query->where('last_seen_at', '>=', now()->subSeconds(User::ONLINE_SECONDS)),
             'today' => $query->where('created_at', '>=', $todayStart),
         };

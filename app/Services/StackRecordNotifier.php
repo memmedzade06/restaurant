@@ -49,7 +49,7 @@ class StackRecordNotifier
 
         $user = User::find($leader->user_id);
 
-        return $user && $user->telegram_chat_id && $user->hasVerifiedPhone() ? [$user, (int) $leader->best] : null;
+        return $user && $user->telegram_chat_id && $user->isVerified() ? [$user, (int) $leader->best] : null;
     }
 
     /** Mesaj cavab brauzerə getdikdən sonra göndərilir — Telegram ləng cavab versə də oyunçu gözləmir */

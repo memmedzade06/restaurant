@@ -11,7 +11,7 @@
 </section>
 
 @php
-    $canSave = auth()->check() && auth()->user()->hasVerifiedPhone();
+    $canSave = auth()->check() && auth()->user()->isVerified();
 @endphp
 
 <section class="section pt-4 games-scene">

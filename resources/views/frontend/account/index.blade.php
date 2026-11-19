@@ -44,7 +44,7 @@
                 {{-- Yalnız admin: idarəetmə paneli (yuxarı menyuda link yoxdur — buradan keçilir) --}}
                 @php
                     $usersTotal = \App\Models\User::count();
-                    $usersVerified = \App\Models\User::whereNotNull('phone_verified_at')->count();
+                    $usersVerified = \App\Models\User::verified()->count();
                     $usersToday = \App\Models\User::where('created_at', '>=', now('Asia/Baku')->startOfDay()->setTimezone(config('app.timezone')))->count();
                     $usersOnline = \App\Models\User::where('last_seen_at', '>=', now()->subSeconds(\App\Models\User::ONLINE_SECONDS))->count();
                     $prizesActive = \App\Models\WheelSpin::prizes(\App\Models\WheelSpin::ACTIVE)->count();
@@ -58,7 +58,7 @@
                         </div>
                         <div class="acc-stats four mt-3 mb-0">
                             <div><b>{{ $usersTotal }}</b><span>Cəmi qeydiyyat</span></div>
-                            <div><b>{{ $usersVerified }}</b><span>Telegram ilə təsdiqlənib</span></div>
+                            <div><b>{{ $usersVerified }}</b><span>Təsdiqlənib</span></div>
                             <div><b>{{ $usersToday }}</b><span>Bu gün qeydiyyat</span></div>
                             <div><b>{{ $usersOnline }}</b><span>İndi saytda</span></div>
                         </div>
@@ -71,9 +71,11 @@
                 <div class="acc-card acc-profile">
                     <div class="acc-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($me->name, 0, 1)) }}</div>
                     <h4 class="acc-name">{{ $me->name }}</h4>
-                    <span class="acc-verified"><i class="fa fa-check-circle me-1"></i>Telegram ilə təsdiqlənib</span>
+                    <span class="acc-verified"><i class="fa fa-check-circle me-1"></i>{{ $me->phone_verified_at ? 'Telegram ilə təsdiqlənib' : 'E-poçt ilə təsdiqlənib' }}</span>
                     <ul class="account-list acc-details">
-                        <li><span><i class="fa fa-phone-alt me-2"></i>Telefon</span><b>{{ \App\Support\Phone::format($me->phone) }}</b></li>
+                        @if ($me->phone)
+                            <li><span><i class="fa fa-phone-alt me-2"></i>Telefon</span><b>{{ \App\Support\Phone::format($me->phone) }}</b></li>
+                        @endif
                         @if ($me->email)
                             <li><span><i class="fa fa-envelope me-2"></i>E-poçt</span><b>{{ $me->email }}</b></li>
                         @endif

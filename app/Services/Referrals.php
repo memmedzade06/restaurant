@@ -37,7 +37,7 @@ class Referrals
             return;
         }
 
-        $referrer = User::where('referral_code', $code)->whereNotNull('phone_verified_at')->first();
+        $referrer = User::where('referral_code', $code)->verified()->first();
         if ($referrer && $referrer->id !== $newUser->id) {
             $newUser->forceFill(['referred_by' => $referrer->id])->save();
         }

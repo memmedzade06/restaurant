@@ -31,13 +31,13 @@ class LoginController extends Controller
         $login = trim($request->input('login'));
         $phone = Phone::normalize($login);
         $credentials = match (true) {
-            str_contains($login, '@') => ['email' => $login],
+            str_contains($login, '@') => ['email' => strtolower($login)],
             $phone !== null => ['phone' => $phone],
             default => ['username' => strtolower($login)],
         };
 
         if (! Auth::attempt($credentials + ['password' => $request->input('password')], $request->boolean('remember'))) {
-            throw ValidationException::withMessages(['login' => 'Nömrə və ya şifrə yanlışdır.']);
+            throw ValidationException::withMessages(['login' => 'Nömrə (e-poçt) və ya şifrə yanlışdır.']);
         }
 
         $request->session()->regenerate();

@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\Frontend\MenuController;
 use App\Http\Controllers\Frontend\ContactController;
+use App\Http\Controllers\Auth\EmailVerifyController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -80,10 +81,18 @@ Route::middleware('guest')->group(function () {
     });
 });
 
+// E-poçtdakı təsdiq linki: imzalıdır, girişsiz də (məs. telefonda) açıla bilər
+Route::get('/tesdiq/e-poct/{user}/{hash}', [EmailVerifyController::class, 'confirm'])
+    ->middleware(['signed', 'throttle:10,1'])->where('user', '\d+')->name('verify.email.confirm');
+
 Route::middleware('auth')->group(function () {
     Route::post('/cixis', [LoginController::class, 'destroy'])->name('logout');
     Route::get('/tesdiq', [TelegramVerifyController::class, 'show'])->name('verify.telegram');
     Route::get('/tesdiq/status', [TelegramVerifyController::class, 'status'])->middleware('throttle:60,1')->name('verify.telegram.status');
+    // E-poçt ilə qeydiyyat: məktubdakı "Təsdiqlə" düyməsi
+    Route::get('/tesdiq/e-poct', [EmailVerifyController::class, 'show'])->name('verify.email');
+    Route::get('/tesdiq/e-poct/status', [EmailVerifyController::class, 'status'])->middleware('throttle:60,1')->name('verify.email.status');
+    Route::post('/tesdiq/e-poct/yeniden', [EmailVerifyController::class, 'resend'])->middleware('throttle:3,1')->name('verify.email.resend');
 
     // Yalnız təsdiqlənmiş istifadəçilər
     Route::middleware('phone.verified')->group(function () {

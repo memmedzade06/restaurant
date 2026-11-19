@@ -131,7 +131,7 @@
         });
     })();
 </script>
-@if (auth()->user()->hasVerifiedPhone())
+@if (auth()->user()->isVerified())
 {{-- Nərd dəvətləri: saytın istənilən səhifəsində gələn dəvət görünür, qəbul olunan dəvət oyuna aparır --}}
 <div id="nardInbox" class="nard-inbox" aria-live="polite"
      data-url="{{ route('games.nard.inbox') }}"

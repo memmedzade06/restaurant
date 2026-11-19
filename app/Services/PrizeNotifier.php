@@ -26,7 +26,7 @@ class PrizeNotifier
     public function notify(WheelSpin $spin): void
     {
         $user = $spin->user;
-        if (! $spin->code || ! $user || ! $user->telegram_chat_id || ! $user->hasVerifiedPhone() || ! $this->bot->configured()) {
+        if (! $spin->code || ! $user || ! $user->telegram_chat_id || ! $user->isVerified() || ! $this->bot->configured()) {
             return;
         }
 

@@ -88,10 +88,22 @@ class User extends Authenticatable
         return $this->hasMany(GameResult::class);
     }
 
-    /** Telefon Telegram ilə təsdiqlənibmi */
-    public function hasVerifiedPhone(): bool
+    /** Hesab təsdiqlənibmi: telefon Telegram ilə və ya e-poçt kod ilə */
+    public function isVerified(): bool
     {
-        return $this->phone_verified_at !== null;
+        return $this->phone_verified_at !== null || $this->email_verified_at !== null;
+    }
+
+    /** Təsdiqlənməmiş hesab üçün təsdiq səhifəsi: nömrə ilə qeydiyyat — Telegram, e-poçt ilə — kod */
+    public function verificationRoute(): string
+    {
+        return $this->phone || ! $this->email ? 'verify.telegram' : 'verify.email';
+    }
+
+    /** Təsdiqlənmiş istifadəçilər (Telegram və ya e-poçt ilə) */
+    public function scopeVerified($query)
+    {
+        return $query->where(fn ($q) => $q->whereNotNull('phone_verified_at')->orWhereNotNull('email_verified_at'));
     }
 
     /**
@@ -103,8 +115,10 @@ class User extends Authenticatable
     /** Hazırda saytda olan təsdiqlənmiş istifadəçilər (səhifəsi açıq olanlar) */
     public function scopeOnline($query)
     {
-        return $query->whereNotNull('phone_verified_at')
-            ->whereNotNull('phone') // telefonsuz xidməti admin hesabı siyahıda görünmür
+        // xidməti admin hesabı (nömrəsiz, e-poçtu təsdiqlənməmiş) siyahıda görünmür
+        return $query->where(fn ($q) => $q
+                ->where(fn ($q) => $q->whereNotNull('phone_verified_at')->whereNotNull('phone'))
+                ->orWhereNotNull('email_verified_at'))
             ->where('last_seen_at', '>=', now()->subSeconds(self::ONLINE_SECONDS));
     }
 

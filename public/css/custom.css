@@ -356,6 +356,21 @@ a.contact-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg)
 .tg-wait { margin: 18px 0 6px; font-weight: 800; color: var(--wine); display: inline-flex; align-items: center; gap: 10px; }
 .tg-wait .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); animation: pulseDot 1.2s infinite; }
 @keyframes pulseDot { 50% { opacity: .25; transform: scale(.7); } }
+/* Qeydiyyat: təsdiq üsulunun seçimi */
+.method-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.auth-card .method-opt { margin: 0; cursor: pointer; font-weight: 400; }
+.method-opt input { position: absolute; opacity: 0; pointer-events: none; }
+.method-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 16px 10px; border-radius: 16px; border: 1.5px solid #eadfd3; background: var(--cream); text-align: center; transition: border-color .2s, box-shadow .2s, background .2s; }
+.method-card i { font-size: 24px; margin-bottom: 4px; }
+.method-card .m-tg { color: #229ED9; }
+.method-card .m-mail { color: var(--wine); }
+.method-card b { color: var(--dark); font-size: 15px; }
+.method-card small { color: var(--muted); font-size: 12px; }
+.method-opt:hover .method-card { border-color: var(--primary); }
+.method-opt input:checked + .method-card { border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(233, 162, 59, .18); }
+.method-opt input:focus-visible + .method-card { outline: 2px solid var(--wine); outline-offset: 2px; }
+.mail-icon { background: var(--wine); box-shadow: 0 12px 28px rgba(122, 20, 32, .3); }
+.btn-link-plain:disabled { text-decoration: none; opacity: .7; cursor: default; }
 .alert-soft { background: #fff4e0; color: #8a5a00; border-radius: 14px; padding: 14px; font-weight: 700; }
 .btn-link-plain { background: none; border: 0; color: var(--muted); text-decoration: underline; font-size: 14px; }
 .account-list { list-style: none; padding: 0; margin: 0 0 24px; }

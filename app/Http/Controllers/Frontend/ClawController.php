@@ -27,7 +27,7 @@ class ClawController extends Controller
     public function show(Request $request): View
     {
         $user = $request->user();
-        $verified = $user && $user->hasVerifiedPhone();
+        $verified = $user && $user->isVerified();
 
         return view('frontend.games.claw', [
             'verified' => $verified,
@@ -44,7 +44,7 @@ class ClawController extends Controller
         $user = $request->user();
         $token = Str::random(32);
 
-        if (! $user || ! $user->hasVerifiedPhone()) {
+        if (! $user || ! $user->isVerified()) {
             $request->session()->put('claw_demo', ['token' => $token, 'at' => microtime(true)]);
 
             return response()->json(['token' => $token, 'demo' => true]);
@@ -90,12 +90,12 @@ class ClawController extends Controller
                 return response()->json(['message' => 'Cəhd tapılmadı.'], 422);
             }
             $p = $this->pick();
-            $verified = $user && $user->hasVerifiedPhone();
+            $verified = $user && $user->isVerified();
 
             return response()->json(['label' => $p['label'], 'prize' => (bool) $p['prize'], 'demo' => ! $verified, 'fun' => $verified]
                 + ($verified ? ['state' => $this->state($user->id)] : []));
         }
-        if (! $user || ! $user->hasVerifiedPhone()) {
+        if (! $user || ! $user->isVerified()) {
             return response()->json(['message' => 'Cəhd tapılmadı.'], 422);
         }
 

@@ -20,12 +20,12 @@
             <form method="POST" action="{{ route('login') }}" novalidate>
                 @csrf
 
-                {{-- Qeydiyyat yalnız nömrə ilədir. (Arxada admin istifadəçi adı ilə də daxil ola bilir.) --}}
+                {{-- Nömrə və ya e-poçt (arxada admin istifadəçi adı ilə də daxil ola bilir) --}}
                 <div class="field">
-                    <label for="login">Mobil nömrə</label>
+                    <label for="login">Mobil nömrə və ya e-poçt</label>
                     <div class="input-icon">
-                        <i class="fa fa-phone-alt"></i>
-                        <input id="login" name="login" type="text" value="{{ old('login') }}" placeholder="050 123 45 67" autocomplete="username" required class="@error('login') is-invalid @enderror">
+                        <i class="fa fa-user"></i>
+                        <input id="login" name="login" type="text" value="{{ old('login') }}" placeholder="050 123 45 67 və ya ad@gmail.com" autocomplete="username" required class="@error('login') is-invalid @enderror">
                     </div>
                     @error('login') <small class="err">{{ $message }}</small> @enderror
                 </div>

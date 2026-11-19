@@ -18,7 +18,7 @@ class ReferralController extends Controller
         }
 
         $code = strtoupper($code);
-        if (User::where('referral_code', $code)->whereNotNull('phone_verified_at')->exists()) {
+        if (User::where('referral_code', $code)->verified()->exists()) {
             Referrals::remember($code);
         }
 

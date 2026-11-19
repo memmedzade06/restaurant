@@ -41,7 +41,7 @@ class GameController extends Controller
     {
         $user = $request->user();
 
-        $verified = $user && $user->hasVerifiedPhone();
+        $verified = $user && $user->isVerified();
 
         return view('frontend.games.stack', [
             'leaders' => $this->stackLeaders(10),
@@ -277,7 +277,7 @@ class GameController extends Controller
         return view('frontend.games.nard', [
             'leaders' => NardLeaderboard::today(),
             'lastWinners' => NardLeaderboard::yesterdayWinners(),
-            'myStats' => $user && $user->hasVerifiedPhone() ? NardLeaderboard::myToday($user->id) : null,
+            'myStats' => $user && $user->isVerified() ? NardLeaderboard::myToday($user->id) : null,
         ]);
     }
 
@@ -314,7 +314,7 @@ class GameController extends Controller
     public function wheel(Request $request): View
     {
         $user = $request->user();
-        $verified = $user && $user->hasVerifiedPhone();
+        $verified = $user && $user->isVerified();
 
         return view('frontend.games.wheel', [
             'segments' => $this->segments(),
@@ -335,7 +335,7 @@ class GameController extends Controller
     {
         $user = $request->user();
 
-        if (! $user || ! $user->hasVerifiedPhone()) {
+        if (! $user || ! $user->isVerified()) {
             $n = (int) $request->session()->get('wheel_demo_count', 0);
             $request->session()->put('wheel_demo_count', $n + 1);
 
@@ -421,7 +421,7 @@ class GameController extends Controller
         ];
 
         $user = $request->user();
-        if (! $user || ! $user->hasVerifiedPhone() || $run['mode'] === 'demo') {
+        if (! $user || ! $user->isVerified() || $run['mode'] === 'demo') {
             return response()->json($payload);
         }
 

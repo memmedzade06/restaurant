@@ -2,7 +2,7 @@
 @section('title', 'Nərd - 50 Qəpik Oyunlar')
 
 @php
-    $canSave = auth()->check() && auth()->user()->hasVerifiedPhone();
+    $canSave = auth()->check() && auth()->user()->isVerified();
     $online = isset($match); // iki nəfərlik oyun (dəvətlə)
 @endphp
 

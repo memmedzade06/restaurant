@@ -36,7 +36,7 @@ class MarketController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
-        $verified = $user && $user->hasVerifiedPhone();
+        $verified = $user && $user->isVerified();
 
         // yenicə alınmış kupon (bir dəfə göstərilir)
         $bought = $verified && session('market_bought')

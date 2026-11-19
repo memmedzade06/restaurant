@@ -83,7 +83,7 @@ class TelegramVerification
             return;
         }
 
-        if ($user->hasVerifiedPhone()) {
+        if ($user->isVerified()) {
             $this->sendWithSiteLink($chatId, '✅ Bu hesab artıq təsdiqlənib.');
             return;
         }
