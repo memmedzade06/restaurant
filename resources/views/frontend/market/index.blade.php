@@ -57,7 +57,7 @@
                         <div class="acc-ico big"><i class="fa fa-lock"></i></div>
                         <div>
                             <h5 class="mb-1">Hədiyyə almaq üçün daxil olun</h5>
-                            <p class="mb-0 text-muted">Xallar yalnız Telegram ilə təsdiqlənmiş hesablarda toplanır.
+                            <p class="mb-0 text-muted">Xallar yalnız təsdiqlənmiş hesablarda toplanır.
                                 @auth <a href="{{ route('verify.telegram') }}" class="fw-bold">Profilinizi təsdiqləyin</a>
                                 @else <a href="{{ route('login') }}" class="fw-bold">Daxil olun</a> və ya <a href="{{ route('register') }}" class="fw-bold">qeydiyyatdan keçin</a>
                                 @endauth
@@ -117,7 +117,7 @@
                                 $earnParts[] = e($earn[$i] ?? (($i + 1) . '-ci səviyyə üçün')) . ' <b>' . e($fmt($p)) . ' xal</b>';
                             }
                         @endphp
-                        <li>Xal qazanmaq: dəvət linkiniz ilə qeydiyyatdan keçib nömrəsini təsdiqləyən {!! implode(', ', $earnParts) !!}.</li>
+                        <li>Xal qazanmaq: dəvət linkiniz ilə qeydiyyatdan keçib profilini təsdiqləyən {!! implode(', ', $earnParts) !!}.</li>
                     </ul>
                 </div>
             </div>

@@ -51,8 +51,8 @@ class Referrals
     }
 
     /**
-     * Nömrə təsdiqlənəndə: dəvət zənciri boyunca yuxarı xal yazılır — birbaşa dəvət edənə 1,
-     * onu dəvət edənə 0.5, ondan yuxarıdakına 0.25 (config referral.levels).
+     * Hesab təsdiqlənəndə: dəvət zənciri boyunca yuxarı xal yazılır — birbaşa dəvət edənə 0.5,
+     * onu dəvət edənə 0.25, ondan yuxarıdakına 0.125 (config referral.levels).
      * Hər yeni istifadəçi üçün yalnız bir dəfə (referral_rewarded_at), eyni anda iki sorğu gəlsə də.
      */
     public static function reward(User $user): void

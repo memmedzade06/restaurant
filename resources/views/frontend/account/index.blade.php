@@ -112,7 +112,7 @@
 
                 <div class="acc-card mt-4">
                     <div class="acc-head"><span class="acc-ico"><i class="fa fa-user-plus"></i></span><h5>Dostlarını dəvət et</h5></div>
-                    <p class="acc-note">Linki və ya QR kodu paylaşın. Kimsə onunla qeydiyyatdan keçib nömrəsini Telegram ilə təsdiqləyəndə balansınıza <b>{{ $fmt($refPoints) }} xal</b> əlavə olunur.
+                    <p class="acc-note">Linki və ya QR kodu paylaşın. Kimsə onunla qeydiyyatdan keçib profilini təsdiqləyəndə balansınıza <b>{{ $fmt($refPoints) }} xal</b> əlavə olunur.
                         @if (count($refLevels) > 1)
                             Dostunuz da öz linkini paylaşsa, onun dəvət etdiyi hər kəs üçün sizə <b>{{ $fmt($refLevels[1]) }} xal</b>@if (count($refLevels) > 2), onların dəvət etdikləri üçün isə <b>{{ $fmt($refLevels[2]) }} xal</b>@endif gəlir.
                         @endif
