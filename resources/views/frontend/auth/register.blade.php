@@ -38,7 +38,7 @@
                     <div class="method-choice" role="radiogroup">
                         <label class="method-opt">
                             <input type="radio" name="method" value="telegram" @checked($method !== 'email')>
-                            <span class="method-card"><i class="fab fa-telegram-plane m-tg"></i><b>Telegram ilə</b><small>Bot vasitəsilə</small></span>
+                            <span class="method-card"><i class="fab fa-telegram-plane m-tg"></i><b>Telegram ilə</b><small>Bir toxunuşla</small></span>
                         </label>
                         <label class="method-opt">
                             <input type="radio" name="method" value="email" @checked($method === 'email')>

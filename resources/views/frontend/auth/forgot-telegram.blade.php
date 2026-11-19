@@ -23,7 +23,7 @@
 
             <ol class="tg-steps">
                 <li>Aşağıdakı düyməni basın — Telegram açılacaq.</li>
-                <li>Botda <b>Start</b> basın. Bot istəsə, <b>✅ Təsdiqlə</b> düyməsini də basın.</li>
+                <li>Telegramda <b>Start</b> basın. Lazım olsa, <b>✅ Təsdiqlə</b> düyməsini də basın.</li>
                 <li>Bu səhifə özü yeni şifrə formuna keçəcək.</li>
             </ol>
 
@@ -32,7 +32,8 @@
                     <i class="fab fa-telegram-plane me-2"></i>Telegram ilə təsdiqlə
                 </a>
             @else
-                <div class="alert-soft">Telegram bot hələ qoşulmayıb (.env: TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USERNAME).</div>
+                {{-- .env: TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USERNAME --}}
+                <div class="alert-soft">Telegram ilə təsdiq hazırda işləmir. Bir az sonra yenidən cəhd edin.</div>
             @endif
 
             <p class="tg-wait"><span class="dot"></span> Təsdiq gözlənilir…</p>

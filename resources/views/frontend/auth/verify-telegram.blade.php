@@ -17,7 +17,7 @@
 
             <ol class="tg-steps">
                 <li>Aşağıdakı düyməni basın — Telegram açılacaq.</li>
-                <li>Botda <b>Start</b>, sonra <b>✅ Təsdiqlə</b> düyməsini basın.</li>
+                <li>Telegramda <b>Start</b>, sonra <b>✅ Təsdiqlə</b> düyməsini basın.</li>
                 <li>Bu səhifə özü yenilənəcək.</li>
             </ol>
 
@@ -26,7 +26,8 @@
                     <i class="fab fa-telegram-plane me-2"></i>Telegram ilə təsdiqlə
                 </a>
             @else
-                <div class="alert-soft">Telegram bot hələ qoşulmayıb (.env: TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USERNAME).</div>
+                {{-- .env: TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USERNAME --}}
+                <div class="alert-soft">Telegram ilə təsdiq hazırda işləmir. Bir az sonra yenidən cəhd edin.</div>
             @endif
 
             <p class="tg-wait" id="tgWait"><span class="dot"></span> Təsdiq gözlənilir…</p>
