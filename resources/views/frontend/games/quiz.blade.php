@@ -33,7 +33,13 @@
                             </p>
                         @endif
                         <p class="qz-record" hidden></p>
-                        <button type="button" class="btn btn-primary qz-start px-5 py-3">Başla <i class="fa fa-play ms-2"></i></button>
+                        @if ($quiz['resumeStage'])
+                            {{-- təsdiqdən sonra qayıdıb: yarımçıq oyunu davam etdirmək olar --}}
+                            <button type="button" class="btn btn-primary qz-resume px-5 py-3 mb-2">{{ $quiz['resumeStage'] }}-{{ [1 => 'ci', 2 => 'ci', 3 => 'cü', 4 => 'cü', 5 => 'ci', 6 => 'cı', 7 => 'ci', 8 => 'ci', 9 => 'cu'][$quiz['resumeStage'] % 10] ?? 'cu' }} mərhələdən davam et <i class="fa fa-forward ms-2"></i></button>
+                            <button type="button" class="btn btn-ghost-dark qz-start px-4 py-2">Yeni oyun</button>
+                        @else
+                            <button type="button" class="btn btn-primary qz-start px-5 py-3">Başla <i class="fa fa-play ms-2"></i></button>
+                        @endif
                     </div>
 
                     {{-- Sual --}}
@@ -56,6 +62,15 @@
                         <h3 class="qz-stage-title"></h3>
                         <p class="qz-stage-note"></p>
                         <button type="button" class="btn btn-primary qz-next-stage px-5 py-3">Növbəti mərhələ <i class="fa fa-arrow-right ms-2"></i></button>
+                        {{-- təsdiqlənməmiş oyunçu: davam etmək üçün profil təsdiqi --}}
+                        <div class="qz-verify" hidden>
+                            @if ($quiz['isGuest'])
+                                <a href="{{ $quiz['registerUrl'] }}" class="btn btn-primary px-5 py-3">Qeydiyyatdan keç <i class="fa fa-user-plus ms-2"></i></a>
+                                <p class="mt-2 mb-0 small">Hesabınız var? <a href="{{ $quiz['loginUrl'] }}">Daxil olun</a></p>
+                            @else
+                                <a href="{{ $quiz['registerUrl'] }}" class="btn btn-primary px-5 py-3">Profili təsdiqlə <i class="fa fa-check ms-2"></i></a>
+                            @endif
+                        </div>
                     </div>
 
                     {{-- Oyun bitdi --}}
@@ -77,6 +92,7 @@
                         <li>Hər suala <b>{{ $quiz['seconds'] }} saniyə</b> vaxt var — vaxt bitsə, cavab səhv sayılır.</li>
                         <li>Bir mərhələ <b>{{ $quiz['perStage'] }} sualdır</b>. <b>{{ $quiz['lives'] }} səhv</b> etsəniz, oyun bitir.</li>
                         <li>{{ $quiz['perStage'] }} sualı keçəndə növbəti mərhələ başlayır, canlar yenilənir. Birinci mərhələ asandır, sonra suallar getdikcə çətinləşir.</li>
+                        <li>İlk <b>{{ $quiz['guestStages'] }} mərhələni</b> hamı oynaya bilər. Davam etmək üçün <b>profilinizi təsdiqləməlisiniz</b>.</li>
                         @if ($quiz['stagePoints'] > 0)
                             <li>Hər keçilən mərhələ üçün balansınıza xal yazılır və mərhələ artdıqca xal da artır:
                                 @for ($s = 1; $s <= 4; $s++)
@@ -93,5 +109,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/quiz.js') }}?v=5"></script>
+<script src="{{ asset('js/games/quiz.js') }}?v=7"></script>
 @endsection

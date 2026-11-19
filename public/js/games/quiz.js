@@ -46,12 +46,26 @@
             body: JSON.stringify(body || {}),
         });
         const d = await r.json().catch(() => ({}));
-        if (!r.ok) throw new Error(d.message || 'Xəta baş verdi. Yenidən cəhd edin.');
+        if (!r.ok) {
+            const err = new Error(d.message || 'Xəta baş verdi. Yenidən cəhd edin.');
+            err.needVerify = !!d.needVerify;
+            err.status = r.status;
+            throw err;
+        }
         return d;
     }
 
     function failed(err) {
         stopTimer();
+        if (err.needVerify) return askVerify(passed);
+        // server bu oyunu artıq tanımır (vaxtı keçib, başqa vərəqdə yeni oyun başlanıb və s.) — oyun bitmiş sayılır
+        if (err.status === 409) {
+            $('.qz-over-title').textContent = 'Oyun başa çatdı';
+            $('.qz-over-note').innerHTML = (total ? `Düz cavab: <b>${total}</b><br>` : '') + 'Yeni oyuna başlamaq üçün düyməni basın.';
+            saveRecord();
+            renderRecord();
+            return show('over');
+        }
         $('.qz-over-title').textContent = 'Bağlantı xətası';
         $('.qz-over-note').textContent = err.message;
         show('over');
@@ -102,6 +116,18 @@
             const d = await post(cfg.startUrl);
             renderQuestion(d.question);
         } catch (e) { failed(e); }
+    }
+
+    /** Davam etmək üçün profil təsdiqi lazımdır (server növbəti mərhələni bağlayıb) */
+    function askVerify(stage) {
+        $('.qz-stage-title').textContent = stage ? `${ordinal(stage)} mərhələ keçildi! 🎉` : 'Davam etmək üçün təsdiq lazımdır';
+        $('.qz-stage-note').innerHTML = (stage ? `Cəmi düz cavab: <b>${total}</b>.<br>` : '') +
+            (cfg.isGuest
+                ? 'Növbəti mərhələlərə keçmək və xal qazanmaq üçün <b>qeydiyyatdan keçin</b> və profilinizi təsdiqləyin. Qayıdanda oyunu buradan davam etdirəcəksiniz.'
+                : 'Növbəti mərhələlərə keçmək və xal qazanmaq üçün <b>profilinizi təsdiqləyin</b>. Qayıdanda oyunu buradan davam etdirəcəksiniz.');
+        $('.qz-next-stage').hidden = true;
+        $('.qz-verify').hidden = false;
+        show('stageDone');
     }
 
     async function nextQuestion() {
@@ -216,6 +242,9 @@
     }
 
     function stageComplete(d) {
+        if (d.needVerify) return askVerify(d.stage);
+        $('.qz-next-stage').hidden = false;
+        $('.qz-verify').hidden = true;
         $('.qz-stage-title').textContent = `${ordinal(d.stage)} mərhələ keçildi! 🎉`;
         $('.qz-stage-note').innerHTML = `Cəmi düz cavab: <b>${total}</b>. Növbəti mərhələdə suallar daha çətindir, canlar yenilənir.` +
             pointsNote(d.bonus, d.pointsLeft);
@@ -239,6 +268,11 @@
     $('.qz-start').addEventListener('click', newGame);
     $('.qz-again').addEventListener('click', newGame);
     $('.qz-next-stage').addEventListener('click', nextQuestion);
+    // təsdiqdən sonra qayıdıb: yarımçıq oyunun növbəti mərhələsi
+    $('.qz-resume')?.addEventListener('click', () => {
+        passed = cfg.resumeStage - 1;
+        nextQuestion();
+    });
 
     // klaviatura: 1, 2, 3 — cavablar
     document.addEventListener('keydown', (e) => {

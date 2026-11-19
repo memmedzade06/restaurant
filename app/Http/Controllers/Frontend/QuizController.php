@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 /**
@@ -27,6 +28,7 @@ class QuizController extends Controller
     {
         $user = $request->user();
         $verified = $user && $user->isVerified();
+        $this->playerToken($request); // açar səhifə açılanda yaradılsın — oyunun sorğularından əvvəl
 
         return view('frontend.games.quiz', [
             'quiz' => $this->settings() + [
@@ -36,6 +38,10 @@ class QuizController extends Controller
                 'answerUrl' => route('games.quiz.answer'),
                 'nextUrl' => route('games.quiz.next'),
                 'registerUrl' => $user ? route($user->verificationRoute()) : route('register'),
+                'loginUrl' => route('login'),
+                'isGuest' => ! $user,
+                // təsdiqdən sonra yarımçıq oyuna qayıdanda: növbəti mərhələdən davam
+                'resumeStage' => $verified ? $this->resumableStage($request) : null,
             ],
         ]);
     }
@@ -46,10 +52,12 @@ class QuizController extends Controller
             'stage' => 0, 'passed' => 0, 'correct' => 0, 'lives' => 0,
             'used' => [], 'queue' => [], 'index' => 0,
             'current' => null, 'over' => false,
+            'seen' => $this->seenHistory($request), // bu oyunçunun əvvəlki oyunlarda gördüyü suallar
         ];
         $this->beginStage($game);
         $this->ask($game);
-        $request->session()->put(self::KEY, $game);
+        $this->rememberSeen($request, $game);
+        $this->saveGame($request, $game);
 
         return response()->json(['question' => $this->publicQuestion($game)]);
     }
@@ -57,7 +65,7 @@ class QuizController extends Controller
     public function answer(Request $request): JsonResponse
     {
         $data = $request->validate(['choice' => ['nullable', 'integer', 'min:0', 'max:2']]);
-        $game = $request->session()->get(self::KEY);
+        $game = $this->loadGame($request);
         if (! $game || $game['over'] || ! $game['current'] || $game['current']['answered']) {
             return response()->json(['message' => 'Oyun tapılmadı. Yenidən başlayın.'], 409);
         }
@@ -92,6 +100,7 @@ class QuizController extends Controller
             $result += [
                 'stageDone' => true,
                 'stage' => $game['stage'],
+                'needVerify' => $this->mustVerify($request, $game),
                 'bonus' => $this->awardStage($request->user(), $game['stage']),
                 'allDone' => count($game['used']) >= count($this->questions()),
             ];
@@ -100,19 +109,22 @@ class QuizController extends Controller
             }
         }
 
-        $request->session()->put(self::KEY, $game);
+        $this->saveGame($request, $game);
 
         return response()->json($result + ['pointsLeft' => $this->pointsLeftFor($request->user())]);
     }
 
     public function next(Request $request): JsonResponse
     {
-        $game = $request->session()->get(self::KEY);
+        $game = $this->loadGame($request);
         if (! $game || $game['over'] || ! $game['current'] || ! $game['current']['answered']) {
             return response()->json(['message' => 'Oyun tapılmadı. Yenidən başlayın.'], 409);
         }
 
         if ($game['index'] + 1 >= count($game['queue'])) {
+            if ($this->mustVerify($request, $game)) {
+                return response()->json(['message' => 'Davam etmək üçün profilinizi təsdiqləyin.', 'needVerify' => true], 403);
+            }
             if (! $this->beginStage($game)) {
                 return response()->json(['message' => 'Suallar bitdi.'], 409);
             }
@@ -120,9 +132,64 @@ class QuizController extends Controller
             $game['index']++;
         }
         $this->ask($game);
-        $request->session()->put(self::KEY, $game);
+        $this->rememberSeen($request, $game);
+        $this->saveGame($request, $game);
 
         return response()->json(['question' => $this->publicQuestion($game)]);
+    }
+
+    /* ---------- Oyunun saxlanması ---------- */
+
+    /**
+     * Oyunun vəziyyəti sessiyada yox, keşdə saxlanılır. Səbəb: səhifə arxa planda başqa sorğular da
+     * göndərir ("İndi saytda" siqnalı və s.), Laravel isə sessiyanı hər sorğuda bütövlükdə yenidən yazır —
+     * eyni anda gələn sorğu oyunun yeni vəziyyətini köhnəsi ilə əvəz edə bilirdi ("Oyun tapılmadı").
+     * Sessiyada yalnız dəyişməyən açar (token) qalır; girişdə sessiya yenilənəndə də o saxlanılır.
+     */
+    private function playerToken(Request $request): string
+    {
+        $token = $request->session()->get('quiz_token');
+        if (! $token) {
+            $token = Str::random(32);
+            $request->session()->put('quiz_token', $token);
+        }
+
+        return $token;
+    }
+
+    private function gameKey(Request $request): string
+    {
+        return self::KEY . ':' . $this->playerToken($request);
+    }
+
+    private function loadGame(Request $request): ?array
+    {
+        return Cache::get($this->gameKey($request));
+    }
+
+    private function saveGame(Request $request, array $game): void
+    {
+        Cache::put($this->gameKey($request), $game, now()->addHours(6));
+    }
+
+    /** Təsdiqlənməmiş oyunçu icazə verilən mərhələləri keçib — növbəti mərhələ üçün təsdiq lazımdır */
+    private function mustVerify(Request $request, array $game): bool
+    {
+        $user = $request->user();
+
+        return ! ($user && $user->isVerified()) && $game['stage'] >= $this->settings()['guestStages'];
+    }
+
+    /** Sessiyada mərhələsi bitmiş, davam etdirilə bilən oyun varsa — növbəti mərhələnin nömrəsi */
+    private function resumableStage(Request $request): ?int
+    {
+        $game = $this->loadGame($request);
+        if (! $game || $game['over'] || ! $game['current'] || ! $game['current']['answered']
+            || $game['index'] + 1 < count($game['queue'])) {
+            return null;
+        }
+
+        return $game['stage'] + 1;
     }
 
     /* ---------- Oyunun gedişatı ---------- */
@@ -138,17 +205,24 @@ class QuizController extends Controller
         $mix = array_values($stages[min($game['stage'], count($stages) - 1)] ?? [10, 0, 0]);
         $perStage = $this->settings()['perStage'];
 
+        // Hər çətinlikdə əvvəlcə bu oyunçunun hələ görmədiyi suallar (qarışıq), sonra gördükləri.
+        // Belə hər oyunçu öz növbəsi ilə bütün bazanı görür, təkrar suallar az olur.
         $used = array_flip($game['used']);
-        $pool = [1 => [], 2 => [], 3 => []];
+        $seen = array_flip($game['seen'] ?? []);
+        $fresh = [1 => [], 2 => [], 3 => []];
+        $old = [1 => [], 2 => [], 3 => []];
         foreach ($this->questions() as $id => $q) {
             if (! isset($used[$id])) {
-                $pool[max(1, min(3, (int) $q['l']))][] = $id;
+                $level = max(1, min(3, (int) $q['l']));
+                isset($seen[$id]) ? $old[$level][] = $id : $fresh[$level][] = $id;
             }
         }
-        foreach ($pool as &$ids) {
-            shuffle($ids);
+        $pool = [];
+        foreach ([1, 2, 3] as $level) {
+            shuffle($fresh[$level]);
+            shuffle($old[$level]);
+            $pool[$level] = array_merge($fresh[$level], $old[$level]);
         }
-        unset($ids);
 
         $picked = [1 => [], 2 => [], 3 => []];
         foreach ([1, 2, 3] as $level) {
@@ -192,6 +266,43 @@ class QuizController extends Controller
             'asked_at' => microtime(true),
             'answered' => false,
         ];
+    }
+
+    /* ---------- Oyunçunun gördüyü suallar ---------- */
+
+    /** Daxil olmuş oyunçu — hesaba bağlı (bütün cihazlarda), qonaq — bu brauzerə bağlı */
+    private function seenKey(Request $request): ?string
+    {
+        return $request->user() ? 'quiz_seen:' . $request->user()->id : null;
+    }
+
+    private function seenHistory(Request $request): array
+    {
+        $key = $this->seenKey($request);
+        $ids = Cache::get($key ?? 'quiz_seen:guest:' . $this->playerToken($request), []);
+
+        return array_values(array_filter($ids, fn ($id) => isset($this->questions()[$id])));
+    }
+
+    /**
+     * Verilən sualı tarixçəyə yazır. Hansısa çətinlikdə bütün suallar görülübsə,
+     * həmin çətinliyin tarixçəsi sıfırlanır — dövr yenidən başlayır.
+     */
+    private function rememberSeen(Request $request, array &$game): void
+    {
+        $id = $game['current']['id'];
+        $seen = array_values(array_unique(array_merge($game['seen'] ?? [], [$id])));
+
+        $questions = $this->questions();
+        $level = (int) $questions[$id]['l'];
+        $ofLevel = array_keys(array_filter($questions, fn ($q) => (int) $q['l'] === $level));
+        if (! array_diff($ofLevel, $seen)) {
+            $seen = array_values(array_diff($seen, $ofLevel));
+        }
+        $game['seen'] = $seen;
+
+        $key = $this->seenKey($request);
+        Cache::put($key ?? 'quiz_seen:guest:' . $this->playerToken($request), $seen, now()->addDays($key ? 90 : 2));
     }
 
     private function publicQuestion(array $game): array
@@ -270,6 +381,7 @@ class QuizController extends Controller
             'stagePoints' => self::stageReward(1),
             'stageStep' => max(0, (float) config('quiz.stage_points_step', 0.25)),
             'maxPerDay' => max(0, (float) config('quiz.max_points_per_day', 2)),
+            'guestStages' => max(1, (int) config('quiz.guest_stages', 2)),
         ];
     }
 
