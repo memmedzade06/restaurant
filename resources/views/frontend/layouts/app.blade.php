@@ -3,6 +3,17 @@
 
 <head>
     <meta charset="utf-8">
+    @php($gaId = config('services.google_analytics.id'))
+    {{-- Google Analytics: yalnız real saytda; admin özü baxanda statistikaya düşmür --}}
+    @if ($gaId && ! app()->environment('local') && ! auth()->user()?->is_admin)
+        <script async src="https://www.googletagmanager.com/gtag/js?id={{ urlencode($gaId) }}"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', @json($gaId));
+        </script>
+    @endif
     <title>@yield('title', 'Restoran - 50 Qəpik')</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <meta name="csrf-token" content="{{ csrf_token() }}">

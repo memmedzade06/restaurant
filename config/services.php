@@ -32,6 +32,11 @@ return [
     ],
 
     // Qeydiyyatın Telegram bot ilə təsdiqi
+    // Google Analytics 4: Ölçmə ID-si (G-XXXXXXXXXX). Boşdursa və ya lokal mühitdə kod əlavə olunmur.
+    'google_analytics' => [
+        'id' => env('GOOGLE_ANALYTICS_ID'),
+    ],
+
     'telegram' => [
         'bot_token' => env('TELEGRAM_BOT_TOKEN'),
         'bot_username' => env('TELEGRAM_BOT_USERNAME'),

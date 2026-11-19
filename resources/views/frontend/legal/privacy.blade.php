@@ -26,6 +26,7 @@
                 <li><b>Google hesab identifikatoru</b> — «Google ilə davam et» istifadə etmisinizsə. Google-dan yalnız adınızı və e-poçtunuzu alırıq; Gmail məktublarınıza, kontaktlarınıza və ya digər məlumatlarınıza giriş istəmirik.</li>
                 <li><b>Oyun nəticələri, xallar və hədiyyə kodları</b> — liderlər cədvəli və hədiyyələr üçün.</li>
                 <li><b>Texniki məlumatlar</b> — sessiya üçün zəruri cookie-lər və saytda son aktivlik vaxtı («İndi saytda» siyahısı üçün).</li>
+                <li><b>Ziyarət statistikası</b> — saytı yaxşılaşdırmaq üçün <b>Google Analytics</b> istifadə edirik: hansı səhifələrə baxıldığı, cihaz növü, təxmini şəhər/ölkə və saytda keçirilən vaxt anonim şəkildə toplanır. Bunun üçün Google Analytics cookie-ləri istifadə olunur; adınız, nömrəniz və e-poçtunuz Google Analytics-ə göndərilmir.</li>
             </ul>
             <p>Şifrəniz yalnız şifrələnmiş (hash) şəkildə saxlanılır — biz onu görə bilmirik.</p>
 
@@ -44,7 +45,7 @@
             <p>Məlumatlarınızı üçüncü şəxslərə satmırıq və ötürmürük. Yalnız aşağıdakı xidmətlər işin texniki hissəsini yerinə yetirir:</p>
             <ul>
                 <li><b>Telegram</b> — təsdiq və bildiriş mesajları üçün;</li>
-                <li><b>Google</b> — «Google ilə davam et» girişi və e-poçt məktublarının göndərilməsi (Gmail) üçün;</li>
+                <li><b>Google</b> — «Google ilə davam et» girişi, e-poçt məktublarının göndərilməsi (Gmail) və ziyarət statistikası (Google Analytics) üçün;</li>
                 <li><b>hostinq provayderi</b> — saytın və verilənlər bazasının saxlanması üçün.</li>
             </ul>
             <p>Liderlər cədvəlində adınız qısaldılmış şəkildə (soyad və adın baş hərfi) göstərilir; nömrəniz və e-poçtunuz heç vaxt açıq göstərilmir.</p>
