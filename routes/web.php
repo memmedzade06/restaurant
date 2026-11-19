@@ -108,6 +108,8 @@ Route::middleware('auth')->group(function () {
     // Yalnız təsdiqlənmiş istifadəçilər
     Route::middleware('phone.verified')->group(function () {
         Route::get('/hesabim', fn () => view('frontend.account.index'))->name('account');
+        // Profildə: Google hesabını bağla (sonra "Google ilə davam et" eyni hesaba aparsın)
+        Route::get('/hesabim/google', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'link'])->middleware('throttle:20,1')->name('account.google');
         Route::get('/hediyyelerim', [\App\Http\Controllers\Frontend\PrizeController::class, 'index'])->name('prizes');
     });
 

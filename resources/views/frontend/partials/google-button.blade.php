@@ -13,7 +13,7 @@
         </svg>
         {{ $label ?? 'Google ilə davam et' }}
     </a>
-    @unless ($dividerFirst ?? false)
+    @unless (($dividerFirst ?? false) || ($noDivider ?? false))
         <div class="auth-or"><span>və ya</span></div>
     @endunless
 @endif

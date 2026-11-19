@@ -34,14 +34,20 @@ class GoogleAuthController extends Controller
         return $this->driver()->redirect();
     }
 
-    /** Daxil olmuş, amma təsdiqlənməmiş istifadəçi: Google hesabını öz profilinə bağlayıb təsdiqləyir */
+    /**
+     * Daxil olmuş istifadəçi Google hesabını öz profilinə bağlayır:
+     *  - təsdiqlənməmiş profil — həm də təsdiqlənir ("Google ilə təsdiqlə");
+     *  - təsdiqlənmiş profil (məs. Telegram ilə) — sonra "Google ilə davam et" ilə eyni hesaba daxil ola bilsin.
+     */
     public function link(Request $request): SymfonyRedirect
     {
         abort_unless(self::enabled(), 404);
 
-        if ($request->user()->isVerified()) {
-            return redirect()->route('games.index');
+        if ($request->user()->google_id) {
+            return redirect()->route('account');
         }
+
+        $request->session()->put('google_link', true);
 
         return $this->driver()->redirect();
     }
@@ -50,11 +56,13 @@ class GoogleAuthController extends Controller
     {
         abort_unless(self::enabled(), 404);
 
-        $current = $request->user(); // daxil olubsa — bu, "Google ilə təsdiqlə"dir
-        if ($current?->isVerified()) {
-            return redirect()->route('games.index');
+        // Daxil olubsa — bu, Google hesabını profilə bağlamaqdır ("Google ilə təsdiqlə" / "Google hesabını bağla")
+        $current = $request->user();
+        $linking = (bool) $request->session()->pull('google_link');
+        if ($current && ($current->google_id || ($current->isVerified() && ! $linking))) {
+            return redirect()->route($current->isVerified() ? 'account' : 'games.index');
         }
-        $back = $current ? route($current->verificationRoute()) : route('login');
+        $back = ! $current ? route('login') : ($current->isVerified() ? route('account') : route($current->verificationRoute()));
         $errorKey = $current ? 'google' : 'login';
 
         // İstifadəçi Google pəncərəsində "Ləğv et" basıb
@@ -119,27 +127,37 @@ class GoogleAuthController extends Controller
     }
 
     /**
-     * Google hesabını daxil olmuş istifadəçinin profilinə bağlayır və profili təsdiqləyir.
+     * Google hesabını daxil olmuş istifadəçinin profilinə bağlayır (təsdiqlənməmişsə — həm də təsdiqləyir).
      * Bu Google hesabı / e-poçt başqa profildədirsə — bağlamırıq (iki hesab qarışmasın).
      */
     private function linkToCurrent(Request $request, User $user, string $googleId, string $email): RedirectResponse
     {
+        $wasVerified = $user->isVerified();
+        $back = $wasVerified ? route('account') : route($user->verificationRoute());
+
         $taken = User::whereKeyNot($user->id)
             ->where(fn ($q) => $q->where('google_id', $googleId)->orWhere('email', $email))
             ->exists();
 
         if ($taken) {
-            return redirect()->route($user->verificationRoute())
-                ->withErrors(['google' => 'Bu Google hesabı başqa profilə bağlıdır. Başqa Google hesabı seçin və ya hesabınızı əvvəlki üsulla təsdiqləyin.']);
+            return redirect($back)->withErrors(['google' => $wasVerified
+                ? 'Bu Google hesabı başqa profilə bağlıdır. Başqa Google hesabı seçin.'
+                : 'Bu Google hesabı başqa profilə bağlıdır. Başqa Google hesabı seçin və ya hesabınızı əvvəlki üsulla təsdiqləyin.']);
         }
 
-        // Nömrə ilə qeydiyyatda e-poçt yox idi; e-poçtla qeydiyyatda isə yazılan ünvan heç vaxt təsdiqlənməyib —
-        // hər iki halda profilə Google-un təsdiqlədiyi ünvan yazılır
-        $user->forceFill([
-            'google_id' => $googleId,
-            'email' => $email,
-            'email_verified_at' => now(),
-        ])->save();
+        $data = ['google_id' => $googleId];
+        // Profildə təsdiqlənmiş e-poçt yoxdursa (nömrə ilə qeydiyyat və ya təsdiqlənməmiş ünvan) —
+        // Google-un təsdiqlədiyi ünvan yazılır. Təsdiqlənmiş öz e-poçtu varsa, o qalır.
+        if (! $user->email || ! $user->email_verified_at) {
+            $data['email'] = $email;
+            $data['email_verified_at'] = now();
+        }
+        $user->forceFill($data)->save();
+
+        if ($wasVerified) {
+            return redirect()->route('account')
+                ->with('status', 'Google hesabınız bağlandı. İndi "Google ilə davam et" ilə də daxil ola bilərsiniz.');
+        }
 
         Referrals::reward($user); // dəvət linki ilə gəlibsə — dəvət edənə xal
         $request->session()->flash('registered', true);

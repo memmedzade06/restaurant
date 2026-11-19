@@ -79,8 +79,24 @@
                         @if ($me->email)
                             <li><span><i class="fa fa-envelope me-2"></i>E-poçt</span><b>{{ $me->email }}</b></li>
                         @endif
+                        @if ($me->google_id)
+                            <li><span><i class="fab fa-google me-2"></i>Google</span><b class="text-success"><i class="fa fa-check me-1"></i>bağlıdır</b></li>
+                        @endif
                         <li><span><i class="fa fa-calendar-alt me-2"></i>Qeydiyyat</span><b>{{ $me->created_at->format('d.m.Y') }}</b></li>
                     </ul>
+
+                    @if (session('status'))
+                        <div class="alert-ok text-start"><i class="fa fa-check-circle me-2"></i>{{ session('status') }}</div>
+                    @endif
+                    @error('google') <div class="alert-soft text-start mb-3">{{ $message }}</div> @enderror
+
+                    {{-- Google bağlanmayıbsa: sonra "Google ilə davam et" eyni hesaba aparsın deyə --}}
+                    @if (! $me->google_id && \App\Http\Controllers\Auth\GoogleAuthController::enabled())
+                        <div class="acc-google">
+                            @include('frontend.partials.google-button', ['href' => route('account.google'), 'label' => 'Google hesabını bağla', 'dividerFirst' => null, 'noDivider' => true])
+                            <small class="hint">Bağlasanız, növbəti dəfə <b>"Google ilə davam et"</b> ilə də bu hesaba daxil ola bilərsiniz.</small>
+                        </div>
+                    @endif
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button type="submit" class="btn btn-wine w-100 py-2"><i class="fa fa-sign-out-alt me-2"></i>Çıxış</button>

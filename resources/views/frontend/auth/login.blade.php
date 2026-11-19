@@ -17,7 +17,11 @@
                 <div class="alert-ok"><i class="fa fa-check-circle me-2"></i>{{ session('status') }}</div>
             @endif
 
-            @include('frontend.partials.google-button')
+            @include('frontend.partials.google-button', ['noDivider' => true])
+            @if (\App\Http\Controllers\Auth\GoogleAuthController::enabled())
+                <p class="google-note"><i class="fa fa-info-circle me-1"></i>Əvvəl <b>nömrə ilə</b> qeydiyyatdan keçmisinizsə, əvvəlcə nömrənizlə daxil olun və <b>Hesabım</b> səhifəsində Google hesabınızı bağlayın — yoxsa yeni hesab açılar.</p>
+                <div class="auth-or"><span>və ya</span></div>
+            @endif
 
             <form method="POST" action="{{ route('login') }}" novalidate>
                 @csrf
