@@ -19,7 +19,17 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="description" content="50 Qəpik — Elmlərdə milli və Avropa mətbəxi, çay dəstgahı və qəlyan seti. Dadlı yeməklər, sərfəli qiymətlər.">
 
-    <link href="{{ asset('img/logo.png') }}" rel="icon">
+    {{-- İkonlar: Google axtarışı /favicon.ico və 48-in misli ölçülü kvadrat ikon istəyir --}}
+    <link rel="icon" href="{{ asset('favicon.ico') }}?v=2" sizes="48x48">
+    <link rel="icon" type="image/png" href="{{ asset('img/favicon-96.png') }}?v=2" sizes="96x96">
+    <link rel="icon" type="image/png" href="{{ asset('img/favicon-192.png') }}?v=2" sizes="192x192">
+    <link rel="apple-touch-icon" href="{{ asset('img/apple-touch-icon.png') }}?v=2">
+    <meta name="theme-color" content="#7a1420">
+    <meta property="og:site_name" content="50 Qəpik">
+    @if (request()->routeIs('home'))
+        {{-- Google axtarışında sayt adı "50qepik.com" yox, "50 Qəpik" göstərilsin --}}
+        <script type="application/ld+json">{"@@context":"https://schema.org","@@type":"WebSite","name":"50 Qəpik","alternateName":"50 Qəpik Elmlər","url":"{{ url('/') }}/"}</script>
+    @endif
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
