@@ -134,12 +134,12 @@
                     <div class="col-12" id="rvTakenRow" hidden><p class="rv-taken" id="rvTaken"></p></div>
                     <div class="col-12">
                         <label for="rvName">Ad, soyad</label>
-                        <input type="text" id="rvName" name="name" required maxlength="120" autocomplete="name" placeholder="Məs. Əli Məmmədov" value="{{ $booking['prefill']['name'] }}">
+                        <input type="text" id="rvName" name="name" required maxlength="120" autocomplete="name" placeholder="Adınız və soyadınız" value="{{ $booking['prefill']['name'] }}">
                     </div>
                     <div class="col-12">
                         <label for="rvPhone">Telefon nömrəsi</label>
                         {{-- nömrə hər dəfə yazılır; hesabda nömrə varsa, əvvəlcədən doldurulur --}}
-                        <input type="tel" id="rvPhone" name="phone" required maxlength="13" inputmode="numeric" autocomplete="tel-national" placeholder="050 123 45 67" pattern="0\d{2} \d{3} \d{2} \d{2}" value="{{ $booking['prefill']['phone'] }}">
+                        <input type="tel" id="rvPhone" name="phone" required maxlength="13" inputmode="numeric" autocomplete="tel-national" placeholder="Telefon nömrəniz" pattern="0\d{2} \d{3} \d{2} \d{2}" value="{{ $booking['prefill']['phone'] }}">
                     </div>
                 </div>
 
