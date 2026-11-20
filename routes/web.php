@@ -197,13 +197,17 @@ Route::prefix('oyunlar/hediyye-krani')->name('games.claw')->middleware('game.ena
 | Admin panel — hədiyyə kodlarının yoxlanması (php artisan admin:make <telefon>)
 |--------------------------------------------------------------------------
 */
+// Rezervasiyalar: admin və ofisiantlar baxa bilər, ləğv etmək — yalnız admin (aşağıdakı qrupda)
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(function () {
+    Route::get('/rezervasiyalar', [\App\Http\Controllers\Admin\ReservationController::class, 'index'])->name('reservations');
+});
+
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/', fn () => redirect()->route('admin.prizes'));
     Route::get('/hediyyeler', [\App\Http\Controllers\Admin\PrizeController::class, 'index'])->name('prizes');
     Route::post('/hediyyeler/{prize}/istifade', [\App\Http\Controllers\Admin\PrizeController::class, 'redeem'])->name('prizes.redeem');
     // hədiyyənin QR kodu: admin oxudub açanda kod istifadə olunur
     Route::get('/hediyyeler/qr/{code}', [\App\Http\Controllers\Admin\PrizeController::class, 'qr'])->where('code', '[A-Za-z0-9-]+')->name('prizes.qr');
-    Route::get('/rezervasiyalar', [\App\Http\Controllers\Admin\ReservationController::class, 'index'])->name('reservations');
     Route::post('/rezervasiyalar/{reservation}/legv', [\App\Http\Controllers\Admin\ReservationController::class, 'cancel'])->name('reservations.cancel');
     Route::get('/istifadeciler', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('users');
     Route::get('/istifadeciler/{user}/duzelis', [\App\Http\Controllers\Admin\UserController::class, 'edit'])->name('users.edit');

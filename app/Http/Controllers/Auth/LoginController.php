@@ -44,7 +44,10 @@ class LoginController extends Controller
 
         // admin — panelə, oyunçu — oyunlara (müəyyən səhifəni açmaq istəyirdisə, ora).
         // Adi istifadəçini admin ünvanına qaytarmırıq — orada onsuz da 403 alar.
-        if (! $request->user()->is_admin && str_contains((string) $request->session()->get('url.intended'), '/admin')) {
+        // (ofisiant rezervasiyalar səhifəsinə qayıda bilər)
+        $intended = (string) $request->session()->get('url.intended');
+        $staffPage = $request->user()->isStaff() && str_contains($intended, '/admin/rezervasiyalar');
+        if (! $request->user()->is_admin && ! $staffPage && str_contains($intended, '/admin')) {
             $request->session()->forget('url.intended');
         }
 

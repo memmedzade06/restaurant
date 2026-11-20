@@ -70,5 +70,6 @@ class Kernel extends HttpKernel
         'phone.verified' => \App\Http\Middleware\EnsurePhoneVerified::class,
         'game.enabled' => \App\Http\Middleware\EnsureGameEnabled::class,
         'admin' => \App\Http\Middleware\EnsureAdmin::class,
+        'staff' => \App\Http\Middleware\EnsureStaff::class, // admin və ofisiant
     ];
 }

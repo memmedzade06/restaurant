@@ -209,4 +209,24 @@ class ReservationTest extends TestCase
         $this->actingAs($admin)->post(route('admin.reservations.cancel', $r))->assertRedirect();
         $this->assertSame(Reservation::STATUS_CANCELLED, $r->fresh()->status);
     }
+
+    public function test_waiters_can_view_reservations_but_only_admins_cancel(): void
+    {
+        $this->book()->assertOk();
+        $r = Reservation::latest('id')->first();
+        auth()->logout();
+        $waiter = User::create(['name' => 'Ofisiant', 'email' => 'w' . uniqid() . '@example.com', 'password' => 'secret123']);
+        $waiter->forceFill(['type' => User::TYPE_WAITER])->save();
+
+        $this->actingAs($waiter)->get(route('admin.reservations', ['date' => $this->tomorrow()]))->assertOk()
+            ->assertSee('Əli Məmmədov')->assertSee('+994 50 111 22 33')
+            ->assertDontSee(route('admin.reservations.cancel', $r), false)   // ləğv düyməsi yoxdur
+            ->assertDontSee(route('admin.users'), false);                    // admin menyusu yoxdur
+        $this->actingAs($waiter)->post(route('admin.reservations.cancel', $r))->assertForbidden();
+        $this->assertSame(Reservation::STATUS_ACTIVE, $r->fresh()->status);
+
+        // ofisiantın "Hesabım" səhifəsində rezervasiyalar linki var
+        $waiter->forceFill(['email_verified_at' => now()])->save();
+        $this->actingAs($waiter)->get(route('account'))->assertOk()->assertSee(route('admin.reservations'), false);
+    }
 }

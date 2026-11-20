@@ -48,6 +48,7 @@
                     $usersToday = \App\Models\User::where('created_at', '>=', now('Asia/Baku')->startOfDay()->setTimezone(config('app.timezone')))->count();
                     $usersOnline = \App\Models\User::where('last_seen_at', '>=', now()->subSeconds(\App\Models\User::ONLINE_SECONDS))->count();
                     $prizesActive = \App\Models\WheelSpin::prizes(\App\Models\WheelSpin::ACTIVE)->count();
+                    $reservationsToday = \App\Models\Reservation::active()->whereDate('date', now('Asia/Baku')->toDateString())->count();
                 @endphp
                 <div class="col-12">
                     <div class="acc-card acc-admin-card">
@@ -55,12 +56,24 @@
                         <div class="account-admin">
                             <a href="{{ route('admin.prizes') }}"><span><i class="fa fa-gift me-2"></i>Hədiyyə kodları <small class="acc-badge">{{ $prizesActive }} aktiv</small></span><i class="fa fa-arrow-right"></i></a>
                             <a href="{{ route('admin.users') }}"><span><i class="fa fa-users me-2"></i>İstifadəçilər <small class="acc-badge">{{ $usersTotal }}</small></span><i class="fa fa-arrow-right"></i></a>
+                            <a href="{{ route('admin.reservations') }}"><span><i class="fa fa-chair me-2"></i>Rezervasiyalar <small class="acc-badge">{{ $reservationsToday }} bu gün</small></span><i class="fa fa-arrow-right"></i></a>
                         </div>
                         <div class="acc-stats four mt-3 mb-0">
                             <div><b>{{ $usersTotal }}</b><span>Cəmi qeydiyyat</span></div>
                             <div><b>{{ $usersVerified }}</b><span>Təsdiqlənib</span></div>
                             <div><b>{{ $usersToday }}</b><span>Bu gün qeydiyyat</span></div>
                             <div><b>{{ $usersOnline }}</b><span>İndi saytda</span></div>
+                        </div>
+                    </div>
+                </div>
+            @elseif ($me->isStaff())
+                {{-- Ofisiant: rezervasiyalara baxa bilər (ləğv etmək — yalnız admin) --}}
+                @php($reservationsToday = \App\Models\Reservation::active()->whereDate('date', now('Asia/Baku')->toDateString())->count())
+                <div class="col-12">
+                    <div class="acc-card acc-admin-card">
+                        <div class="acc-head"><span class="acc-ico"><i class="fa fa-concierge-bell"></i></span><h5>Ofisiant</h5></div>
+                        <div class="account-admin">
+                            <a href="{{ route('admin.reservations') }}"><span><i class="fa fa-chair me-2"></i>Rezervasiyalar <small class="acc-badge">{{ $reservationsToday }} bu gün</small></span><i class="fa fa-arrow-right"></i></a>
                         </div>
                     </div>
                 </div>

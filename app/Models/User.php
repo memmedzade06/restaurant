@@ -142,6 +142,12 @@ class User extends Authenticatable
     }
 
     /** Hesab təsdiqlənibmi: telefon Telegram ilə və ya e-poçt kod ilə */
+    /** İşçi: admin və ya ofisiant (məs. rezervasiyalara baxa bilər) */
+    public function isStaff(): bool
+    {
+        return $this->is_admin || in_array($this->type, [self::TYPE_ADMIN, self::TYPE_WAITER], true);
+    }
+
     public function isVerified(): bool
     {
         return $this->phone_verified_at !== null || $this->email_verified_at !== null;
