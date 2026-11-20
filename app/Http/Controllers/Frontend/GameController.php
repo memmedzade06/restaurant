@@ -49,7 +49,6 @@ class GameController extends Controller
             'prizeLeft' => $verified ? $this->stackPrizesLeft($user->id) : null,
             // xal bonusu yalnız qonaqlara (ofisiant və admin oynaya bilər, amma xal almır)
             'bonus' => $this->stackBonusConfig() + ['left' => $verified && $user->earnsGamePoints() ? $this->stackBonusLeft($user->id) : 0],
-            'earnsPoints' => ! $user || $user->earnsGamePoints(),
             // ?hava=rain kimi baxış rejimi; yoxsa canlı hava səhifə açılandan sonra ayrıca sorğu ilə gəlir
             // (xidmət bir neçə saniyə cavab verə bilər — səhifə bunu gözləməsin)
             'weather' => BakuWeather::preview($request->query('hava')),

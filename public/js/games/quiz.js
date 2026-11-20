@@ -99,7 +99,7 @@
         if (cfg.staff) return ''; // ofisiant və admin oyundan xal almır
         if (!cfg.canEarn) {
             return cfg.stagePoints > 0
-                ? `<br><a href="${cfg.registerUrl}">Profilinizi təsdiqləyin</a> ki, mərhələləri keçəndə xal qazanasınız (1-ci mərhələ: <b>+${fmt(cfg.stagePoints)} xal</b>, sonra daha çox).`
+                ? `<br><a href="${cfg.registerUrl}">Profilinizi təsdiqləyin</a> ki, mərhələləri keçəndə xal qazanasınız (${cfg.pointsFromLabel} mərhələdən: <b>+${fmt(cfg.stagePoints)} xal</b>, sonra daha çox).`
                 : '';
         }
         if (bonus > 0) return `<br><span class="qz-bonus">⭐ +${fmt(bonus)} xal balansınıza yazıldı!</span>`;

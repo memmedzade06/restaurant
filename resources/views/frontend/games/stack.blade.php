@@ -107,7 +107,7 @@
                             <li>Yuxarıda stəkan sağa-sola yellənir.</li>
                             <li>Toxunun — stəkan düşüb qüllənin üstünə düşür.</li>
                             @if ($bonus['points'] > 0)
-                                <li><b>{{ $bonus['score'] }} stəkan</b> — balansınıza <b>+{{ \App\Services\Referrals::format($bonus['points']) }} xal bonus</b> (gündə {{ $bonus['per_day'] }} dəfə)@unless ($earnsPoints) — <i>xal yalnız qonaqlara yazılır</i>@endunless</li>
+                                <li><b>{{ $bonus['score'] }} stəkan</b> — balansınıza <b>+{{ \App\Services\Referrals::format($bonus['points']) }} xal bonus</b> (gündə {{ $bonus['per_day'] }} dəfə)</li>
                             @endif
                             @foreach ($prizes as $min => $p)
                                 @if ($loop->last)

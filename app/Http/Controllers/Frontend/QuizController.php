@@ -336,13 +336,34 @@ class QuizController extends Controller
         return $user && $user->isVerified() && $user->earnsGamePoints() ? $this->pointsLeftToday($user->id) : null;
     }
 
-    /** N-ci mərhələnin xalı: 1-ci — stage_points, hər növbəti — stage_points_step qədər çox */
+    /** Xal verilən ilk mərhələ (config quiz.points_from_stage); ondan əvvəlkilər xalsızdır */
+    public static function firstPaidStage(): int
+    {
+        return max(1, (int) config('quiz.points_from_stage', 3));
+    }
+
+    /**
+     * N-ci mərhələnin xalı: firstPaidStage()-dən əvvəl — 0, həmin mərhələ — stage_points,
+     * hər növbəti — stage_points_step qədər çox.
+     */
     public static function stageReward(int $stage): float
     {
+        $from = self::firstPaidStage();
+        if ($stage < $from) {
+            return 0;
+        }
         $base = max(0, (float) config('quiz.stage_points', 0.25));
         $step = max(0, (float) config('quiz.stage_points_step', 0.25));
 
-        return round($base + max(0, $stage - 1) * $step, 3);
+        return round($base + ($stage - $from) * $step, 3);
+    }
+
+    /** Sıra sayı: 1 → "1-ci", 3 → "3-cü", 6 → "6-cı", 9 → "9-cu", 10 → "10-cu" */
+    public static function ordinal(int $n): string
+    {
+        $suffix = [0 => 'cu', 1 => 'ci', 2 => 'ci', 3 => 'cü', 4 => 'cü', 5 => 'ci', 6 => 'cı', 7 => 'ci', 8 => 'ci', 9 => 'cu'][$n % 10];
+
+        return "{$n}-{$suffix}";
     }
 
     /** Mərhələ keçildi: təsdiqlənmiş oyunçuya xal (bu günün limiti çatana qədər). Qaytarır: yazılan xal */
@@ -380,7 +401,9 @@ class QuizController extends Controller
             'perStage' => max(1, (int) config('quiz.per_stage', 10)),
             'lives' => max(1, (int) config('quiz.lives', 3)),
             'seconds' => max(1, (int) config('quiz.seconds', 5)),
-            'stagePoints' => self::stageReward(1),
+            'stagePoints' => self::stageReward(self::firstPaidStage()), // xal verilən ilk mərhələnin xalı
+            'pointsFrom' => self::firstPaidStage(),
+            'pointsFromLabel' => self::ordinal(self::firstPaidStage()),
             'stageStep' => max(0, (float) config('quiz.stage_points_step', 0.25)),
             'maxPerDay' => max(0, (float) config('quiz.max_points_per_day', 2)),
             'guestStages' => max(1, (int) config('quiz.guest_stages', 2)),
@@ -390,6 +413,6 @@ class QuizController extends Controller
     /** Oyunlar səhifəsindəki kart üçün */
     public static function pointsLabel(): string
     {
-        return Referrals::format(self::stageReward(1));
+        return Referrals::format(self::stageReward(self::firstPaidStage()));
     }
 }

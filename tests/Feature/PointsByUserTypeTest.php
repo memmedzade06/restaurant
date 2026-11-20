@@ -106,17 +106,42 @@ class PointsByUserTypeTest extends TestCase
         foreach ([User::TYPE_GUEST => true, User::TYPE_WAITER => false, User::TYPE_ADMIN => false] as $type => $earns) {
             $u = $this->user($type);
             Cache::flush();
-            $given = (float) $this->invokePrivate($controller, 'awardStage', $u, 1);
+            $given = (float) $this->invokePrivate($controller, 'awardStage', $u, 3); // xal 3-cü mərhələdən
 
             $earns ? $this->assertGreaterThan(0, $given, "{$type} xal almalıdır") : $this->assertSame(0.0, $given, "{$type} xal almamalıdır");
             $this->assertEqualsWithDelta($given, (float) $u->fresh()->points, 0.0001);
         }
     }
 
-    public function test_quiz_page_tells_staff_points_are_for_guests(): void
+    public function test_quiz_points_start_from_third_stage(): void
+    {
+        config(['quiz.points_from_stage' => 3, 'quiz.stage_points' => 0.25, 'quiz.stage_points_step' => 0.25]);
+        $this->assertSame(0.0, (float) QuizController::stageReward(1));
+        $this->assertSame(0.0, (float) QuizController::stageReward(2));
+        $this->assertSame(0.25, QuizController::stageReward(3));
+        $this->assertSame(0.5, QuizController::stageReward(4));
+        $this->assertSame(1.0, QuizController::stageReward(6));
+        $this->assertSame('3-cü', QuizController::ordinal(3));
+        $this->assertSame('6-cı', QuizController::ordinal(6));
+
+        // 1-ci və 2-ci mərhələ qonağa xal vermir
+        $controller = app(QuizController::class);
+        $u = $this->user();
+        $this->assertSame(0.0, (float) $this->invokePrivate($controller, 'awardStage', $u, 1));
+        $this->assertSame(0.0, (float) $this->invokePrivate($controller, 'awardStage', $u, 2));
+        $this->assertSame(0.25, (float) $this->invokePrivate($controller, 'awardStage', $u, 3));
+        $this->assertEqualsWithDelta(0.25, (float) $u->fresh()->points, 0.0001);
+
+        // səhifələrdə də 3-cü mərhələdən yazılır
+        $this->actingAs($u)->get(route('games.quiz'))->assertOk()
+            ->assertSee('3-cü mərhələdən')->assertDontSee('1-ci mərhələ:');
+        $this->get(route('games.index'))->assertOk()->assertSee('3-cü mərhələdən artan xallar');
+    }
+
+    public function test_staff_see_no_points_warning(): void
     {
         $this->actingAs($this->user(User::TYPE_WAITER))->get(route('games.quiz'))
-            ->assertOk()->assertSee('Oyunlardan xal yalnız qonaqlara yazılır.');
+            ->assertOk()->assertDontSee('Oyunlardan xal yalnız qonaqlara yazılır.')->assertDontSee('ki, xal qazanasınız');
         $this->actingAs($this->user())->get(route('games.quiz'))
             ->assertOk()->assertDontSee('Oyunlardan xal yalnız qonaqlara yazılır.');
     }

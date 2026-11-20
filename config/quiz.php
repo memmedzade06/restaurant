@@ -15,8 +15,10 @@ return [
     'seconds' => (int) env('QUIZ_SECONDS', 5), // hər suala cavab vaxtı; vaxt bitsə — səhv sayılır
     // Mərhələni keçən təsdiqlənmiş oyunçunun balansına xal (Hədiyyə marketində xərclənir).
     // Gündəlik limit var ki, oyunu dəfələrlə oynayıb xal yığmaq olmasın.
-    // 1-ci mərhələ stage_points xal verir, hər növbəti mərhələ stage_points_step qədər çox:
-    // 0,25 → 0,5 → 0,75 → 1 ... (gündəlik limitə qədər)
+    // Xal points_from_stage-ci mərhələdən verilir (ondan əvvəlki mərhələlər xalsızdır).
+    // Həmin mərhələ stage_points xal verir, hər növbəti mərhələ stage_points_step qədər çox:
+    // 3-cü — 0,25 → 4-cü — 0,5 → 5-ci — 0,75 → 6-cı — 1 ... (gündəlik limitə qədər)
+    'points_from_stage' => (int) env('QUIZ_POINTS_FROM_STAGE', 3),
     'stage_points' => (float) env('QUIZ_STAGE_POINTS', 0.25),
     'stage_points_step' => (float) env('QUIZ_STAGE_POINTS_STEP', 0.25),
     'max_points_per_day' => (float) env('QUIZ_MAX_POINTS_PER_DAY', 2),
