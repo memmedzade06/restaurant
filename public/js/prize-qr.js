@@ -8,12 +8,11 @@
 (function () {
     'use strict';
 
-    const tpl = document.querySelector('meta[name="prize-qr-url"]')?.content;
-    if (!tpl) return;
+    const tpl = document.querySelector('meta[name="prize-qr-url"]')?.content || '';
     const DARK = '#3A0D0D';
 
     function render(el) {
-        if (el.dataset.qrDone || el.classList.contains('no-qr') || !window.qrcode) return;
+        if (!tpl || el.dataset.qrDone || el.classList.contains('no-qr') || !window.qrcode) return;
         const code = (el.dataset.prizeQr || el.textContent || '').trim().toUpperCase();
         if (!/^QP-[A-Z0-9]+$/.test(code)) return;
         el.dataset.qrDone = '1';
@@ -39,6 +38,28 @@
         if (root.matches('.prize-code, [data-prize-qr]')) render(root);
         root.querySelectorAll('.prize-code, [data-prize-qr]').forEach(render);
     };
+
+    /* ---------- Kuponun etibarlılıq müddəti: geri sayım ---------- */
+    // .prize-expiry[data-expires] — "9 dəq 12 san qalıb"; son 2 dəqiqədə qırmızı və döyünür, bitəndə "Vaxtı bitdi"
+    function tick() {
+        document.querySelectorAll('.prize-expiry[data-expires]').forEach(el => {
+            const left = Math.floor((Date.parse(el.dataset.expires) - Date.now()) / 1000);
+            const out = el.querySelector('.prize-expiry-left');
+            if (!out) return;
+            out.hidden = false;
+            if (left <= 0) {
+                out.textContent = 'Vaxtı bitdi';
+                el.classList.add('is-over');
+                el.classList.remove('is-soon');
+                return;
+            }
+            const d = Math.floor(left / 86400), h = Math.floor(left % 86400 / 3600), m = Math.floor(left % 3600 / 60), s = left % 60;
+            out.textContent = (d ? `${d} gün ${h} saat` : h ? `${h} saat ${m} dəq` : `${m} dəq ${String(s).padStart(2, '0')} san`) + ' qalıb';
+            el.classList.toggle('is-soon', left <= 120);
+        });
+    }
+    tick();
+    setInterval(tick, 1000);
 
     scan(document.body);
     new MutationObserver(list => {

@@ -47,7 +47,7 @@
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
     <link href="{{ asset('css/custom.css') }}?v=25" rel="stylesheet">
-    <link href="{{ asset('css/games.css') }}?v=58" rel="stylesheet">
+    <link href="{{ asset('css/games.css') }}?v=59" rel="stylesheet">
     @yield('css')
 </head>
 
@@ -197,7 +197,7 @@
 @auth
     {{-- hədiyyə kodlarının altında QR kod — yalnız daxil olmuş istifadəçidə (kod onlarda olur) --}}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" defer></script>
-    <script src="{{ asset('js/prize-qr.js') }}?v=1" defer></script>
+    <script src="{{ asset('js/prize-qr.js') }}?v=2" defer></script>
 @endauth
 </body>
 

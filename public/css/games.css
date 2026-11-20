@@ -663,3 +663,17 @@ html.cl-noscroll, html.cl-noscroll body { overflow: hidden; }
 .prize-qr small { color: var(--muted); font-size: 12px; font-weight: 700; }
 .prize-side .prize-qr { margin: 6px 0 4px; }
 .prize-side .prize-qr svg { width: 112px; height: 112px; }
+
+/* Hədiyyələrim: kuponun etibarlılıq müddəti — böyük, diqqətçəkən, geri sayımla */
+.prize-expiry { display: inline-flex; align-items: center; gap: 12px; align-self: flex-start; margin-top: 10px; padding: 10px 16px; border-radius: 14px; background: #fff1dc; border: 2px solid #f0b75a; color: var(--wine); }
+.prize-expiry > i { font-size: 22px; color: #d9822b; }
+.prize-expiry > div { display: flex; flex-direction: column; line-height: 1.2; }
+.prize-expiry-label { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; color: #b0662a; }
+.prize-expiry b { font-size: 20px; font-weight: 900; color: var(--wine); }
+.prize-expiry-left { font-size: 14px; font-weight: 800; color: #1f7a4a; }
+.prize-expiry.is-soon { background: #fdecea; border-color: #e0574a; animation: expiryPulse 1s ease-in-out infinite; }
+.prize-expiry.is-soon > i, .prize-expiry.is-soon .prize-expiry-left { color: #c0392b; }
+.prize-expiry.is-over { background: #f1eeea; border-color: #cfc8c0; }
+.prize-expiry.is-over .prize-expiry-left, .prize-expiry.is-over > i { color: #8a8079; }
+@keyframes expiryPulse { 50% { box-shadow: 0 0 0 5px rgba(224, 87, 74, .18); } }
+@media (prefers-reduced-motion: reduce) { .prize-expiry.is-soon { animation: none; } }
