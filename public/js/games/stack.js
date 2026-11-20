@@ -72,6 +72,7 @@
             puddles: [],
             stains: [],
             camY: 0,
+            sky: 0,                   // gecəyə keçid (0 — gündüz, 1 — gecə); qüllə aşanda yeni oyuna qədər dəyişmir
             gap: SWING_GAP,           // yellənən stəkanla qüllə arasındakı indiki məsafə (RAISE_FROM-dan sonra rəvan artır)
             shake: 0,
             popups: [],
@@ -917,6 +918,9 @@
         if (g.state !== 'fall' && g.state !== 'over') {
             const want = Math.max(0, LH - VISIBLE_GLASSES * GH - g.gap - swingY());
             g.camY += (want - g.camY) * Math.min(1, dt * 4);
+            // səma yüksəkliyə görə gecəyə keçir. Qüllə aşanda kamera masaya enir, amma səma olduğu kimi
+            // qalır — yoxsa 1 saniyəlik gecədən gündüzə keçid "Qüllə aşdı" pəncərəsinin arxasında boz görünür
+            g.sky = Math.min(1, g.camY / 2500);
         } else {
             g.camY += (0 - g.camY) * Math.min(1, dt * 2.6);
         }
@@ -1750,8 +1754,8 @@
         const cam = g.camY;
         const sx = g.shake ? Math.sin(g.time * 60) * g.shake : 0;
 
-        // səma: fotodakı axşam səmasının rəngi, yuxarı qalxdıqca gecəyə keçir
-        const h = Math.min(1, cam / 2500);
+        // səma: fotodakı axşam səmasının rəngi, yuxarı qalxdıqca gecəyə keçir (g.sky — update-də)
+        const h = g.sky;
         const bg = ctx.createLinearGradient(0, 0, 0, LH);
         bg.addColorStop(0, mix('#4b5c7c', '#141028', h));
         bg.addColorStop(1, mix('#7b8daf', '#2e1838', h));
