@@ -456,6 +456,10 @@
         tower[tower.length - 1].s = {a: g.slosh.a, v: g.slosh.v - side * power};
         const below = tower[tower.length - 2];
         if (below.s) below.s.v -= side * power * 0.4; else below.s = {a: 0, v: -side * power * 0.4};
+        // toxunduğu yerdə xırda çat — yalnız alttakı stəkanın ağzında (kənara qonduqca böyük)
+        const hard = Math.min(1, ad / (GW * 0.5));
+        const hitX = Math.max(-GW * 0.3, Math.min(GW * 0.3, (x - below.x) / 2 + side * GW * (0.12 + hard * 0.12)));
+        addCrack(below, hitX, hard);
         g.slosh = {a: 0, v: 0};
         g.score += gain;
         g.margin = st.margin;
@@ -863,6 +867,7 @@
     function update(dt) {
         g.time += dt;
         updateSlosh(dt);
+        updateCracks(dt);
 
         if (g.state === 'swing') {
             const min = GW / 2 + 8, max = LW - GW / 2 - 8;
@@ -1266,6 +1271,78 @@
         ctx.lineTo(x, tip);
         ctx.stroke();
         ctx.setLineDash([]);
+        ctx.restore();
+    }
+
+    /* ---------- Qonanda xırda çatlar ---------- */
+    // Çat əvvəl parlaq görünür (kiçik parıltı ilə), sonra solub şüşədə incə iz kimi qalır.
+    const CRACK = {flash: 0.5, fade: 1.4, rest: 0.22};
+
+    /**
+     * Stəkanın ağzına çat əlavə edir (üstünə stəkan düşüb): ağızın kənarından aşağı yayılır.
+     * ox — çatın stəkanın mərkəzinə nisbətən x-i, hard — zərbənin gücü (0..1).
+     */
+    function addCrack(glass, ox, hard) {
+        const rnd = Math.random;
+        const dirY = 1;                                   // ağızdan aşağı yayılır
+        const n = 2 + Math.round(hard * 2 + rnd());       // budaq sayı
+        const len = GH * (0.1 + hard * 0.12);             // budaqların uzunluğu
+        const lines = [];
+        const tilt0 = (rnd() - 0.5) * 0.9; // bütün çat bir az yana meyllidir
+        for (let k = 0; k < n; k++) {
+            // dar, qeyri-bərabər yelpik — hörümçək kimi simmetrik görünməsin
+            const ang = tilt0 + (k / Math.max(1, n - 1) - 0.5) * 1.3 + (rnd() - 0.5) * 0.6;
+            const pts = [[0, 0]];
+            let px = 0, py = 0;
+            const segs = 3 + Math.floor(rnd() * 2);
+            for (let j = 0; j < segs; j++) {
+                const l = len / segs * (0.7 + rnd() * 0.6);
+                const a = ang + (rnd() - 0.5) * 0.9;     // ziqzaq
+                px += Math.sin(a) * l;
+                py += Math.cos(a) * l * dirY;
+                pts.push([px, py]);
+            }
+            lines.push(pts);
+        }
+        (glass.cracks || (glass.cracks = [])).push({ox, lines, t: 0});
+        if (glass.cracks.length > 3) glass.cracks.shift(); // bir stəkanda çox çat yığılmasın
+    }
+
+    function updateCracks(dt) {
+        for (const t of g.tower) if (t.cracks) for (const c of t.cracks) c.t += dt;
+    }
+
+    /** Stəkanın çatları (x, y — stəkanın dibinin mərkəzi, drawGlass kimi) */
+    function drawCracks(x, y, cracks) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        for (const c of cracks) {
+            const fresh = c.t < CRACK.flash ? 1 : Math.max(0, 1 - (c.t - CRACK.flash) / CRACK.fade);
+            const a = CRACK.rest + (1 - CRACK.rest) * fresh;
+            const oy = -GH + RIM_RY;                     // ağzın ön kənarı
+            ctx.save();
+            ctx.translate(c.ox, oy);
+            // tünd kölgə xətti (dərinlik) + üstündə açıq işıqlı xətt
+            ctx.strokeStyle = `rgba(60, 20, 10, ${(a * 0.35).toFixed(3)})`;
+            ctx.lineWidth = 0.9;
+            for (const pts of c.lines) {
+                ctx.beginPath();
+                pts.forEach(([px, py], i) => (i ? ctx.lineTo(px + 0.4, py + 0.4) : ctx.moveTo(px + 0.4, py + 0.4)));
+                ctx.stroke();
+            }
+            ctx.strokeStyle = `rgba(255, 255, 255, ${(a * 0.9).toFixed(3)})`;
+            ctx.lineWidth = 0.6;
+            for (const pts of c.lines) {
+                ctx.beginPath();
+                pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)));
+                ctx.stroke();
+            }
+            ctx.restore();
+            // zərbə anında toxunma nöqtəsində kiçik parıltı
+            if (c.t < CRACK.flash) glintStar(c.ox, oy, 3 + 3 * (1 - c.t / CRACK.flash), 1 - c.t / CRACK.flash);
+        }
         ctx.restore();
     }
 
@@ -1878,7 +1955,9 @@
             if (i === 0 && baseInPhoto()) return;
             const gy = BASE_Y - i * GH;
             if (gy + 8 + cam < 0 || gy - GH - 24 + cam > LH) return; // ekrandan kənardadır — çəkmirik
-            drawGlass(t.x + sx * (i / Math.max(1, g.tower.length)), gy, 0, 1, t.s ? t.s.a : 0, glassKind(i), towerRipple(t.s));
+            const gx = t.x + sx * (i / Math.max(1, g.tower.length));
+            drawGlass(gx, gy, 0, 1, t.s ? t.s.a : 0, glassKind(i), towerRipple(t.s));
+            if (t.cracks) drawCracks(gx, gy, t.cracks);
         });
 
         // yellənən / düşən / aşan stəkan
