@@ -21,7 +21,7 @@
 
 <section class="section pt-4 games-scene">
     <div class="container">
-        <a href="{{ route('games.index') }}" class="back-link"><i class="fa fa-arrow-left"></i> Oyunlara qayıt</a>
+        @include('frontend.games._topbar')
         <div class="row g-4">
             <div class="col-xl-9">
                 {{-- nard-stage: böyük ekran rejimində bütün ekranı tutan qat, lövhə onun ortasında qalır --}}
