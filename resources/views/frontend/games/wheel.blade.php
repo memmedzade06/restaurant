@@ -86,6 +86,15 @@
                     <div class="wheel-pointer"></div>
                     <svg class="wheel-svg" viewBox="-110 -110 220 220" aria-hidden="true"></svg>
                     <button type="button" class="wheel-btn" id="wheelSpin">Fırlat</button>
+
+                    {{-- Çarx dayananda nəticə çarxın üzərində modal kimi göstərilir (telefonda panel aşağıda qalır) --}}
+                    <div class="wheel-modal" id="wheelModal" hidden>
+                        <div class="wheel-modal-card" role="dialog" aria-modal="true" aria-label="Nəticə">
+                            <button type="button" class="wheel-modal-close" aria-label="Bağla">&times;</button>
+                            <div class="wheel-modal-body wheel-result" aria-live="polite"></div>
+                        </div>
+                    </div>
+                    <button type="button" class="wheel-reopen" id="wheelReopen" hidden><i class="fa fa-gift me-2"></i>Nəticəni göstər</button>
                 </div>
             </div>
 
@@ -132,5 +141,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/wheel.js') }}?v=15"></script>
+<script src="{{ asset('js/games/wheel.js') }}?v=18"></script>
 @endsection

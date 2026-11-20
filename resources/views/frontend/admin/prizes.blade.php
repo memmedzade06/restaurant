@@ -24,14 +24,14 @@
         @endforeach
 
         <div class="side-card">
-            <form method="GET" action="{{ route('admin.prizes') }}" class="admin-search">
+            <form method="GET" action="{{ route('admin.prizes') }}" class="admin-search" data-live-search="prizeExact,prizeResults">
                 <div class="admin-search-input">
                     <i class="fa fa-search"></i>
-                    <input type="text" name="q" value="{{ $q }}" placeholder="Kod (QP-AB12CD) və ya telefon" autofocus autocomplete="off">
+                    <input type="search" name="q" value="{{ $q }}" placeholder="Kod (QP-AB12CD) və ya telefon" autofocus autocomplete="off" aria-controls="prizeResults">
                 </div>
-                <button class="btn btn-primary px-4">Axtar</button>
             </form>
 
+            <div id="prizeExact" aria-live="polite">
             @if ($q !== '')
                 @if ($exact)
                     @php($st = $exact->status())
@@ -57,9 +57,10 @@
                     <div class="alert alert-warning mt-3 mb-0">«{{ $q }}» üzrə kod tapılmadı.</div>
                 @endif
             @endif
+            </div>
         </div>
 
-        <div class="side-card">
+        <div class="side-card" id="prizeResults">
             {{-- Bölmələr: Aktiv (susmaya görə) və İstifadə olunub ayrıca; vaxtı keçmiş (istifadəsiz) kuponlar
                  avtomatik silinir — o bölmə yalnız hələ silinməmiş kupon olanda görünür --}}
             <div class="admin-tabs">
@@ -111,4 +112,8 @@
         </div>
     </div>
 </section>
+@endsection
+
+@section('js')
+<script src="{{ asset('js/admin-search.js') }}?v=1"></script>
 @endsection

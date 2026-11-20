@@ -96,6 +96,7 @@
 
     /** Xal haqqında qeyd (mərhələ sonunda) */
     function pointsNote(bonus, left) {
+        if (cfg.staff) return ''; // ofisiant və admin oyundan xal almır
         if (!cfg.canEarn) {
             return cfg.stagePoints > 0
                 ? `<br><a href="${cfg.registerUrl}">Profilinizi təsdiqləyin</a> ki, mərhələləri keçəndə xal qazanasınız (1-ci mərhələ: <b>+${fmt(cfg.stagePoints)} xal</b>, sonra daha çox).`

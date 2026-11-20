@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\NardLeaderboard;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -58,6 +59,40 @@ class UserController extends Controller
             'counts' => collect(self::FILTERS)->map(fn ($label, $key) => $this->applyFilter(User::query(), $key, $todayStart)->count()),
             'total' => User::count(),
         ]);
+    }
+
+    /** İstifadəçinin tipini dəyişmək üçün səhifə */
+    public function edit(User $user): View
+    {
+        return view('frontend.admin.user-edit', ['user' => $user]);
+    }
+
+    /**
+     * İstifadəçinin tipini dəyişir: qonaq, ofisiant və ya admin.
+     * Admin öz tipini dəyişə bilməz — təsadüfən adminlikdən çıxıb paneldən kənarda qalmasın.
+     */
+    public function update(Request $request, User $user): RedirectResponse
+    {
+        $data = $request->validate([
+            'type' => ['required', Rule::in(array_keys(User::TYPES))],
+        ], [
+            'type.required' => 'İstifadəçi tipini seçin.',
+            'type.in' => 'Belə istifadəçi tipi yoxdur.',
+        ]);
+
+        if ($user->id === $request->user()->id && $data['type'] !== $user->type) {
+            return back()->with('error', 'Öz tipinizi dəyişə bilməzsiniz.');
+        }
+
+        $old = $user->type;
+        $user->forceFill(['type' => $data['type']])->save();
+        if ($old !== $user->type) {
+            logger()->info('Admin istifadəçinin tipini dəyişdi', [
+                'admin_id' => $request->user()->id, 'user_id' => $user->id, 'from' => $old, 'to' => $user->type,
+            ]);
+        }
+
+        return redirect()->route('admin.users')->with('success', "{$user->name} — tip: {$user->type_label}.");
     }
 
     /**

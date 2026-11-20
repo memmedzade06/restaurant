@@ -616,3 +616,40 @@ html.cl-noscroll, html.cl-noscroll body { overflow: hidden; }
 
 /* 40 stəkan bonusu (nəticə pəncərəsində) */
 .st-bonus { display: inline-block; margin-top: 6px; padding: 4px 12px; border-radius: 999px; background: #fff4e0; color: #8a5a00; font-weight: 800; }
+
+/* Çarx: dayananda nəticə çarxın üzərində modal kimi (telefonda nəticə paneli aşağıda qalır) */
+.wheel-modal { position: absolute; inset: 0; z-index: 6; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: radial-gradient(circle, rgba(42, 15, 12, .55) 0%, rgba(42, 15, 12, .35) 62%, transparent 72%); }
+.wheel-modal[hidden] { display: none; }
+.wheel-modal.pop .wheel-modal-card { animation: wheelModalIn .35s cubic-bezier(.2, .9, .3, 1.2) both; }
+.wheel-modal-card { position: relative; width: min(92%, 360px); max-height: 100%; overflow-y: auto; background: #fff; border-radius: 22px; padding: 22px 20px 16px; text-align: center; box-shadow: 0 20px 50px rgba(0, 0, 0, .45); border: 3px solid var(--primary); }
+.wheel-modal-card h3 { margin: 4px 0 12px; font-size: clamp(20px, 5.5vw, 26px); }
+.wheel-modal-card .choice { justify-content: center; }
+.wheel-modal-card .choice .btn { flex: 1 1 130px; padding: 10px 14px; font-size: 14px; }
+.wheel-modal-card .demo-tag { float: none; display: inline-block; margin-bottom: 6px; }
+.wheel-modal-card .prize-code { font-size: 22px; padding: 10px 16px; }
+.wheel-modal-close { position: absolute; top: 6px; right: 10px; width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: var(--text); font-size: 26px; line-height: 1; cursor: pointer; }
+.wheel-modal-close:hover { background: var(--cream); }
+@keyframes wheelModalIn { from { opacity: 0; transform: scale(.8); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .wheel-modal.pop .wheel-modal-card { animation: none; } }
+.wheel-reopen { position: absolute; left: 50%; bottom: -4%; transform: translateX(-50%); z-index: 5; border: 0; border-radius: 30px; padding: 9px 18px; background: #fff; color: var(--wine); font-weight: 800; font-size: 14px; box-shadow: 0 8px 20px rgba(0, 0, 0, .35); cursor: pointer; white-space: nowrap; }
+.wheel-reopen[hidden] { display: none; }
+.wheel-reopen:hover { background: var(--cream); }
+
+/* Admin: istifadəçi tipi (qonaq, ofisiant, admin) */
+.user-type { display: inline-block; margin-top: 4px; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; background: #f1ece6; color: #6f665d; }
+.user-type-waiter { background: #e3f1ea; color: #1f6b45; }
+.user-type-admin { background: var(--wine); color: #fff; }
+.btn-user-edit { width: 36px; height: 36px; border-radius: 10px; border: 1px solid #eadfcf; background: #fff; color: var(--wine); display: inline-flex; align-items: center; justify-content: center; text-decoration: none; vertical-align: middle; transition: background .15s, color .15s; }
+.btn-user-edit:hover, .btn-user-edit:focus-visible { background: var(--wine); color: #fff; border-color: var(--wine); }
+.user-edit-info { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0 0 20px; padding-bottom: 16px; border-bottom: 1px solid #f0e6da; }
+.user-edit-info dt { color: var(--muted); font-weight: 700; font-size: 14px; }
+.user-edit-info dd { margin: 0; font-weight: 700; }
+.user-type-options { border: 0; padding: 0; margin: 0; display: grid; gap: 10px; }
+.user-type-option { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border: 2px solid #eee3d6; border-radius: 14px; cursor: pointer; transition: border-color .15s, background .15s; }
+.user-type-option:has(input:checked) { border-color: var(--primary); background: #fffaf2; }
+.user-type-option input { margin-top: 4px; accent-color: var(--wine); }
+.user-type-option b { display: block; }
+.user-type-option small { color: var(--muted); }
+.user-type-options:disabled .user-type-option { cursor: not-allowed; opacity: .7; }
+#usersResults, #prizeExact, #prizeResults { transition: opacity .15s; }
+#usersResults.is-loading, #prizeExact.is-loading, #prizeResults.is-loading { opacity: .55; }

@@ -14,6 +14,9 @@
     const btn = document.getElementById('wheelSpin');
     const resultBox = document.getElementById('wheelResult');
     const intro = document.getElementById('wheelIntro');
+    const modal = document.getElementById('wheelModal');
+    const modalBody = modal?.querySelector('.wheel-modal-body');
+    const reopen = document.getElementById('wheelReopen');
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
     const verified = root.dataset.verified === '1';
     let closed = JSON.parse(root.dataset.closed || '[]');
@@ -196,14 +199,19 @@
         // əyləncə rejimində (məs. cəhdlər bitib) əyləncə qeydi hər zaman görünsün
         if (state.fun && !html.includes('fun-result')) html += fun;
         resultBox.innerHTML = html;
-        resultBox.hidden = !html;
-        intro.hidden = !!(state.claimed || (state.last && verified));
+        // nəticə yalnız çarxın üzərindəki modalda görünür; sağ paneldə həmişə qaydalar qalır
+        // (modal yoxdursa — köhnə davranış: nəticə paneldə)
+        resultBox.hidden = modal ? true : !html;
+        if (!modal) intro.hidden = !!(state.claimed || (state.last && verified));
         if (animate && html) {
             resultBox.classList.remove('pop');
             void resultBox.offsetWidth;
             resultBox.classList.add('pop');
         }
         resultBox.querySelectorAll('[data-act]').forEach(b => { b.disabled = busy || !!run; });
+        if (modal && !html) hideModal();
+        syncModal();
+        updateReopen();
 
         // mərkəzdəki düymə: dayanıqda "Fırlat", fırlananda "Dayan"
         root.classList.toggle('running', !!run);
@@ -216,11 +224,43 @@
         }
     }
 
+    /* ---------- Nəticə modalı: çarxın üzərində ---------- */
+    function syncModal() {
+        if (!modal || modal.hidden) return;
+        modalBody.innerHTML = resultBox.innerHTML;
+        modalBody.querySelectorAll('[data-act]').forEach(b => { b.disabled = busy || !!run; });
+    }
+    // modal bağlananda çarxın altında "Nəticə" düyməsi — nəticəni yenidən açmaq üçün
+    function updateReopen() {
+        if (reopen) reopen.hidden = !modal.hidden || !!run || !resultBox.innerHTML.trim();
+    }
+    function showModal() {
+        if (!modal || !resultBox.innerHTML.trim()) return;
+        modal.hidden = false;
+        syncModal();
+        updateReopen();
+        modal.classList.remove('pop');
+        void modal.offsetWidth;
+        modal.classList.add('pop');
+        modal.querySelector('.wheel-modal-close').focus({preventScroll: true});
+    }
+    function hideModal() {
+        if (!modal || modal.hidden) return;
+        modal.hidden = true;
+        updateReopen();
+    }
+    // panelə əlavə qeyd (xəta, sınaq xəbərdarlığı) — modal açıqdırsa orada da görünsün
+    function addNote(html) {
+        resultBox.insertAdjacentHTML('beforeend', html);
+        syncModal();
+    }
+
     async function claim() {
         if (busy || run) return;
         if (!verified) {
-            resultBox.insertAdjacentHTML('beforeend', `<div class="alert-soft mt-3">Bu sınaq idi. Real hədiyyə götürmək üçün <a href="${esc(root.dataset.authUrl)}">qeydiyyatdan keçin</a>.</div>`);
             resultBox.querySelector('[data-act="claim"]')?.setAttribute('disabled', 'disabled');
+            addNote(`<div class="alert-soft mt-3">Bu sınaq idi. Real hədiyyə götürmək üçün <a href="${esc(root.dataset.authUrl)}">qeydiyyatdan keçin</a>.</div>`);
+            modalBody?.querySelector('[data-act="claim"]')?.setAttribute('disabled', 'disabled');
             return;
         }
         busy = true;
@@ -229,7 +269,7 @@
         busy = false;
         if (r && r.data.state) state = r.data.state;
         render(true);
-        if (!r || !r.ok) resultBox.insertAdjacentHTML('beforeend', `<p class="small text-danger mt-2 mb-0">${esc(r?.data?.message || 'Bağlantı xətası, yenə cəhd edin.')}</p>`);
+        if (!r || !r.ok) addNote(`<p class="small text-danger mt-2 mb-0">${esc(r?.data?.message || 'Bağlantı xətası, yenə cəhd edin.')}</p>`);
     }
 
     function fail(msg) {
@@ -238,13 +278,14 @@
         cancelAnimationFrame(raf);
         render();
         resultBox.innerHTML = `<p class="mb-0">${esc(msg || 'Bağlantı xətası, bir az sonra yenə cəhd edin.')}</p>`;
-        resultBox.hidden = false;
+        if (modal) showModal(); else resultBox.hidden = false;
     }
 
     // "Fırlat": server fırlanmanın parametrlərini verir, çarx dayanmadan fırlanır
     async function start() {
         if (busy || run || (!state.fun && (state.claimed || state.attemptsLeft <= 0))) return;
         busy = true;
+        hideModal();
         render();
 
         let d;
@@ -265,6 +306,7 @@
         closedNote = '';
         resultBox.hidden = true;
         intro.hidden = false;
+        hideModal();
         t0 = performance.now();
         render();
         const tick = () => {
@@ -321,17 +363,28 @@
             state = {...state, attemptsLeft: Math.max(0, state.attemptsLeft - 1), last: {label: d.label, prize: d.prize}};
         }
         render(true);
+        showModal();
     }
 
     function press() {
         if (run) stop(); else start();
     }
 
-    resultBox.addEventListener('click', e => {
+    function onAct(e) {
         const act = e.target.closest('[data-act]')?.dataset.act;
         if (act === 'claim') claim();
         if (act === 'spin') start();
-    });
+    }
+    resultBox.addEventListener('click', onAct);
+    if (modal) {
+        modal.addEventListener('click', e => {
+            // bağla düyməsi və ya kartdan kənar (çarxın üstündəki fon)
+            if (e.target === modal || e.target.closest('.wheel-modal-close')) { hideModal(); btn.focus({preventScroll: true}); return; }
+            onAct(e);
+        });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) hideModal(); });
+        reopen?.addEventListener('click', showModal);
+    }
 
     draw();
     btn.addEventListener('click', press);
@@ -343,4 +396,5 @@
         if (e.code === 'Space' && run && !e.repeat && !e.target.closest('button, a, input, textarea')) { e.preventDefault(); stop(); }
     });
     render();
+    if (state.claimed || state.last) showModal();
 })();

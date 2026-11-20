@@ -25,7 +25,9 @@
                             <b>{{ $quiz['lives'] }} səhv</b> etsəniz, oyun bitir.</p>
                         @if ($quiz['stagePoints'] > 0)
                             <p class="qz-earn"><i class="fa fa-star me-1"></i>1-ci mərhələ: <b>+{{ \App\Services\Referrals::format($quiz['stagePoints']) }} xal</b>@if ($quiz['stageStep'] > 0), hər növbəti mərhələdə <b>+{{ \App\Services\Referrals::format($quiz['stageStep']) }}</b> çox @endif
-                                @if ($quiz['canEarn'] && $quiz['pointsLeft'] <= 0)
+                                @if ($quiz['staff'])
+                                    <br><small>Oyunlardan xal yalnız qonaqlara yazılır.</small>
+                                @elseif ($quiz['canEarn'] && $quiz['pointsLeft'] <= 0)
                                     <br><small>Bu günün xal limiti bitib — sabah yenə qazanın.</small>
                                 @elseif (! $quiz['canEarn'])
                                     <br><small><a href="{{ $quiz['registerUrl'] }}">{{ auth()->check() ? 'Profilinizi təsdiqləyin' : 'Qeydiyyatdan keçin' }}</a> ki, xal qazanasınız.</small>
@@ -109,5 +111,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/quiz.js') }}?v=7"></script>
+<script src="{{ asset('js/games/quiz.js') }}?v=8"></script>
 @endsection

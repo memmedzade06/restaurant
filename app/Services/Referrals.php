@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
  *  1. Kimsə dəvət linkini və ya QR kodu açır — kod cookie-də yadda saxlanılır (config referral.cookie_days).
  *  2. Qeydiyyatdan keçəndə yeni istifadəçiyə "kim dəvət edib" yazılır.
  *  3. Yeni istifadəçi hesabını təsdiqləyəndə (Telegram, e-poçt və ya Google ilə) dəvət edənin balansına xal yazılır (bir dəfə).
+ *  Xal yalnız qonaqlara və ofisiantlara yazılır (User::earnsReferralPoints) — adminə düşən pay heç kimə keçmir.
  */
 class Referrals
 {
@@ -75,10 +76,14 @@ class Referrals
                     break;
                 }
                 $seen[$upId] = true;
-                if ($points > 0) {
+                $up = User::whereKey($upId)->first(['id', 'type', 'referred_by']);
+                if (! $up) {
+                    break;
+                }
+                if ($points > 0 && $up->earnsReferralPoints()) {
                     User::whereKey($upId)->increment('points', $points);
                 }
-                $upId = User::whereKey($upId)->value('referred_by');
+                $upId = $up->referred_by;
             }
         });
     }

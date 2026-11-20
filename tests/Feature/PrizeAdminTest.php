@@ -78,8 +78,8 @@ class PrizeAdminTest extends TestCase
 
         // siyahıda silmə düyməsi var (öz hesabı üçün yoxdur)
         $this->actingAs($admin)->get('/admin/istifadeciler')->assertOk()
-            ->assertSee(route('admin.users.destroy', $player))
-            ->assertDontSee(route('admin.users.destroy', $admin));
+            ->assertSee('action="' . route('admin.users.destroy', $player) . '"', false)
+            ->assertDontSee('action="' . route('admin.users.destroy', $admin) . '"', false);
 
         $this->actingAs($admin)->from('/admin/istifadeciler')->delete("/admin/istifadeciler/{$player->id}")
             ->assertRedirect('/admin/istifadeciler')->assertSessionHas('success');
@@ -111,6 +111,63 @@ class PrizeAdminTest extends TestCase
 
         // olmayan istifadəçi
         $this->actingAs($admin)->delete('/admin/istifadeciler/999999999')->assertNotFound();
+    }
+
+    public function test_new_users_are_guests(): void
+    {
+        $u = $this->user();
+        $this->assertSame(User::TYPE_GUEST, $u->fresh()->type);
+        $this->assertFalse($u->fresh()->is_admin);
+        // köhnə yol (admin:make) tipi də dəyişir
+        $u->forceFill(['is_admin' => true])->save();
+        $this->assertSame(User::TYPE_ADMIN, $u->fresh()->type);
+    }
+
+    public function test_admin_changes_user_type(): void
+    {
+        $admin = $this->user(true);
+        $player = $this->user();
+
+        // siyahıda düzəliş düyməsi və tip görünür
+        $this->actingAs($admin)->get('/admin/istifadeciler')->assertOk()
+            ->assertSee(route('admin.users.edit', $player))->assertSee('Qonaq');
+        $this->actingAs($admin)->get(route('admin.users.edit', $player))->assertOk()
+            ->assertSee('Ofisiant')->assertSee('Yadda saxla');
+
+        // qonaq → ofisiant
+        $this->actingAs($admin)->put(route('admin.users.update', $player), ['type' => 'waiter'])
+            ->assertRedirect(route('admin.users'))->assertSessionHas('success');
+        $this->assertSame(User::TYPE_WAITER, $player->fresh()->type);
+        $this->assertFalse($player->fresh()->is_admin);
+
+        // ofisiant → admin: admin panelə girişi açılır
+        $this->actingAs($admin)->put(route('admin.users.update', $player), ['type' => 'admin']);
+        $this->assertTrue($player->fresh()->is_admin);
+        $this->actingAs($player->fresh())->get('/admin/istifadeciler')->assertOk();
+
+        // admin → qonaq: giriş bağlanır
+        $this->actingAs($admin)->put(route('admin.users.update', $player), ['type' => 'guest']);
+        $this->assertFalse($player->fresh()->is_admin);
+        $this->actingAs($player->fresh())->get('/admin/istifadeciler')->assertForbidden();
+
+        // naməlum tip qəbul olunmur
+        $this->actingAs($admin)->put(route('admin.users.update', $player), ['type' => 'boss'])->assertSessionHasErrors('type');
+        $this->assertSame(User::TYPE_GUEST, $player->fresh()->type);
+    }
+
+    public function test_user_type_change_is_admin_only_and_not_for_self(): void
+    {
+        $admin = $this->user(true);
+        $player = $this->user();
+
+        $this->put(route('admin.users.update', $player), ['type' => 'admin'])->assertRedirect();
+        $this->actingAs($player)->put(route('admin.users.update', $player), ['type' => 'admin'])->assertForbidden();
+        $this->actingAs($player)->get(route('admin.users.edit', $player))->assertForbidden();
+        $this->assertSame(User::TYPE_GUEST, $player->fresh()->type);
+
+        // admin öz tipini dəyişə bilməz
+        $this->actingAs($admin)->put(route('admin.users.update', $admin), ['type' => 'guest'])->assertSessionHas('error');
+        $this->assertTrue($admin->fresh()->is_admin);
     }
 
     public function test_only_admin_can_open_panel(): void

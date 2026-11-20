@@ -32,8 +32,10 @@ class QuizController extends Controller
 
         return view('frontend.games.quiz', [
             'quiz' => $this->settings() + [
-                'canEarn' => $verified,
-                'pointsLeft' => $verified ? $this->pointsLeftToday($user->id) : null,
+                // xal yalnız qonaqlara; ofisiant və admin oynaya bilər, amma xal almır ("staff")
+                'canEarn' => $verified && $user->earnsGamePoints(),
+                'staff' => $user && ! $user->earnsGamePoints(),
+                'pointsLeft' => $verified && $user->earnsGamePoints() ? $this->pointsLeftToday($user->id) : null,
                 'startUrl' => route('games.quiz.start'),
                 'answerUrl' => route('games.quiz.answer'),
                 'nextUrl' => route('games.quiz.next'),
@@ -331,7 +333,7 @@ class QuizController extends Controller
 
     private function pointsLeftFor(?User $user): ?float
     {
-        return $user && $user->isVerified() ? $this->pointsLeftToday($user->id) : null;
+        return $user && $user->isVerified() && $user->earnsGamePoints() ? $this->pointsLeftToday($user->id) : null;
     }
 
     /** N-ci mərhələnin xalı: 1-ci — stage_points, hər növbəti — stage_points_step qədər çox */
@@ -347,7 +349,7 @@ class QuizController extends Controller
     private function awardStage(?User $user, int $stage): float
     {
         $points = self::stageReward($stage);
-        if (! $user || ! $user->isVerified() || $points <= 0) {
+        if (! $user || ! $user->isVerified() || ! $user->earnsGamePoints() || $points <= 0) {
             return 0;
         }
 

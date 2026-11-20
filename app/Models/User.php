@@ -12,6 +12,58 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    /** İstifadəçi tipləri: qeydiyyatdan keçən hər kəs qonaqdır, admin onlardan ofisiant və ya admin seçir */
+    public const TYPE_GUEST = 'guest';
+    public const TYPE_WAITER = 'waiter';
+    public const TYPE_ADMIN = 'admin';
+
+    public const TYPES = [
+        self::TYPE_GUEST => 'Qonaq',
+        self::TYPE_WAITER => 'Ofisiant',
+        self::TYPE_ADMIN => 'Admin',
+    ];
+
+    protected $attributes = [
+        'type' => self::TYPE_GUEST,
+    ];
+
+    /**
+     * "type" və köhnə "is_admin" sütunu sinxron qalır: tip dəyişəndə is_admin yenilənir,
+     * is_admin dəyişəndə (məs. php artisan admin:make) tip də uyğunlaşır.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (User $user) {
+            if ($user->isDirty('type')) {
+                $user->is_admin = $user->type === self::TYPE_ADMIN;
+            } elseif ($user->isDirty('is_admin')) {
+                if ($user->is_admin) {
+                    $user->type = self::TYPE_ADMIN;
+                } elseif ($user->type === self::TYPE_ADMIN) {
+                    $user->type = self::TYPE_GUEST;
+                }
+            }
+        });
+    }
+
+    /** Oyunlardan (Stəkan bonusu, Bilik Yarışı) xal yalnız qonaqlara yazılır */
+    public function earnsGamePoints(): bool
+    {
+        return ($this->type ?? self::TYPE_GUEST) === self::TYPE_GUEST;
+    }
+
+    /** Dəvət linkini paylaşmağa görə xal: qonaqlar və ofisiantlar (admin yox) */
+    public function earnsReferralPoints(): bool
+    {
+        return in_array($this->type ?? self::TYPE_GUEST, [self::TYPE_GUEST, self::TYPE_WAITER], true);
+    }
+
+    /** Tipin adı: "Qonaq", "Ofisiant", "Admin" */
+    public function getTypeLabelAttribute(): string
+    {
+        return self::TYPES[$this->type] ?? self::TYPES[self::TYPE_GUEST];
+    }
+
     /**
      * The attributes that are mass assignable.
      *

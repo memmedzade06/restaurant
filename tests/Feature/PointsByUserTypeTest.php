@@ -1,0 +1,123 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Http\Controllers\Frontend\GameController;
+use App\Http\Controllers\Frontend\QuizController;
+use App\Models\User;
+use App\Services\Referrals;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Cache;
+use Tests\TestCase;
+
+/**
+ * Xal kimə yazılır:
+ *  - qonaq: oyunlardan (Stəkan bonusu, Bilik Yarışı) və dəvət linkinə görə;
+ *  - ofisiant: yalnız dəvət linkinə görə;
+ *  - admin: heç birindən.
+ */
+class PointsByUserTypeTest extends TestCase
+{
+    use DatabaseTransactions;
+
+    private function user(string $type = User::TYPE_GUEST): User
+    {
+        $u = User::create([
+            'name' => 'Xal Testi',
+            'email' => 'x' . uniqid() . '@example.com',
+            'phone' => '+99450' . random_int(1000000, 9999999),
+            'password' => 'secret123',
+        ]);
+        $u->forceFill(['phone_verified_at' => now(), 'type' => $type])->save();
+
+        return $u->fresh();
+    }
+
+    private function invokePrivate(object $controller, string $method, ...$args)
+    {
+        $m = new \ReflectionMethod($controller, $method);
+        $m->setAccessible(true);
+
+        return $m->invoke($controller, ...$args);
+    }
+
+    public function test_type_rules(): void
+    {
+        $this->assertTrue($this->user()->earnsGamePoints());
+        $this->assertTrue($this->user()->earnsReferralPoints());
+        $this->assertFalse($this->user(User::TYPE_WAITER)->earnsGamePoints());
+        $this->assertTrue($this->user(User::TYPE_WAITER)->earnsReferralPoints());
+        $this->assertFalse($this->user(User::TYPE_ADMIN)->earnsGamePoints());
+        $this->assertFalse($this->user(User::TYPE_ADMIN)->earnsReferralPoints());
+    }
+
+    public function test_referral_points_go_to_guests_and_waiters_not_admins(): void
+    {
+        config(['referral.levels' => [0.5, 0.25, 0.125]]);
+
+        foreach ([User::TYPE_GUEST => 0.5, User::TYPE_WAITER => 0.5, User::TYPE_ADMIN => 0.0] as $type => $expected) {
+            $referrer = $this->user($type);
+            $invited = $this->user();
+            $invited->forceFill(['referred_by' => $referrer->id])->save();
+
+            Referrals::reward($invited->fresh());
+
+            $this->assertEqualsWithDelta($expected, (float) $referrer->fresh()->points, 0.0001, "{$type} dəvət xalı");
+        }
+    }
+
+    public function test_admin_in_the_middle_of_chain_gets_nothing_but_others_do(): void
+    {
+        config(['referral.levels' => [0.5, 0.25, 0.125]]);
+        $waiter = $this->user(User::TYPE_WAITER);   // 3-cü səviyyə
+        $admin = $this->user(User::TYPE_ADMIN);     // 2-ci səviyyə
+        $admin->forceFill(['referred_by' => $waiter->id])->save();
+        $guest = $this->user();                      // 1-ci səviyyə
+        $guest->forceFill(['referred_by' => $admin->id])->save();
+        $invited = $this->user();
+        $invited->forceFill(['referred_by' => $guest->id])->save();
+
+        Referrals::reward($invited->fresh());
+
+        $this->assertEqualsWithDelta(0.5, (float) $guest->fresh()->points, 0.0001);
+        $this->assertEqualsWithDelta(0.0, (float) $admin->fresh()->points, 0.0001);
+        $this->assertEqualsWithDelta(0.125, (float) $waiter->fresh()->points, 0.0001);
+    }
+
+    public function test_stack_bonus_only_for_guests(): void
+    {
+        config(['games.stack.bonus' => ['score' => 10, 'points' => 0.5, 'per_day' => 3]]);
+        $controller = app(GameController::class);
+
+        foreach ([User::TYPE_GUEST => 0.5, User::TYPE_WAITER => 0.0, User::TYPE_ADMIN => 0.0] as $type => $expected) {
+            $u = $this->user($type);
+            Cache::flush();
+            $given = $this->invokePrivate($controller, 'awardStackBonus', $u, 10);
+
+            $this->assertEqualsWithDelta($expected, (float) $given, 0.0001, "{$type} Stəkan bonusu");
+            $this->assertEqualsWithDelta($expected, (float) $u->fresh()->points, 0.0001);
+        }
+    }
+
+    public function test_quiz_points_only_for_guests(): void
+    {
+        $controller = app(QuizController::class);
+
+        foreach ([User::TYPE_GUEST => true, User::TYPE_WAITER => false, User::TYPE_ADMIN => false] as $type => $earns) {
+            $u = $this->user($type);
+            Cache::flush();
+            $given = (float) $this->invokePrivate($controller, 'awardStage', $u, 1);
+
+            $earns ? $this->assertGreaterThan(0, $given, "{$type} xal almalıdır") : $this->assertSame(0.0, $given, "{$type} xal almamalıdır");
+            $this->assertEqualsWithDelta($given, (float) $u->fresh()->points, 0.0001);
+        }
+    }
+
+    public function test_quiz_page_tells_staff_points_are_for_guests(): void
+    {
+        $this->actingAs($this->user(User::TYPE_WAITER))->get(route('games.quiz'))
+            ->assertOk()->assertSee('Oyunlardan xal yalnız qonaqlara yazılır.');
+        $this->actingAs($this->user())->get(route('games.quiz'))
+            ->assertOk()->assertDontSee('Oyunlardan xal yalnız qonaqlara yazılır.');
+    }
+}

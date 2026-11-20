@@ -24,17 +24,16 @@
         @endforeach
 
         <div class="side-card">
-            <form method="GET" action="{{ route('admin.users') }}" class="admin-search">
+            <form method="GET" action="{{ route('admin.users') }}" class="admin-search" data-live-search="usersResults">
                 <div class="admin-search-input">
                     <i class="fa fa-search"></i>
-                    <input type="text" name="q" value="{{ $q }}" placeholder="Ad, telefon və ya e-poçt" autocomplete="off">
+                    <input type="search" name="q" value="{{ $q }}" placeholder="Ad, telefon və ya e-poçt" autocomplete="off" aria-controls="usersResults">
                 </div>
                 @if ($filter)<input type="hidden" name="filter" value="{{ $filter }}">@endif
-                <button class="btn btn-primary px-4">Axtar</button>
             </form>
         </div>
 
-        <div class="side-card">
+        <div class="side-card" id="usersResults" aria-live="polite">
             <div class="admin-tabs">
                 <a href="{{ route('admin.users', array_filter(['q' => $q])) }}" class="{{ $filter ? '' : 'active' }}">Hamısı <span>{{ $total }}</span></a>
                 @foreach (\App\Http\Controllers\Admin\UserController::FILTERS as $key => $label)
@@ -56,7 +55,7 @@
                                 <tr>
                                     <td>
                                         <b>{{ $u->name }}</b>
-                                        @if ($u->is_admin)<span class="status-pill status-used ms-1">admin</span>@endif
+                                        <br><span class="user-type user-type-{{ $u->type }}">{{ $u->type_label }}</span>
                                     </td>
                                     <td>
                                         {{ \App\Support\Phone::format($u->phone) ?: ($u->email ?: '—') }}
@@ -106,9 +105,10 @@
                                             @endif
                                         </small>
                                     </td>
-                                    <td class="text-end">
+                                    <td class="text-end text-nowrap">
+                                        <a href="{{ route('admin.users.edit', $u) }}" class="btn-user-edit" title="Düzəliş et" aria-label="{{ $u->name }} — düzəliş et"><i class="fa fa-pen"></i></a>
                                         @unless ($u->is_admin || $u->id === auth()->id())
-                                            <form method="POST" action="{{ route('admin.users.destroy', $u) }}"
+                                            <form method="POST" action="{{ route('admin.users.destroy', $u) }}" class="d-inline-block ms-1"
                                                   onsubmit="return confirm({{ \Illuminate\Support\Js::from($u->name . ' (' . (\App\Support\Phone::format($u->phone) ?: ($u->email ?: $u->username)) . ') birdəfəlik silinsin? Onun hədiyyə kodları və oyun nəticələri də silinəcək. Bunu geri qaytarmaq olmur.') }})">
                                                 @csrf
                                                 @method('DELETE')
@@ -126,4 +126,8 @@
         </div>
     </div>
 </section>
+@endsection
+
+@section('js')
+<script src="{{ asset('js/admin-search.js') }}?v=1"></script>
 @endsection

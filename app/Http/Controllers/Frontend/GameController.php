@@ -47,7 +47,9 @@ class GameController extends Controller
             'best' => $verified ? $this->stackBest($user->id) : null,
             'prizes' => $this->stackPrizes(),
             'prizeLeft' => $verified ? $this->stackPrizesLeft($user->id) : null,
-            'bonus' => $this->stackBonusConfig() + ['left' => $verified ? $this->stackBonusLeft($user->id) : 0],
+            // xal bonusu yalnız qonaqlara (ofisiant və admin oynaya bilər, amma xal almır)
+            'bonus' => $this->stackBonusConfig() + ['left' => $verified && $user->earnsGamePoints() ? $this->stackBonusLeft($user->id) : 0],
+            'earnsPoints' => ! $user || $user->earnsGamePoints(),
             // ?hava=rain kimi baxış rejimi; yoxsa canlı hava səhifə açılandan sonra ayrıca sorğu ilə gəlir
             // (xidmət bir neçə saniyə cavab verə bilər — səhifə bunu gözləməsin)
             'weather' => BakuWeather::preview($request->query('hava')),
@@ -198,7 +200,7 @@ class GameController extends Controller
                 'expires_at' => now()->addDays((int) config('games.stack.code_valid_days', 1)),
             ]);
             $this->countStackPrize($user->id);
-            $bonus = $this->awardStackBonus($user->id, $score);
+            $bonus = $this->awardStackBonus($user, $score);
 
             return response()->json(['prize' => $this->spinPayload($spin), 'best' => $this->stackBest($user->id), 'bonus' => $bonus]);
         });
@@ -258,13 +260,15 @@ class GameController extends Controller
     /**
      * Bonus: oyunçu kifayət qədər stəkan yığıbsa və bu günün limiti bitməyibsə — balansına xal yazılır.
      * Çağıran tərəf oyunun gedişatını artıq yoxlayıb. Qaytarır: yazılan xal (0 — bonus yoxdur).
+     * Xal yalnız qonaqlara yazılır — ofisiant və admin oyundan xal qazanmır.
      */
-    private function awardStackBonus(int $userId, int $score): float
+    private function awardStackBonus(User $user, int $score): float
     {
         ['score' => $need, 'points' => $points] = $this->stackBonusConfig();
-        if ($points <= 0 || $score < $need) {
+        if ($points <= 0 || $score < $need || ! $user->earnsGamePoints()) {
             return 0;
         }
+        $userId = $user->id;
 
         return DB::transaction(function () use ($userId, $points) {
             User::whereKey($userId)->lockForUpdate()->first(); // eyni anda iki sorğu limiti keçməsin
@@ -312,7 +316,7 @@ class GameController extends Controller
             'saved' => true,
             'best' => max($before, $data['score']),
             'record' => $data['score'] > $before && $data['score'] > 0,
-            'bonus' => $this->awardStackBonus($request->user()->id, (int) $data['score']),
+            'bonus' => $this->awardStackBonus($request->user(), (int) $data['score']),
         ]);
     }
 
