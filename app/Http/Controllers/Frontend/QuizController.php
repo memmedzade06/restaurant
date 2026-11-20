@@ -55,9 +55,13 @@ class QuizController extends Controller
             'used' => [], 'queue' => [], 'index' => 0,
             'current' => null, 'over' => false,
             'seen' => $this->seenHistory($request), // bu oyunçunun əvvəlki oyunlarda gördüyü suallar
+            'today' => $this->todaySeen($request),  // bu gün artıq verilən suallar — bu gün təkrar düşmür
         ];
-        $this->beginStage($game);
+        if (! $this->beginStage($game)) {
+            return response()->json(['message' => self::TODAY_DONE, 'todayDone' => true], 409);
+        }
         $this->ask($game);
+        $this->rememberToday($request, $game);
         $this->rememberSeen($request, $game);
         $this->saveGame($request, $game);
 
@@ -104,7 +108,8 @@ class QuizController extends Controller
                 'stage' => $game['stage'],
                 'needVerify' => $this->mustVerify($request, $game),
                 'bonus' => $this->awardStage($request->user(), $game['stage']),
-                'allDone' => count($game['used']) >= count($this->questions()),
+                // bu gün üçün sual qalmayıb (gün ərzində təkrar sual verilmir)
+                'allDone' => $this->leftToday($game) === 0,
             ];
             if ($result['allDone']) {
                 $game['over'] = true;
@@ -128,12 +133,13 @@ class QuizController extends Controller
                 return response()->json(['message' => 'Davam etmək üçün profilinizi təsdiqləyin.', 'needVerify' => true], 403);
             }
             if (! $this->beginStage($game)) {
-                return response()->json(['message' => 'Suallar bitdi.'], 409);
+                return response()->json(['message' => self::TODAY_DONE, 'todayDone' => true], 409);
             }
         } else {
             $game['index']++;
         }
         $this->ask($game);
+        $this->rememberToday($request, $game);
         $this->rememberSeen($request, $game);
         $this->saveGame($request, $game);
 
@@ -209,7 +215,8 @@ class QuizController extends Controller
 
         // Hər çətinlikdə əvvəlcə bu oyunçunun hələ görmədiyi suallar (qarışıq), sonra gördükləri.
         // Belə hər oyunçu öz növbəsi ilə bütün bazanı görür, təkrar suallar az olur.
-        $used = array_flip($game['used']);
+        // bu oyunda verilən və bu gün əvvəlki oyunlarda verilən suallar yenidən düşmür
+        $used = array_flip(array_merge($game['used'], $game['today'] ?? []));
         $seen = array_flip($game['seen'] ?? []);
         $fresh = [1 => [], 2 => [], 3 => []];
         $old = [1 => [], 2 => [], 3 => []];
@@ -268,6 +275,46 @@ class QuizController extends Controller
             'asked_at' => microtime(true),
             'answered' => false,
         ];
+    }
+
+    /* ---------- Gün ərzində təkrar sual yoxdur ---------- */
+
+    public const TODAY_DONE = 'Bu günün sualları bitdi — sabah yeni suallarla gəlin!';
+
+    /** Bu gün verilən suallar: daxil olmuşda hesaba, qonaqda brauzerə bağlı; ikisi birləşdirilir (oyun ortasında girişdə) */
+    private function todayKeys(Request $request): array
+    {
+        $day = now('Asia/Baku')->toDateString();
+        $keys = ['quiz_today:g:' . $this->playerToken($request) . ':' . $day];
+        if ($request->user()) {
+            $keys[] = 'quiz_today:u:' . $request->user()->id . ':' . $day;
+        }
+
+        return $keys;
+    }
+
+    private function todaySeen(Request $request): array
+    {
+        $ids = [];
+        foreach ($this->todayKeys($request) as $key) {
+            $ids = array_merge($ids, Cache::get($key, []));
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /** Verilən sualı bu günün siyahısına yazır (gün sonuna qədər saxlanılır) */
+    private function rememberToday(Request $request, array &$game): void
+    {
+        $game['today'] = array_values(array_unique(array_merge($game['today'] ?? [], [$game['current']['id']])));
+        $keys = $this->todayKeys($request);
+        Cache::put(end($keys), $game['today'], now('Asia/Baku')->endOfDay());
+    }
+
+    /** Bu gün bu oyunçuya hələ verilməmiş sual sayı */
+    private function leftToday(array $game): int
+    {
+        return count(array_diff(array_keys($this->questions()), $game['used'], $game['today'] ?? []));
     }
 
     /* ---------- Oyunçunun gördüyü suallar ---------- */

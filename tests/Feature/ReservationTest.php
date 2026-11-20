@@ -106,7 +106,7 @@ class ReservationTest extends TestCase
     {
         $u = $this->verifiedUser(['phone' => '+994551234567']);
         $this->actingAs($u)->get(route('reservations'))->assertOk()
-            ->assertSee('name="phone"', false)->assertSee('value="+994 55 123 45 67"', false);
+            ->assertSee('name="phone"', false)->assertSee('value="055 123 45 67"', false);
 
         // formda yazılan nömrə rezervasiyaya düşür
         $this->book(['phone' => '070 999 99 99'], $u)->assertOk();
@@ -188,7 +188,7 @@ class ReservationTest extends TestCase
         $u = $this->verifiedUser(['name' => 'Rəşad Quliyev', 'phone' => '+994551234567']);
 
         $this->actingAs($u)->get(route('reservations'))->assertOk()
-            ->assertSee('value="Rəşad Quliyev"', false)->assertSee('Ad, soyad')->assertSee('+994 55 123 45 67');
+            ->assertSee('value="Rəşad Quliyev"', false)->assertSee('Ad, soyad')->assertSee('055 123 45 67');
         $this->book([], $u)->assertOk();
         $this->assertSame($u->id, Reservation::latest('id')->first()->user_id);
     }

@@ -2,7 +2,7 @@
 @section('title', 'Masa rezervasiyası - 50 Qəpik')
 
 @section('css')
-<link href="{{ asset('css/reservations.css') }}?v=37" rel="stylesheet">
+<link href="{{ asset('css/reservations.css') }}?v=38" rel="stylesheet">
 @endsection
 
 @section('content')
@@ -37,8 +37,9 @@
         </div>
 
         <div class="rv-legend">
+            {{-- rənglər plandakı masalar kimidir: taxta — boş, qızılı — seçilən tarixdə rezerv var --}}
             <span><i class="rv-dot rv-dot-free"></i>Boş</span>
-            <span><i class="rv-dot rv-dot-busy"></i>Bu gün rezervi var (saatı masada yazılıb)</span>
+            <span><i class="rv-dot rv-dot-busy"></i>Seçilən tarixdə rezerv var (saatı masada yazılır)</span>
             <span><i class="fa {{ $kinds['table']['icon'] }}"></i>{{ $kinds['table']['name'] }}</span>
             <span><i class="fa {{ $kinds['sofa']['icon'] }}"></i>{{ $kinds['sofa']['name'] }}</span>
             <span><i class="fa {{ $kinds['okey']['icon'] }}"></i>{{ $kinds['okey']['name'] }}</span>
@@ -138,7 +139,7 @@
                     <div class="col-12">
                         <label for="rvPhone">Telefon nömrəsi</label>
                         {{-- nömrə hər dəfə yazılır; hesabda nömrə varsa, əvvəlcədən doldurulur --}}
-                        <input type="tel" id="rvPhone" name="phone" required maxlength="30" inputmode="tel" autocomplete="tel" placeholder="050 123 45 67" value="{{ $booking['prefill']['phone'] }}">
+                        <input type="tel" id="rvPhone" name="phone" required maxlength="13" inputmode="numeric" autocomplete="tel-national" placeholder="050 123 45 67" pattern="0\d{2} \d{3} \d{2} \d{2}" value="{{ $booking['prefill']['phone'] }}">
                     </div>
                 </div>
 
@@ -154,11 +155,11 @@
                     <div class="rv-gate" id="rvGate" hidden>
                         <div class="rv-gate-ico"><i class="fa {{ $booking['access'] === 'guest' ? 'fa-user-lock' : 'fa-user-check' }}"></i></div>
                         @if ($booking['access'] === 'guest')
-                            <p><b>Son addım: rezervi təsdiqləmək üçün hesabınıza daxil olun.</b><br>Boş rezervlər olmasın deyə masanı yalnız təsdiqlənmiş hesabla rezerv etmək olur. Yazdıqlarınız yadda qaldı — daxil olandan sonra bir düymə ilə təsdiqləyəcəksiniz.</p>
+                            <p><b>Son addım: rezervi təsdiqləmək üçün hesabınıza daxil olun.</b><br>Boş rezervlər olmasın deyə masanı yalnız təsdiqlənmiş hesabla rezerv etmək olur.</p>
                             <a href="{{ route('reservations.continue', ['to' => 'login']) }}" class="btn btn-primary w-100 py-3"><i class="fa fa-sign-in-alt me-2"></i>Daxil ol</a>
                             <a href="{{ route('reservations.continue', ['to' => 'register']) }}" class="btn btn-outline-secondary w-100 py-2 mt-2">Qeydiyyatdan keç</a>
                         @else
-                            <p><b>Son addım: rezervi təsdiqləmək üçün profilinizi təsdiqləyin.</b><br>Boş rezervlər olmasın deyə masanı yalnız təsdiqlənmiş hesabla rezerv etmək olur. Yazdıqlarınız yadda qaldı — təsdiqdən sonra bir düymə ilə təsdiqləyəcəksiniz.</p>
+                            <p><b>Son addım: rezervi təsdiqləmək üçün profilinizi təsdiqləyin.</b><br>Boş rezervlər olmasın deyə masanı yalnız təsdiqlənmiş hesabla rezerv etmək olur.</p>
                             <a href="{{ route('reservations.continue') }}" class="btn btn-primary w-100 py-3"><i class="fa fa-check me-2"></i>Profili təsdiqlə</a>
                         @endif
                         <button type="button" class="btn btn-link w-100 mt-1 rv-gate-back" id="rvGateBack">← Məlumatlara qayıt</button>
@@ -178,5 +179,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/reservations.js') }}?v=6"></script>
+<script src="{{ asset('js/reservations.js') }}?v=7"></script>
 @endsection

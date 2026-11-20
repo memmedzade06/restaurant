@@ -51,7 +51,8 @@ class ReservationController extends Controller
                 ]),
                 'prefill' => [
                     'name' => trim((string) $user?->name),
-                    'phone' => $user?->phone ? Phone::format($user->phone) : '',
+                    // formdakı format: 055 123 45 67
+                    'phone' => $user?->phone ? self::localPhone($user->phone) : '',
                 ],
             ],
         ]);
@@ -157,6 +158,13 @@ class ReservationController extends Controller
     }
 
     /* ---------------------------------------------------------------- */
+
+    /** "+994551234567" → "055 123 45 67" (formdakı maska ilə eyni format) */
+    public static function localPhone(?string $phone): string
+    {
+        return preg_match('/^\+994(\d{2})(\d{3})(\d{2})(\d{2})$/', (string) $phone, $m)
+            ? "0{$m[1]} {$m[2]} {$m[3]} {$m[4]}" : '';
+    }
 
     public static function now(): Carbon
     {

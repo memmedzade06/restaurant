@@ -82,6 +82,28 @@
             : '';
     }
 
+    /* ---------- Telefon: yalnız rəqəm, "050 123 45 67" formatında ---------- */
+    const OPERATORS = ['10', '50', '51', '55', '60', '70', '77', '99'];
+    function formatPhone(value) {
+        let d = String(value).replace(/\D/g, '');
+        if (d.startsWith('994')) d = '0' + d.slice(3);       // +994 50 ... → 050 ...
+        else if (d && d[0] !== '0') d = '0' + d;             // 50 ... → 050 ...
+        d = d.slice(0, 10);
+        return [d.slice(0, 3), d.slice(3, 6), d.slice(6, 8), d.slice(8, 10)].filter(Boolean).join(' ');
+    }
+    const phoneOk = (v) => {
+        const d = v.replace(/\D/g, '');
+        return d.length === 10 && OPERATORS.includes(d.slice(1, 3));
+    };
+    const phoneIn = $('rvPhone');
+    phoneIn.value = formatPhone(phoneIn.value);
+    phoneIn.addEventListener('input', () => {
+        const atEnd = phoneIn.selectionStart === phoneIn.value.length;
+        phoneIn.value = formatPhone(phoneIn.value);
+        if (atEnd) phoneIn.setSelectionRange(phoneIn.value.length, phoneIn.value.length);
+        phoneIn.classList.remove('is-invalid');
+    });
+
     /* ---------- Yarımçıq rezervasiya: girişdən əvvəl yazılanlar yadda qalır ---------- */
     const PENDING = 'rvPending';
     const savePending = (d) => { try { localStorage.setItem(PENDING, JSON.stringify({...d, at: Date.now()})); } catch (_) {} };
@@ -108,7 +130,7 @@
         dateIn.value = pending?.date || day.value || cfg.today;
         if (pending) {
             if (pending.name) $('rvName').value = pending.name;
-            if (pending.phone) $('rvPhone').value = pending.phone;
+            if (pending.phone) $('rvPhone').value = formatPhone(pending.phone);
         }
         $('rvResume').hidden = !pending;
         err.hidden = true;
@@ -138,6 +160,13 @@
             err.textContent = 'Bütün xanaları doldurun.';
             err.hidden = false;
             missing[0].focus();
+            return;
+        }
+        if (!phoneOk(phoneIn.value)) {
+            phoneIn.classList.add('is-invalid');
+            err.textContent = 'Nömrəni tam yazın, məs. 050 123 45 67 (operator kodu: 050, 051, 055, 070, 077, 099, 010, 060).';
+            err.hidden = false;
+            phoneIn.focus();
             return;
         }
 

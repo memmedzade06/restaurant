@@ -49,6 +49,7 @@
         if (!r.ok) {
             const err = new Error(d.message || 'Xəta baş verdi. Yenidən cəhd edin.');
             err.needVerify = !!d.needVerify;
+            err.todayDone = !!d.todayDone;
             err.status = r.status;
             throw err;
         }
@@ -59,6 +60,14 @@
         stopTimer();
         if (err.needVerify) return askVerify(passed);
         // server bu oyunu artıq tanımır (vaxtı keçib, başqa vərəqdə yeni oyun başlanıb və s.) — oyun bitmiş sayılır
+        // bu gün üçün suallar bitib (gün ərzində təkrar sual verilmir)
+        if (err.todayDone) {
+            $('.qz-over-title').textContent = 'Bu günün sualları bitdi 🌙';
+            $('.qz-over-note').innerHTML = (total ? `Düz cavab: <b>${total}</b><br>` : '') + 'Bu gün bütün suallara cavab verdiniz — sabah yeni suallarla gəlin!';
+            saveRecord();
+            renderRecord();
+            return show('over');
+        }
         if (err.status === 409) {
             $('.qz-over-title').textContent = 'Oyun başa çatdı';
             $('.qz-over-note').innerHTML = (total ? `Düz cavab: <b>${total}</b><br>` : '') + 'Yeni oyuna başlamaq üçün düyməni basın.';
@@ -255,7 +264,7 @@
     function finish(allDone, d) {
         stopTimer();
         const record = saveRecord();
-        $('.qz-over-title').textContent = allDone ? 'Bütün sualları keçdiniz! 🏆' : 'Oyun bitdi';
+        $('.qz-over-title').textContent = allDone ? 'Bu günün bütün suallarını keçdiniz! 🏆' : 'Oyun bitdi';
         $('.qz-over-note').innerHTML =
             `Düz cavab: <b>${total}</b><br>Keçilən mərhələ: <b>${passed}</b>` +
             (record ? '<br><span class="qz-new-record">⭐ Yeni rekord!</span>' : '') +

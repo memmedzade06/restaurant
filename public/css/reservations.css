@@ -13,11 +13,13 @@
 .rv-day i { color: var(--primary); }
 .rv-day input { border: 0; background: var(--cream); border-radius: 50px; padding: 6px 12px; font-weight: 700; color: var(--dark); }
 
-.rv-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; color: var(--muted); margin-bottom: 12px; font-weight: 700; }
-.rv-legend span { display: inline-flex; align-items: center; gap: 6px; }
-.rv-dot { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
-.rv-dot-free { background: linear-gradient(160deg, #8d2424, var(--wine-dark)); }
-.rv-dot-busy { background: linear-gradient(160deg, #f2b552, var(--primary-dark)); }
+.rv-legend { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13.5px; color: var(--text); margin-bottom: 14px; font-weight: 700; }
+.rv-legend span { display: inline-flex; align-items: center; gap: 7px; background: #fff; border-radius: 50px; padding: 6px 13px; box-shadow: 0 3px 10px rgba(58, 13, 13, .07); }
+.rv-legend .fa { color: var(--wine); font-size: 14px; }
+/* plandakı masa kimi: taxta üst, iki yanda qırmızı stul zolağı */
+.rv-dot { width: 18px; height: 14px; border-radius: 3px; display: inline-block; box-shadow: inset 0 3px 0 #b0452f, inset 0 -3px 0 #b0452f; }
+.rv-dot-free { background: linear-gradient(160deg, #a8743f, #7d5228); }
+.rv-dot-busy { background: linear-gradient(160deg, #f2b552, #e9a23b); box-shadow: inset 0 3px 0 #f7c96f, inset 0 -3px 0 #e39a32, 0 0 0 2px rgba(233, 162, 59, .35); }
 
 /* Plan: mərtəbənin "döşəməsi" */
 .rv-plan-wrap { background: linear-gradient(160deg, #2a1010, #1a0808); border-radius: 22px; padding: 18px; box-shadow: var(--shadow-lg); }
@@ -56,7 +58,6 @@
     background: rgba(233, 162, 59, .12); border-color: var(--primary-dark); color: var(--dark); text-shadow: none;
 }
 .rv-table-kind { font-size: .72em; font-weight: 700; opacity: .85; white-space: nowrap; }
-.rv-legend .fa { color: var(--wine); }
 /* 4 nəfərlik masa (yuxarıdan görünüş): ortada masa, yuxarıda və aşağıda üzbəüz iki-iki stul */
 .rv-kind-table {
     --wood: linear-gradient(160deg, #a8743f, #7d5228);
