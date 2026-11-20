@@ -400,6 +400,7 @@
             const above = i > level;                 // zəif nöqtədən yuxarıda
             const k = above ? i - level : 0;
             return {
+                kind: glassKind(i),
                 x: t.x,
                 y: BASE_Y - i * GH,
                 vx: side * (above ? 50 + k * 28 : 18 + i * 10),
@@ -927,6 +928,28 @@
     }
     const GLASS = glassPath(GW, GH);
 
+    // Masadakı başlanğıc stəkan və oyunçunun ilk PLAIN_GLASSES stəkanı daş stəkandır
+    // (ağzı enli, dibə doğru daralan, dibi tilli), ondan sonrakılar armudu.
+    // Forma yalnız görünüşdür — oyunun qaydaları (en, tarazlıq) eynidir.
+    const PLAIN_GLASSES = 20;
+    const PLAIN_RIM = 0.52;    // daş stəkanın ağzının yarım eni (GW-yə nisbətən) — armududan enli
+    const PLAIN_BOTTOM = 0.36; // daş stəkanın dibinin yarım eni
+    function plainGlassPath(w, h) {
+        const p = new Path2D();
+        const b = PLAIN_BOTTOM * w, r = 3; // r — dibin yumru küncləri
+        p.moveTo(-b + r * 0.4, 0);
+        p.quadraticCurveTo(-b, 0, -b - 0.2, -r);
+        p.lineTo(-PLAIN_RIM * w, -h);                                  // düz, azca çəp yan
+        p.ellipse(0, -h, PLAIN_RIM * w, RIM_RY, 0, Math.PI, 0, true);  // yumru ağzın ön tərəfi
+        p.lineTo(b + 0.2, -r);
+        p.quadraticCurveTo(b, 0, b - r * 0.4, 0);
+        p.closePath();
+        return p;
+    }
+    const GLASS_PLAIN = plainGlassPath(GW, GH);
+    /** Qüllədəki yeri (0 — masadakı başlanğıc stəkan) → forma */
+    const glassKind = (index) => (index <= PLAIN_GLASSES ? 'plain' : 'armudu');
+
     // Arxa fon şəkli (data-bg-photo). PHOTO_IS_BASE = true olanda fotodakı stəkan qüllənin ilk stəkanıdır:
     // oyunçunun stəkanları onun ağzının üstünə düşür. PHOTO_RIM — həmin stəkanın ağzının mərkəzi
     // (şəklin eninə və hündürlüyünə nisbətən), PHOTO_TOP — şəklin yuxarı kənarı (dünya koordinatında).
@@ -1021,6 +1044,33 @@
         ctx.restore();
     }
 
+    /** Düz stəkanın aşağı yarısındakı tillər: yumru başlı şaquli ləçəklər, işıq kənarlarından sınır */
+    function drawPlainFacets() {
+        const n = 5, top = -GH * 0.5, bot = -GH * 0.06;
+        const widthAt = (y) => PLAIN_BOTTOM * GW + (PLAIN_RIM - PLAIN_BOTTOM) * GW * (-y / GH);
+        const wTop = widthAt(top), wBot = widthAt(bot);
+        ctx.save();
+        ctx.lineWidth = 0.9;
+        for (let i = 0; i < n; i++) {
+            // ön tərəf: kənardakı tillər daralır (silindr kimi görünsün)
+            const u0 = -1 + (2 * i) / n, u1 = -1 + (2 * (i + 1)) / n;
+            const sx = (u) => Math.sin(u * Math.PI / 2);
+            const xT0 = sx(u0) * wTop, xT1 = sx(u1) * wTop, xB0 = sx(u0) * wBot, xB1 = sx(u1) * wBot;
+            const arc = (xT1 - xT0) * 0.55;
+            const p = new Path2D();
+            p.moveTo(xB0, bot);
+            p.lineTo(xT0, top + arc);
+            p.quadraticCurveTo((xT0 + xT1) / 2, top - arc * 0.6, xT1, top + arc);
+            p.lineTo(xB1, bot);
+            const mid = Math.abs(i - (n - 1) / 2) / ((n - 1) / 2); // 0 — ortada, 1 — kənarda
+            ctx.fillStyle = i % 2 ? `rgba(255, 220, 180, ${0.1 - mid * 0.05})` : `rgba(60, 10, 0, ${0.12 - mid * 0.05})`;
+            ctx.fill(p);
+            ctx.strokeStyle = `rgba(255, 240, 220, ${0.55 - mid * 0.25})`;
+            ctx.stroke(p);
+        }
+        ctx.restore();
+    }
+
     /** Yumşaq kənarlı ağ duman ləkəsi (ellips): mərkəzdə sıx, kənara doğru tamam şəffaf */
     function mistBlob(cx, cy, rx, ry, alpha) {
         if (alpha <= 0.01) return;
@@ -1066,8 +1116,8 @@
      * sınaraq açıq kəhrəba kimi görünür, kənarları işıqlı, ön kənarı parlaq, ətrafında incə qızılı haşiyə,
      * altında dayandığı yerə düşən yumşaq kölgə. Stəkanın lokal koordinatlarında: dib (0, 0)-dadır.
      */
-    function drawGlassBase() {
-        const rx = GW * 0.27, ry = 2.6, T = 5;             // yarım en, ellipsin yumruluğu, qalınlıq
+    function drawGlassBase(plain = false) {
+        const rx = GW * (plain ? PLAIN_BOTTOM - 0.01 : 0.27), ry = 2.6, T = plain ? 4 : 5; // yarım en, yumruluq, qalınlıq
         // dayandığı yerə düşən kölgə
         const sh = ctx.createRadialGradient(0, 1, 1, 0, 1, rx * 1.25);
         sh.addColorStop(0, 'rgba(0, 0, 0, .35)');
@@ -1114,12 +1164,14 @@
         ctx.beginPath(); ctx.moveTo(-rx + 0.5, -T); ctx.lineTo(-rx + 0.5, 0); ctx.stroke();
         ctx.strokeStyle = 'rgba(90, 40, 20, .5)';
         ctx.beginPath(); ctx.moveTo(rx - 0.5, -T); ctx.lineTo(rx - 0.5, 0); ctx.stroke();
-        // incə qızılı haşiyə dibin ortasında
-        ctx.strokeStyle = '#E9A23B';
-        ctx.lineWidth = 1.1;
-        ctx.beginPath();
-        ctx.ellipse(0, -T * 0.45, rx, ry, 0, 0, Math.PI);
-        ctx.stroke();
+        // incə qızılı haşiyə dibin ortasında (yalnız armudu stəkanda)
+        if (!plain) {
+            ctx.strokeStyle = '#E9A23B';
+            ctx.lineWidth = 1.1;
+            ctx.beginPath();
+            ctx.ellipse(0, -T * 0.45, rx, ry, 0, 0, Math.PI);
+            ctx.stroke();
+        }
         // alt kənar: şüşənin ən parlaq yeri (işıq qalın kənardan sınır)
         ctx.strokeStyle = 'rgba(255, 255, 255, .9)';
         ctx.lineWidth = 1.2;
@@ -1138,10 +1190,11 @@
      * çəkilmir — bir dəfə ayrıca kətana çəkilir və hazır şəkil kimi qoyulur. Kətanın ölçüsü dəyişəndə
      * (böyük ekran, pəncərənin eni) yenidən yaradılır ki, bulanıq olmasın.
      */
-    const SPRITE_PAD = {l: GW * 0.75, r: GW * 0.75, t: GH + 22, b: 8};
-    const glassSprite = {cv: null, res: 0};
-    function getGlassSprite() {
+    const SPRITE_PAD = {l: GW * 0.8, r: GW * 0.8, t: GH + 22, b: 8};
+    const glassSprites = {};
+    function getGlassSprite(kind = 'armudu') {
         const res = dpr * scale;
+        const glassSprite = glassSprites[kind] || (glassSprites[kind] = {cv: null, res: 0});
         if (glassSprite.cv && glassSprite.res === res) return glassSprite.cv;
         const cv = document.createElement('canvas');
         cv.width = Math.ceil((SPRITE_PAD.l + SPRITE_PAD.r) * res);
@@ -1150,7 +1203,7 @@
         ctx = cv.getContext('2d');
         ctx.setTransform(res, 0, 0, res, 0, 0);
         try {
-            drawGlassFull(SPRITE_PAD.l, SPRITE_PAD.t, 0, 1, 0);
+            drawGlassFull(SPRITE_PAD.l, SPRITE_PAD.t, 0, 1, 0, kind);
         } finally {
             ctx = main;
         }
@@ -1189,16 +1242,18 @@
         ctx.restore();
     }
 
-    function drawGlass(x, y, rot = 0, alpha = 1, tilt = 0) {
-        if (rot || Math.abs(tilt) > 0.004) return drawGlassFull(x, y, rot, alpha, tilt);
-        const cv = getGlassSprite();
+    function drawGlass(x, y, rot = 0, alpha = 1, tilt = 0, kind = 'armudu') {
+        if (rot || Math.abs(tilt) > 0.004) return drawGlassFull(x, y, rot, alpha, tilt, kind);
+        const cv = getGlassSprite(kind);
         const a = ctx.globalAlpha;
         ctx.globalAlpha = alpha;
         ctx.drawImage(cv, x - SPRITE_PAD.l, y - SPRITE_PAD.t, SPRITE_PAD.l + SPRITE_PAD.r, SPRITE_PAD.t + SPRITE_PAD.b);
         ctx.globalAlpha = a;
     }
 
-    function drawGlassFull(x, y, rot = 0, alpha = 1, tilt = 0) {
+    function drawGlassFull(x, y, rot = 0, alpha = 1, tilt = 0, kind = 'armudu') {
+        const plain = kind === 'plain';
+        const SHAPE = plain ? GLASS_PLAIN : GLASS;
         ctx.save();
         ctx.globalAlpha = alpha;
         ctx.translate(x, y);
@@ -1206,18 +1261,27 @@
 
         // şüşənin özü (çaydan əvvəl çəkilir ki, çayın rəngini solğunlaşdırmasın)
         ctx.fillStyle = 'rgba(255, 255, 255, .22)';
-        ctx.fill(GLASS);
+        ctx.fill(SHAPE);
 
         // çay
         ctx.save();
-        ctx.clip(GLASS);
+        ctx.clip(SHAPE);
         // dəmlənmiş qara çay: şəffaf, qırmızımtıl-kəhrəba rəng
         const tea = ctx.createLinearGradient(0, -GH * 0.75, 0, 0);
-        tea.addColorStop(0, 'rgba(205, 42, 10, .9)');
-        tea.addColorStop(0.55, 'rgba(160, 18, 4, .95)');
-        tea.addColorStop(1, 'rgba(98, 6, 2, .98)');
+        if (plain) {
+            // təzə dəmlənmiş qara çay: yuxarıda tünd qırmızı-qəhvəyi, aşağıda işıq masadan
+            // qalxdığı üçün kəhrəba-narıncı (real armudu/daş stəkanda belə görünür)
+            tea.addColorStop(0, 'rgba(92, 22, 8, .9)');
+            tea.addColorStop(0.45, 'rgba(128, 34, 10, .88)');
+            tea.addColorStop(0.8, 'rgba(176, 66, 18, .86)');
+            tea.addColorStop(1, 'rgba(214, 112, 34, .85)');
+        } else {
+            tea.addColorStop(0, 'rgba(205, 42, 10, .9)');
+            tea.addColorStop(0.55, 'rgba(160, 18, 4, .95)');
+            tea.addColorStop(1, 'rgba(98, 6, 2, .98)');
+        }
         // çay səthinin altındakı yarımmüstəvi: səth (0, sy) nöqtəsindən keçir, a bucağı ilə əyilir
-        const a = tilt - rot, sy = -GH * 0.74, L = GH * 2;
+        const a = tilt - rot, sy = -GH * (plain ? 0.84 : 0.74), L = GH * 2;
         const cx = Math.cos(a), cy = Math.sin(a), nx = -cy, ny = cx; // nx, ny — səthdən "aşağı" yön
         const teaPath = new Path2D();
         teaPath.moveTo(-L * cx, sy - L * cy);
@@ -1227,71 +1291,130 @@
         teaPath.closePath();
         ctx.fillStyle = tea;
         ctx.fill(teaPath);
-        // işığın çaydan keçməsi — ortada açıq kəhrəba parıltı
-        const glow = ctx.createRadialGradient(-GW * 0.08, -GH * 0.3, 2, -GW * 0.08, -GH * 0.3, GW * 0.42);
-        glow.addColorStop(0, 'rgba(255, 110, 40, .35)');
-        glow.addColorStop(1, 'rgba(255, 110, 40, 0)');
-        ctx.fillStyle = glow;
-        ctx.fill(teaPath);
+        if (plain) {
+            // qalınlıq: ortada çayın qatı qalındır (tünd), kənarlarda nazik (açıq, qırmızımtıl)
+            const depth = ctx.createLinearGradient(-PLAIN_RIM * GW, 0, PLAIN_RIM * GW, 0);
+            depth.addColorStop(0, 'rgba(235, 120, 60, .28)');
+            depth.addColorStop(0.18, 'rgba(0, 0, 0, 0)');
+            depth.addColorStop(0.5, 'rgba(40, 6, 0, .22)');
+            depth.addColorStop(0.82, 'rgba(0, 0, 0, 0)');
+            depth.addColorStop(1, 'rgba(120, 30, 10, .3)');
+            ctx.fillStyle = depth;
+            ctx.fill(teaPath);
+            // işıq soldan düşür: çayın içində yumşaq kəhrəba işıq ləkəsi, dibdə isti parıltı
+            const glow = ctx.createRadialGradient(-GW * 0.12, -GH * 0.42, 1, -GW * 0.12, -GH * 0.42, GW * 0.34);
+            glow.addColorStop(0, 'rgba(255, 150, 70, .3)');
+            glow.addColorStop(1, 'rgba(255, 150, 70, 0)');
+            ctx.fillStyle = glow;
+            ctx.fill(teaPath);
+            const bottomGlow = ctx.createRadialGradient(0, -GH * 0.06, 1, 0, -GH * 0.06, GW * 0.4);
+            bottomGlow.addColorStop(0, 'rgba(255, 175, 80, .45)');
+            bottomGlow.addColorStop(1, 'rgba(255, 175, 80, 0)');
+            ctx.fillStyle = bottomGlow;
+            ctx.fill(teaPath);
+        } else {
+            // işığın çaydan keçməsi — ortada açıq kəhrəba parıltı
+            const glow = ctx.createRadialGradient(-GW * 0.08, -GH * 0.3, 2, -GW * 0.08, -GH * 0.3, GW * 0.42);
+            glow.addColorStop(0, 'rgba(255, 110, 40, .35)');
+            glow.addColorStop(1, 'rgba(255, 110, 40, 0)');
+            ctx.fillStyle = glow;
+            ctx.fill(teaPath);
+        }
         // çayın səthi: stəkana azca yuxarıdan baxırıq, ona görə səth ellips kimi görünür
         // (çay çalxalananda ellips də əyilir)
         ctx.save();
         ctx.translate(0, sy);
         ctx.rotate(a);
-        const srx = GW * TEA_SURFACE_W, sry = RIM_RY * 0.85;
+        // səthin eni stəkanın həmin hündürlükdəki eninə uyğun
+        const srx = plain ? GW * (PLAIN_BOTTOM + (PLAIN_RIM - PLAIN_BOTTOM) * 0.84) * 0.97 : GW * TEA_SURFACE_W;
+        const sry = RIM_RY * 0.85;
         const surf = ctx.createLinearGradient(0, -sry, 0, sry);
-        surf.addColorStop(0, 'rgba(150, 40, 10, .95)');   // arxa kənar tünd
-        surf.addColorStop(1, 'rgba(215, 105, 45, .95)');  // ön kənar işıqlı
+        if (plain) {
+            surf.addColorStop(0, 'rgba(70, 16, 6, .95)');     // arxa kənar: tünd, demək olar qəhvəyi
+            surf.addColorStop(0.6, 'rgba(115, 32, 10, .95)');
+            surf.addColorStop(1, 'rgba(170, 70, 30, .95)');   // ön kənar: işıq düşür
+        } else {
+            surf.addColorStop(0, 'rgba(150, 40, 10, .95)');   // arxa kənar tünd
+            surf.addColorStop(1, 'rgba(215, 105, 45, .95)');  // ön kənar işıqlı
+        }
         ctx.fillStyle = surf;
         ctx.beginPath();
         ctx.ellipse(0, 0, srx, sry, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 200, 150, .7)';      // səthin parlaq haşiyəsi
-        ctx.lineWidth = 0.8;
-        ctx.stroke();
-        ctx.fillStyle = 'rgba(255, 235, 200, .45)';       // səthdə işığın əksi
-        ctx.beginPath();
-        ctx.ellipse(-srx * 0.35, -sry * 0.15, srx * 0.28, sry * 0.35, 0, 0, Math.PI * 2);
-        ctx.fill();
+        if (plain) {
+            // menisk: çay şüşəyə toxunduğu yerdə azca qalxır — incə qızılı-kəhrəba haşiyə
+            ctx.strokeStyle = 'rgba(230, 150, 80, .55)';
+            ctx.lineWidth = 0.7;
+            ctx.stroke();
+            // səthdə pəncərənin yumşaq əksi və kənarda bir neçə xırda köpük
+            ctx.fillStyle = 'rgba(255, 230, 200, .22)';
+            ctx.beginPath();
+            ctx.ellipse(-srx * 0.3, -sry * 0.1, srx * 0.38, sry * 0.32, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255, 225, 190, .55)';
+            for (const [bx, by, br] of [[0.78, 0.15, 0.7], [0.86, -0.1, 0.5], [0.7, 0.42, 0.45], [-0.82, 0.2, 0.5]]) {
+                ctx.beginPath();
+                ctx.arc(bx * srx, by * sry, br, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        } else {
+            ctx.strokeStyle = 'rgba(255, 200, 150, .7)';      // səthin parlaq haşiyəsi
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(255, 235, 200, .45)';       // səthdə işığın əksi
+            ctx.beginPath();
+            ctx.ellipse(-srx * 0.35, -sry * 0.15, srx * 0.28, sry * 0.35, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
         ctx.restore();
 
-        // şüşənin üzərində qızılı naxış (çayın üstündən görünür)
-        drawOrnament(0, 1, 1);                    // ön tərəfdə əsas medalyon
-        drawOrnament(-GW * 0.4, 0.62, 0.45);      // yanlarda yarımçıq görünən medalyonlar
-        drawOrnament(GW * 0.4, 0.62, 0.45);
+        if (plain) {
+            drawPlainFacets();                    // aşağı yarıda tillər
+        } else {
+            // şüşənin üzərində qızılı naxış (çayın üstündən görünür)
+            drawOrnament(0, 1, 1);                // ön tərəfdə əsas medalyon
+            drawOrnament(-GW * 0.4, 0.62, 0.45);  // yanlarda yarımçıq görünən medalyonlar
+            drawOrnament(GW * 0.4, 0.62, 0.45);
+        }
         ctx.restore();
 
         // şüşənin kənarı
         ctx.lineWidth = 2;
         ctx.strokeStyle = 'rgba(255, 255, 255, .95)';
-        ctx.stroke(GLASS);
+        ctx.stroke(SHAPE);
 
         // yumru ağız: içi azca görünür, arxa kənar incə, ön kənar qalın qızılı haşiyə
-        const rw = GW * RIM_W;
+        const rw = GW * (plain ? PLAIN_RIM : RIM_W);
         ctx.fillStyle = 'rgba(255, 255, 255, .18)';
         ctx.beginPath();
         ctx.ellipse(0, -GH, rw, RIM_RY, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(233, 162, 59, .75)';
+        ctx.strokeStyle = plain ? 'rgba(255, 255, 255, .7)' : 'rgba(233, 162, 59, .75)';
         ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.ellipse(0, -GH, rw, RIM_RY, 0, Math.PI, Math.PI * 2);
         ctx.stroke();
-        ctx.strokeStyle = '#E9A23B';
-        ctx.lineWidth = 2.2;
+        ctx.strokeStyle = plain ? 'rgba(255, 255, 255, .95)' : '#E9A23B';
+        ctx.lineWidth = plain ? 2.6 : 2.2;   // düz stəkanın ağzı qalın şüşədir
         ctx.beginPath();
         ctx.ellipse(0, -GH, rw, RIM_RY, 0, 0, Math.PI);
         ctx.stroke();
 
-        drawGlassBase();
+        drawGlassBase(plain);
 
         // parıltı
         ctx.strokeStyle = 'rgba(255, 255, 255, .7)';
         ctx.lineWidth = 3;
         ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(-GW * 0.33, -GH * 0.18);
-        ctx.quadraticCurveTo(-GW * 0.4, -GH * 0.38, -GW * 0.28, -GH * 0.56);
+        if (plain) {
+            // düz stəkanda parıltı yan boyunca düz zolaqdır
+            ctx.moveTo(-GW * 0.36, -GH * 0.55);
+            ctx.lineTo(-GW * 0.44, -GH * 0.93);
+        } else {
+            ctx.moveTo(-GW * 0.33, -GH * 0.18);
+            ctx.quadraticCurveTo(-GW * 0.4, -GH * 0.38, -GW * 0.28, -GH * 0.56);
+        }
         ctx.stroke();
         ctx.restore();
     }
@@ -1727,18 +1850,18 @@
             if (i === 0 && baseInPhoto()) return;
             const gy = BASE_Y - i * GH;
             if (gy + 8 + cam < 0 || gy - GH - 24 + cam > LH) return; // ekrandan kənardadır — çəkmirik
-            drawGlass(t.x + sx * (i / Math.max(1, g.tower.length)), gy, 0, 1, t.s ? t.s.a : 0);
+            drawGlass(t.x + sx * (i / Math.max(1, g.tower.length)), gy, 0, 1, t.s ? t.s.a : 0, glassKind(i));
         });
 
         // yellənən / düşən / aşan stəkan
         if (g.state === 'swing' || g.state === 'ready') {
             drawGuide(g.swing.x, swingY(), topBottomY() - GH);
             const wobble = g.swing.warn ? Math.sin(g.time * 45) * 0.12 : 0; // geri dönəcək — titrəyir
-            drawGlass(g.swing.x, swingY(), wobble, 1, g.slosh.a);
+            drawGlass(g.swing.x, swingY(), wobble, 1, g.slosh.a, glassKind(g.tower.length));
         }
-        if (g.state === 'drop') drawGlass(g.drop.x, g.drop.y, 0, 1, g.slosh.a);
+        if (g.state === 'drop') drawGlass(g.drop.x, g.drop.y, 0, 1, g.slosh.a, glassKind(g.tower.length));
         if ((g.state === 'fall' || g.state === 'over') && g.falling) {
-            g.falling.forEach(f => { if (!f.broken) drawGlass(f.x, f.y, f.rot); });
+            g.falling.forEach(f => { if (!f.broken) drawGlass(f.x, f.y, f.rot, 1, 0, f.kind); });
         }
 
         // isti çayın buxarı — ağzı açıq qalan stəkanlardan qalxır: qüllənin başı və yellənən/düşən stəkan
