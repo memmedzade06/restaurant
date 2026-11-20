@@ -17,6 +17,10 @@
     <title>@yield('title', 'Restoran - 50 Qəpik')</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    @auth
+        {{-- hədiyyə kodunun QR kodu (prize-qr.js): admin oxudub açanda kod istifadə olunur --}}
+        <meta name="prize-qr-url" content="{{ route('admin.prizes.qr', '__CODE__') }}">
+    @endauth
     <meta name="description" content="50 Qəpik — Elmlərdə milli və Avropa mətbəxi, çay dəstgahı və qəlyan seti. Dadlı yeməklər, sərfəli qiymətlər.">
 
     {{-- İkonlar: Google axtarışı /favicon.ico və 48-in misli ölçülü kvadrat ikon istəyir --}}
@@ -43,7 +47,7 @@
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
     <link href="{{ asset('css/custom.css') }}?v=25" rel="stylesheet">
-    <link href="{{ asset('css/games.css') }}?v=57" rel="stylesheet">
+    <link href="{{ asset('css/games.css') }}?v=58" rel="stylesheet">
     @yield('css')
 </head>
 
@@ -190,6 +194,11 @@
 @endif
 @endauth
 @yield('js')
+@auth
+    {{-- hədiyyə kodlarının altında QR kod — yalnız daxil olmuş istifadəçidə (kod onlarda olur) --}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" defer></script>
+    <script src="{{ asset('js/prize-qr.js') }}?v=1" defer></script>
+@endauth
 </body>
 
 </html>

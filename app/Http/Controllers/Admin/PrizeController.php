@@ -62,8 +62,31 @@ class PrizeController extends Controller
      */
     public function redeem(Request $request, string $prize): RedirectResponse
     {
-        $adminId = $request->user()->id;
-        $result = DB::transaction(function () use ($prize, $adminId) {
+        $result = $this->redeemPrize($prize, $request->user()->id);
+
+        return back()->with($result[0], $result[1]);
+    }
+
+    /**
+     * Hədiyyənin QR kodu oxudulanda: QR-da bu ünvan var (/admin/hediyyeler/qr/QP-XXXXXX).
+     * Admin onu telefonla oxudub açanda kod dərhal istifadə olunur və nəticə hədiyyə kodları
+     * səhifəsində göstərilir. Daxil olmayıbsa — əvvəl giriş, sonra yenə bu ünvan; admin deyilsə — 403.
+     */
+    public function qr(string $code): RedirectResponse
+    {
+        $code = $this->normalizeCode($code);
+        $id = WheelSpin::where('code', $code)->value('id');
+        $result = $id
+            ? $this->redeemPrize((string) $id, request()->user()->id)
+            : ['error', "{$code} kodu tapılmadı — vaxtı keçib silinib və ya kod səhvdir."];
+
+        return redirect()->route('admin.prizes', ['q' => $code])->with($result[0], $result[1]);
+    }
+
+    /** Kodu istifadə edir. Qaytarır: ['success'|'error', mesaj] */
+    private function redeemPrize(string $prize, int $adminId): array
+    {
+        return DB::transaction(function () use ($prize, $adminId) {
             $prize = WheelSpin::whereKey($prize)->lockForUpdate()->first(); // iki admin eyni anda bassa belə bir dəfə
 
             if (! $prize) {
@@ -83,8 +106,6 @@ class PrizeController extends Controller
 
             return ['success', "{$prize->code} — «{$prize->prize_label}» istifadə olundu. Kod qüvvədən düşdü və «İstifadə olunub» bölməsinə keçdi."];
         });
-
-        return back()->with($result[0], $result[1]);
     }
 
     private function normalizeCode(string $q): string

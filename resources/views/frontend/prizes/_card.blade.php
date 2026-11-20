@@ -15,7 +15,7 @@
         </span>
     </div>
     <div class="prize-side">
-        <code>{{ $p->code }}</code>
+        <code @if ($st === 'active') data-prize-qr="{{ $p->code }}" @endif>{{ $p->code }}</code>
         <span class="prize-badge">{{ $st === 'used' ? 'Qüvvədən düşüb' : $p->statusLabel() }}</span>
     </div>
 </li>

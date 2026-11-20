@@ -160,7 +160,7 @@
                     : 'Çarxı əyləncə üçün istədiyiniz qədər fırlada bilərsiniz — hədiyyə verilmir.')}</div>` : '';
         if (state.claimed) {
             html = `<span class="eyebrow">Hədiyyəniz 🎉</span><h3>${esc(state.claimed.label)}</h3>` +
-                `<div class="prize-code">${esc(state.claimed.code)}</div>` +
+                `<div class="prize-code${state.claimed.expired || state.claimed.used ? ' no-qr' : ''}">${esc(state.claimed.code)}</div>` +
                 (state.claimed.claimed_at ? `<p class="claimed-at"><i class="fa fa-clock me-1"></i>Götürülüb: <b>${esc(state.claimed.claimed_at)}</b></p>` : '') +
                 (state.claimed.expired
                     // kodun vaxtı bitib (bazadan da silinir) — bu gün yenidən fırlatmaq olmur

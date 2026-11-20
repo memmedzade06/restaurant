@@ -62,7 +62,7 @@ class PrizeAdminTest extends TestCase
         $this->actingAs($admin)->get('/hesabim')->assertOk()
             ->assertSee('İdarəetmə')->assertSee('Cəmi qeydiyyat')
             ->assertSee(route('admin.prizes'))->assertSee(route('admin.users'));
-        $this->actingAs($admin)->get('/oyunlar')->assertOk()->assertDontSee(route('admin.prizes'));
+        $this->actingAs($admin)->get('/oyunlar')->assertOk()->assertDontSee('href="' . route('admin.prizes') . '"', false);
         $this->assertNotNull($new);
     }
 
@@ -186,6 +186,40 @@ class PrizeAdminTest extends TestCase
         // admin öz tipini dəyişə bilməz
         $this->actingAs($admin)->put(route('admin.users.update', $admin), ['type' => 'guest'])->assertSessionHas('error');
         $this->assertTrue($admin->fresh()->is_admin);
+    }
+
+    public function test_scanning_prize_qr_redeems_it_for_admin_only(): void
+    {
+        $admin = $this->user(true);
+        $player = $this->user();
+        $p = $this->prize($player);
+        $url = route('admin.prizes.qr', $p->code);
+
+        // oyunçunun səhifəsində QR üçün ünvan şablonu və aktiv kodun QR işarəsi var
+        $this->actingAs($player)->get('/hediyyelerim')->assertOk()
+            ->assertSee(route('admin.prizes.qr', '__CODE__'), false)
+            ->assertSee('data-prize-qr="' . $p->code . '"', false)
+            ->assertSee('js/prize-qr.js', false);
+
+        // qonaq — girişə yönləndirilir, oyunçu — 403; kod istifadə olunmur
+        auth()->logout();
+        $this->get($url)->assertRedirect(route('login'));
+        $this->actingAs($player)->get($url)->assertForbidden();
+        $this->assertNull($p->fresh()->redeemed_at);
+
+        // admin oxudanda kod istifadə olunur, hədiyyə kodları səhifəsində nəticə görünür
+        $this->actingAs($admin)->get($url)
+            ->assertRedirect(route('admin.prizes', ['q' => $p->code]))
+            ->assertSessionHas('success', fn ($m) => str_contains($m, $p->code));
+        $this->assertNotNull($p->fresh()->redeemed_at);
+        $this->assertSame($admin->id, $p->fresh()->redeemed_by);
+
+        // ikinci dəfə — xəta, kiçik hərflə də tanınır; olmayan kod — xəta
+        $this->actingAs($admin)->get(route('admin.prizes.qr', strtolower($p->code)))->assertSessionHas('error');
+        $this->actingAs($admin)->get(route('admin.prizes.qr', 'QP-NOPE00'))->assertSessionHas('error');
+
+        // istifadə olunmuş kodun QR-ı oyunçu səhifəsində göstərilmir
+        $this->actingAs($player)->get('/hediyyelerim')->assertOk()->assertDontSee('data-prize-qr="' . $p->code . '"', false);
     }
 
     public function test_only_admin_can_open_panel(): void

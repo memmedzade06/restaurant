@@ -195,6 +195,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/', fn () => redirect()->route('admin.prizes'));
     Route::get('/hediyyeler', [\App\Http\Controllers\Admin\PrizeController::class, 'index'])->name('prizes');
     Route::post('/hediyyeler/{prize}/istifade', [\App\Http\Controllers\Admin\PrizeController::class, 'redeem'])->name('prizes.redeem');
+    // hədiyyənin QR kodu: admin oxudub açanda kod istifadə olunur
+    Route::get('/hediyyeler/qr/{code}', [\App\Http\Controllers\Admin\PrizeController::class, 'qr'])->where('code', '[A-Za-z0-9-]+')->name('prizes.qr');
     Route::get('/istifadeciler', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('users');
     Route::get('/istifadeciler/{user}/duzelis', [\App\Http\Controllers\Admin\UserController::class, 'edit'])->name('users.edit');
     Route::put('/istifadeciler/{user}', [\App\Http\Controllers\Admin\UserController::class, 'update'])->name('users.update');
