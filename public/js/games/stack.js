@@ -83,6 +83,7 @@
             t0: 0,                    // oyunun başladığı an (performance.now)
             log: [],                  // hər qonan stəkan: [başlanğıcdan keçən ms, stəkanın sapması px] — server yoxlayır
             slosh: {a: 0, v: 0},   // yellənən/düşən stəkandakı çayın meyli
+            motion: {px: null, vx: 0, ripple: 0}, // hərəkət edən stəkan: əvvəlki x, hamarlanmış sürət, səthdəki dalğaların gücü (0..1)
         };
         startFromRandomSide(); // birinci stəkan da sağdan və ya soldan
         newSwing();
@@ -797,8 +798,9 @@
     }
 
     /* ---------- Çayın çalxalanması ---------- */
-    // Stəkan yellənəndə çay düz qalır. Yalnız divara dəyəndə çalxalanır:
-    // divar tərəfə çırpılır, sonra o yan-bu yana yırğalanıb yenə düzəlir (yay / spring modeli).
+    // Stəkan yellənəndə çay hərəkətin əks tərəfinə azca meyl edir; istiqamət dəyişəndə (havada dönmə,
+    // divara dəymə) o biri tərəfə çırpılıb o yan-bu yana yırğalanır (yay / spring modeli).
+    // Səthdə dalğalar: stəkan hərəkətdə olanda və çay çalxalananda görünür, dayananda sönür.
     const SLOSH_K = 140, SLOSH_D = 4.5, SLOSH_MAX = 0.55;
     const SLOSH_KICK = 6.5; // divara dəyəndə çaya verilən təkan — çay o yan-bu yana çalxalanır
     const LAND_KICK = 4;    // stəkan qüllənin üstünə qonanda çaya verilən təkan
@@ -814,11 +816,31 @@
         s.a = clamp(s.a + s.v * dt, SLOSH_MAX);
     }
 
+    const MOVE_TILT = 0.0008; // sürətə görə meyl (radian / px·s⁻¹)
+    const MOVE_TILT_MAX = 0.22;
+
     function updateSlosh(dt) {
         if (!(dt > 0)) return;
-        springStep(g.slosh, 0, dt);
+        // hərəkət edən stəkanın sürəti (yeni stəkan kənardan başlayanda x sıçrayır — bu sürət sayılmır)
+        const m = g.motion;
+        const mx = g.state === 'swing' || g.state === 'ready' ? g.swing.x : g.state === 'drop' ? g.drop.x : null;
+        let vx = 0;
+        if (mx !== null && m.px !== null) {
+            const raw = (mx - m.px) / dt;
+            if (Math.abs(raw) < 2000) vx = raw;
+        }
+        m.px = mx;
+        m.vx += (vx - m.vx) * Math.min(1, dt * 12);
+        // çay hərəkətin əks tərəfinə meyl edir; istiqamət dəyişəndə hədəf o biri tərəfə keçir — çay çalxalanır
+        springStep(g.slosh, clamp(-m.vx * MOVE_TILT, MOVE_TILT_MAX), dt);
+        // dalğaların gücü: hərəkət + çalxalanma; tez qalxır, yavaş sönür
+        const want = Math.min(1, Math.abs(m.vx) / 260 + Math.abs(g.slosh.v) * 0.3);
+        m.ripple += (want - m.ripple) * Math.min(1, dt * (want > m.ripple ? 8 : 2));
         for (const t of g.tower) if (t.s) springStep(t.s, 0, dt); // qüllədəki stəkanlar
     }
+
+    /** Qüllədəki stəkanın dalğası: yalnız qonandan sonra çay çalxalananda */
+    const towerRipple = (s) => (s ? Math.min(1, Math.abs(s.v) * 0.3 + Math.abs(s.a) * 2) : 0);
 
     /**
      * Buğ hərəkətdən geri qalır: stəkan sağa gedəndə buğ sola, sola gedəndə sağa əyilir.
@@ -1000,9 +1022,10 @@
             return p;
         };
         ctx.save();
-        ctx.globalAlpha *= a;
-        ctx.strokeStyle = '#f2c35a';
-        ctx.fillStyle = '#f2c35a';
+        // naxış çayın üstündədir: sönük qızılı, çay daş stəkandakı kimi tünd görünsün
+        ctx.globalAlpha *= a * 0.55;
+        ctx.strokeStyle = '#d9a03e';
+        ctx.fillStyle = '#d9a03e';
         ctx.lineCap = 'round';
 
         // çərçivə: qalın xarici və incə daxili xətt
@@ -1242,8 +1265,38 @@
         ctx.restore();
     }
 
-    function drawGlass(x, y, rot = 0, alpha = 1, tilt = 0, kind = 'armudu') {
-        if (rot || Math.abs(tilt) > 0.004) return drawGlassFull(x, y, rot, alpha, tilt, kind);
+    /**
+     * Çayın səthində dalğalar (səthin lokal koordinatlarında, mərkəz 0,0): mərkəzdən yayılan halqalar
+     * və o yan-bu yana qaçan işıq parıltısı. strength — 0..1, seed — hər stəkan bir az fərqli dalğalansın.
+     */
+    function drawTeaRipples(srx, sry, strength, seed) {
+        const t = g.time;
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(0, 0, srx, sry, 0, 0, Math.PI * 2);
+        ctx.clip();
+        // yayılan halqalar
+        ctx.lineWidth = 0.8;
+        for (let k = 0; k < 3; k++) {
+            const ph = (t * 1.6 + k / 3 + seed * 0.013) % 1; // 0 — yenicə yaranıb, 1 — kənara çatıb
+            const a = strength * 0.75 * Math.sin(ph * Math.PI);
+            if (a < 0.02) continue;
+            ctx.strokeStyle = `rgba(255, 200, 140, ${a.toFixed(3)})`;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, srx * (0.15 + ph * 0.95), sry * (0.15 + ph * 0.95), 0, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        // səthdə qaçan parıltı: dalğa ilə o yan-bu yana sürüşür
+        const sh = Math.sin(t * 7 + seed * 0.05) * srx * 0.35;
+        ctx.fillStyle = `rgba(255, 225, 185, ${(strength * 0.4).toFixed(3)})`;
+        ctx.beginPath();
+        ctx.ellipse(sh, -sry * 0.15, srx * 0.22, sry * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
+    function drawGlass(x, y, rot = 0, alpha = 1, tilt = 0, kind = 'armudu', ripple = 0) {
+        if (rot || Math.abs(tilt) > 0.004 || ripple > 0.03) return drawGlassFull(x, y, rot, alpha, tilt, kind, ripple);
         const cv = getGlassSprite(kind);
         const a = ctx.globalAlpha;
         ctx.globalAlpha = alpha;
@@ -1251,7 +1304,7 @@
         ctx.globalAlpha = a;
     }
 
-    function drawGlassFull(x, y, rot = 0, alpha = 1, tilt = 0, kind = 'armudu') {
+    function drawGlassFull(x, y, rot = 0, alpha = 1, tilt = 0, kind = 'armudu', ripple = 0) {
         const plain = kind === 'plain';
         const SHAPE = plain ? GLASS_PLAIN : GLASS;
         ctx.save();
@@ -1267,21 +1320,19 @@
         ctx.save();
         ctx.clip(SHAPE);
         // dəmlənmiş qara çay: şəffaf, qırmızımtıl-kəhrəba rəng
-        const tea = ctx.createLinearGradient(0, -GH * 0.75, 0, 0);
-        if (plain) {
-            // təzə dəmlənmiş qara çay: yuxarıda tünd qırmızı-qəhvəyi, aşağıda işıq masadan
-            // qalxdığı üçün kəhrəba-narıncı (real armudu/daş stəkanda belə görünür)
-            tea.addColorStop(0, 'rgba(92, 22, 8, .9)');
-            tea.addColorStop(0.45, 'rgba(128, 34, 10, .88)');
-            tea.addColorStop(0.8, 'rgba(176, 66, 18, .86)');
-            tea.addColorStop(1, 'rgba(214, 112, 34, .85)');
-        } else {
-            tea.addColorStop(0, 'rgba(205, 42, 10, .9)');
-            tea.addColorStop(0.55, 'rgba(160, 18, 4, .95)');
-            tea.addColorStop(1, 'rgba(98, 6, 2, .98)');
-        }
+        // gradient çayın səthindən (sy) dibə qədər — yuxarı tünd, aşağı parlaq
+        const teaTop = -GH * (plain ? 0.84 : 0.74);
+        const tea = ctx.createLinearGradient(0, teaTop, 0, 0);
+        // armudu və daş stəkanda çayın rəngi eynidir: təzə dəmlənmiş qara çay —
+        // yuxarıda tünd qırmızı-qəhvəyi, aşağıya doğru işıq keçdikcə parlaq kəhrəba-narıncı
+        // (yuxarı ilə aşağı arasında tündlük fərqi güclüdür — real stəkanda belə görünür)
+        tea.addColorStop(0, 'rgba(40, 5, 1, .98)');
+        tea.addColorStop(0.25, 'rgba(88, 14, 2, .97)');
+        tea.addColorStop(0.55, 'rgba(156, 40, 7, .95)');
+        tea.addColorStop(0.82, 'rgba(208, 94, 22, .93)');
+        tea.addColorStop(1, 'rgba(236, 146, 52, .92)');
         // çay səthinin altındakı yarımmüstəvi: səth (0, sy) nöqtəsindən keçir, a bucağı ilə əyilir
-        const a = tilt - rot, sy = -GH * (plain ? 0.84 : 0.74), L = GH * 2;
+        const a = tilt - rot, sy = teaTop, L = GH * 2;
         const cx = Math.cos(a), cy = Math.sin(a), nx = -cy, ny = cx; // nx, ny — səthdən "aşağı" yön
         const teaPath = new Path2D();
         teaPath.moveTo(-L * cx, sy - L * cy);
@@ -1291,35 +1342,12 @@
         teaPath.closePath();
         ctx.fillStyle = tea;
         ctx.fill(teaPath);
-        if (plain) {
-            // qalınlıq: ortada çayın qatı qalındır (tünd), kənarlarda nazik (açıq, qırmızımtıl)
-            const depth = ctx.createLinearGradient(-PLAIN_RIM * GW, 0, PLAIN_RIM * GW, 0);
-            depth.addColorStop(0, 'rgba(235, 120, 60, .28)');
-            depth.addColorStop(0.18, 'rgba(0, 0, 0, 0)');
-            depth.addColorStop(0.5, 'rgba(40, 6, 0, .22)');
-            depth.addColorStop(0.82, 'rgba(0, 0, 0, 0)');
-            depth.addColorStop(1, 'rgba(120, 30, 10, .3)');
-            ctx.fillStyle = depth;
-            ctx.fill(teaPath);
-            // işıq soldan düşür: çayın içində yumşaq kəhrəba işıq ləkəsi, dibdə isti parıltı
-            const glow = ctx.createRadialGradient(-GW * 0.12, -GH * 0.42, 1, -GW * 0.12, -GH * 0.42, GW * 0.34);
-            glow.addColorStop(0, 'rgba(255, 150, 70, .3)');
-            glow.addColorStop(1, 'rgba(255, 150, 70, 0)');
-            ctx.fillStyle = glow;
-            ctx.fill(teaPath);
-            const bottomGlow = ctx.createRadialGradient(0, -GH * 0.06, 1, 0, -GH * 0.06, GW * 0.4);
-            bottomGlow.addColorStop(0, 'rgba(255, 175, 80, .45)');
-            bottomGlow.addColorStop(1, 'rgba(255, 175, 80, 0)');
-            ctx.fillStyle = bottomGlow;
-            ctx.fill(teaPath);
-        } else {
-            // işığın çaydan keçməsi — ortada açıq kəhrəba parıltı
-            const glow = ctx.createRadialGradient(-GW * 0.08, -GH * 0.3, 2, -GW * 0.08, -GH * 0.3, GW * 0.42);
-            glow.addColorStop(0, 'rgba(255, 110, 40, .35)');
-            glow.addColorStop(1, 'rgba(255, 110, 40, 0)');
-            ctx.fillStyle = glow;
-            ctx.fill(teaPath);
-        }
+        // işığın çaydan keçməsi — aşağı hissədə yumşaq kəhrəba parıltı (yuxarını açmasın deyə)
+        const glow = ctx.createRadialGradient(-GW * 0.08, -GH * 0.2, 2, -GW * 0.08, -GH * 0.2, GW * 0.36);
+        glow.addColorStop(0, 'rgba(255, 160, 60, .16)');
+        glow.addColorStop(1, 'rgba(255, 170, 70, 0)');
+        ctx.fillStyle = glow;
+        ctx.fill(teaPath);
         // çayın səthi: stəkana azca yuxarıdan baxırıq, ona görə səth ellips kimi görünür
         // (çay çalxalananda ellips də əyilir)
         ctx.save();
@@ -1329,14 +1357,8 @@
         const srx = plain ? GW * (PLAIN_BOTTOM + (PLAIN_RIM - PLAIN_BOTTOM) * 0.84) * 0.97 : GW * TEA_SURFACE_W;
         const sry = RIM_RY * 0.85;
         const surf = ctx.createLinearGradient(0, -sry, 0, sry);
-        if (plain) {
-            surf.addColorStop(0, 'rgba(70, 16, 6, .95)');     // arxa kənar: tünd, demək olar qəhvəyi
-            surf.addColorStop(0.6, 'rgba(115, 32, 10, .95)');
-            surf.addColorStop(1, 'rgba(170, 70, 30, .95)');   // ön kənar: işıq düşür
-        } else {
-            surf.addColorStop(0, 'rgba(150, 40, 10, .95)');   // arxa kənar tünd
-            surf.addColorStop(1, 'rgba(215, 105, 45, .95)');  // ön kənar işıqlı
-        }
+        surf.addColorStop(0, 'rgba(58, 12, 3, .96)');     // arxa kənar tünd
+        surf.addColorStop(1, 'rgba(150, 52, 16, .95)');   // ön kənar azca işıqlı
         ctx.fillStyle = surf;
         ctx.beginPath();
         ctx.ellipse(0, 0, srx, sry, 0, 0, Math.PI * 2);
@@ -1358,14 +1380,16 @@
                 ctx.fill();
             }
         } else {
-            ctx.strokeStyle = 'rgba(255, 200, 150, .7)';      // səthin parlaq haşiyəsi
-            ctx.lineWidth = 0.8;
+            // daş stəkandakı kimi: incə kəhrəba haşiyə və zəif əks — çay tünd qalsın
+            ctx.strokeStyle = 'rgba(230, 150, 80, .55)';
+            ctx.lineWidth = 0.7;
             ctx.stroke();
-            ctx.fillStyle = 'rgba(255, 235, 200, .45)';       // səthdə işığın əksi
+            ctx.fillStyle = 'rgba(255, 230, 200, .22)';
             ctx.beginPath();
-            ctx.ellipse(-srx * 0.35, -sry * 0.15, srx * 0.28, sry * 0.35, 0, 0, Math.PI * 2);
+            ctx.ellipse(-srx * 0.3, -sry * 0.1, srx * 0.38, sry * 0.32, 0, 0, Math.PI * 2);
             ctx.fill();
         }
+        if (ripple > 0.03) drawTeaRipples(srx, sry, ripple, y); // y — yellənəndə sabitdir (x ilə dalğa sürəti titrəyərdi)
         ctx.restore();
 
         if (plain) {
@@ -1850,16 +1874,16 @@
             if (i === 0 && baseInPhoto()) return;
             const gy = BASE_Y - i * GH;
             if (gy + 8 + cam < 0 || gy - GH - 24 + cam > LH) return; // ekrandan kənardadır — çəkmirik
-            drawGlass(t.x + sx * (i / Math.max(1, g.tower.length)), gy, 0, 1, t.s ? t.s.a : 0, glassKind(i));
+            drawGlass(t.x + sx * (i / Math.max(1, g.tower.length)), gy, 0, 1, t.s ? t.s.a : 0, glassKind(i), towerRipple(t.s));
         });
 
         // yellənən / düşən / aşan stəkan
         if (g.state === 'swing' || g.state === 'ready') {
             drawGuide(g.swing.x, swingY(), topBottomY() - GH);
             const wobble = g.swing.warn ? Math.sin(g.time * 45) * 0.12 : 0; // geri dönəcək — titrəyir
-            drawGlass(g.swing.x, swingY(), wobble, 1, g.slosh.a, glassKind(g.tower.length));
+            drawGlass(g.swing.x, swingY(), wobble, 1, g.slosh.a, glassKind(g.tower.length), g.motion.ripple);
         }
-        if (g.state === 'drop') drawGlass(g.drop.x, g.drop.y, 0, 1, g.slosh.a, glassKind(g.tower.length));
+        if (g.state === 'drop') drawGlass(g.drop.x, g.drop.y, 0, 1, g.slosh.a, glassKind(g.tower.length), g.motion.ripple);
         if ((g.state === 'fall' || g.state === 'over') && g.falling) {
             g.falling.forEach(f => { if (!f.broken) drawGlass(f.x, f.y, f.rot, 1, 0, f.kind); });
         }
