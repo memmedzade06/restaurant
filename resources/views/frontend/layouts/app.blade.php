@@ -46,7 +46,7 @@
     <link href="{{ asset('lib/owlcarousel/assets/owl.carousel.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/custom.css') }}?v=25" rel="stylesheet">
+    <link href="{{ asset('css/custom.css') }}?v=27" rel="stylesheet">
     <link href="{{ asset('css/games.css') }}?v=60" rel="stylesheet">
     @yield('css')
 </head>
@@ -67,6 +67,7 @@
             <div class="navbar-nav ms-auto align-items-lg-center">
                 <a href="{{ route('home') }}" class="nav-item nav-link {{ request()->routeIs('home') ? 'active' : '' }}">Ana səhifə</a>
                 <a href="{{ route('menu') }}" class="nav-item nav-link {{ request()->routeIs('menu') ? 'active' : '' }}">Menyu</a>
+                <a href="{{ route('reservations') }}" class="nav-item nav-link {{ request()->routeIs('reservations') ? 'active' : '' }}">Rezervasiya</a>
                 <a href="{{ route('games.index') }}" class="nav-item nav-link {{ request()->routeIs('games.*') ? 'active' : '' }}">Oyunlar</a>
                 <a href="{{ route('contact') }}" class="nav-item nav-link {{ request()->routeIs('contact') ? 'active' : '' }}">Əlaqə</a>
             </div>
@@ -129,6 +130,7 @@
                     <ul>
                         <li><a href="{{ route('home') }}">Ana səhifə</a></li>
                         <li><a href="{{ route('menu') }}">Menyu</a></li>
+                        <li><a href="{{ route('reservations') }}">Masa rezervasiyası</a></li>
                         <li><a href="{{ route('games.index') }}">Oyunlar</a></li>
                         <li><a href="{{ route('contact') }}">Əlaqə</a></li>
                     </ul>

@@ -1,0 +1,274 @@
+/* =========================================================
+   Masa rezervasiyası — mərtəbə planı və rezervasiya pəncərəsi
+   ========================================================= */
+.rv-alert { border-radius: 14px; font-weight: 700; }
+
+.rv-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.rv-floors { display: inline-flex; background: #fff; border-radius: 50px; padding: 5px; box-shadow: var(--shadow); gap: 4px; }
+.rv-floor-tab { border: 0; background: transparent; border-radius: 50px; padding: 9px 18px; font-weight: 800; color: var(--text); transition: .2s; }
+.rv-floor-tab:hover { color: var(--wine); }
+.rv-floor-tab.active { background: var(--wine); color: #fff; }
+
+.rv-day { display: inline-flex; align-items: center; gap: 8px; background: #fff; border-radius: 50px; padding: 6px 8px 6px 16px; box-shadow: var(--shadow); font-weight: 800; color: var(--dark); margin: 0; }
+.rv-day i { color: var(--primary); }
+.rv-day input { border: 0; background: var(--cream); border-radius: 50px; padding: 6px 12px; font-weight: 700; color: var(--dark); }
+
+.rv-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; color: var(--muted); margin-bottom: 12px; font-weight: 700; }
+.rv-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.rv-dot { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+.rv-dot-free { background: linear-gradient(160deg, #8d2424, var(--wine-dark)); }
+.rv-dot-busy { background: linear-gradient(160deg, #f2b552, var(--primary-dark)); }
+
+/* Plan: mərtəbənin "döşəməsi" */
+.rv-plan-wrap { background: linear-gradient(160deg, #2a1010, #1a0808); border-radius: 22px; padding: 18px; box-shadow: var(--shadow-lg); }
+.rv-plan { position: relative; width: 100%; margin: 0 auto; container-type: inline-size; }
+
+.rv-table {
+    position: absolute; border: 0; border-radius: 10px; padding: 2px;
+    background: linear-gradient(160deg, #9a2a2a, var(--wine) 55%, var(--wine-dark));
+    color: #fff; box-shadow: 0 6px 14px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .15);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .2em;
+    font-size: clamp(9px, 2.6cqw, 17px); line-height: 1.1; font-weight: 800; text-align: center;
+    transition: transform .15s, box-shadow .15s, background .2s; cursor: pointer; overflow: hidden;
+}
+.rv-table:hover, .rv-table:focus-visible { transform: translateY(-2px) scale(1.04); box-shadow: 0 10px 22px rgba(0, 0, 0, .45), 0 0 0 3px var(--primary); outline: none; z-index: 2; }
+.rv-kind-cabin { font-size: clamp(11px, 3cqw, 20px); }
+/* Kabinet: divarları olan otaq, içində mebel (divanlı masa və ya stullu masa) */
+.rv-table.rv-kind-cabin {
+    --back: linear-gradient(180deg, #7c2b1d, #551a10);
+    --arm: linear-gradient(90deg, #5e1d12, #8a3525 55%, #5e1d12);
+    --cushion: linear-gradient(180deg, #c0553a, #93371f);
+    --wood: linear-gradient(160deg, #a8743f, #7d5228);
+    --chair: linear-gradient(180deg, #b0452f, #86301f);
+    --chair-back: #551a10;
+    background: rgba(255, 255, 255, .035); border: .55cqw solid #6e2418; border-radius: 1cqw;
+    box-shadow: inset 0 0 1.5cqw rgba(0, 0, 0, .45); text-shadow: 0 1px 3px rgba(0, 0, 0, .8); overflow: visible;
+}
+.rv-kind-cabin > span:not(.cabin-furniture) { position: relative; z-index: 1; }
+.cabin-furniture { position: absolute; left: 14%; right: 14%; top: 12%; bottom: 12%; z-index: 0; }
+.rv-table.rv-kind-cabin.is-busy {
+    --back: linear-gradient(180deg, #b87a22, #925c12);
+    --arm: linear-gradient(90deg, #9a6214, #d39535 55%, #9a6214);
+    --cushion: linear-gradient(180deg, #f7c96f, #e39a32);
+    --wood: linear-gradient(160deg, #f2b552, #e9a23b);
+    --chair: linear-gradient(180deg, #f7c96f, #e39a32);
+    --chair-back: #a86c18;
+    background: rgba(233, 162, 59, .12); border-color: var(--primary-dark); color: var(--dark); text-shadow: none;
+}
+.rv-table-kind { font-size: .72em; font-weight: 700; opacity: .85; white-space: nowrap; }
+.rv-legend .fa { color: var(--wine); }
+/* 4 nəfərlik masa (yuxarıdan görünüş): ortada masa, yuxarıda və aşağıda üzbəüz iki-iki stul */
+.rv-kind-table {
+    --wood: linear-gradient(160deg, #a8743f, #7d5228);
+    --chair: linear-gradient(180deg, #b0452f, #86301f);
+    --chair-back: #551a10;
+    background: none; box-shadow: none; overflow: visible; border-radius: 0; padding: 0;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .7);
+}
+.rv-kind-table:hover, .rv-kind-table:focus-visible { box-shadow: none; }
+.rv-kind-table:hover .setting, .rv-kind-table:focus-visible .setting { filter: drop-shadow(0 0 .4cqw var(--primary)) drop-shadow(0 5px 7px rgba(0, 0, 0, .5)); }
+.rv-kind-table > span:not(.setting) { position: relative; z-index: 1; }
+.rv-kind-table .rv-table-kind { display: none; }
+.setting { position: absolute; inset: 0; z-index: 0; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .5)); transition: filter .15s; }
+.setting i { position: absolute; display: block; }
+.dine-table { left: 8%; right: 8%; top: 25%; bottom: 25%; border-radius: .8cqw; background: var(--wood);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), inset 0 -2px 3px rgba(0, 0, 0, .25); }
+/* hər tərəfdə iki stul, üzbəüz (divanlar kimi): söykənəcək çöl tərəfdə */
+.chair { width: 34%; height: 21%; background: var(--chair); border-radius: .5cqw; box-shadow: inset 0 1px 1px rgba(255, 255, 255, .2); }
+.chair-t1, .chair-b1 { left: 12%; }
+.chair-t2, .chair-b2 { right: 12%; }
+.chair-t1, .chair-t2 { top: 0; border-top: .6cqw solid var(--chair-back); }
+.chair-b1, .chair-b2 { bottom: 0; border-bottom: .6cqw solid var(--chair-back); }
+.rv-table.rv-kind-table.is-busy {
+    --wood: linear-gradient(160deg, #f2b552, #e9a23b);
+    --chair: linear-gradient(180deg, #f7c96f, #e39a32);
+    --chair-back: #a86c18;
+    background: none; color: var(--dark); text-shadow: none;
+}
+
+/* Okey masası (yuxarıdan): künclərində içəri oyuq olan kvadrat taxta masa, ortada yaşıl mahud, stullar oyuq künclərdə */
+.rv-kind-okey {
+    --wood: #b5763f; --wood-dark: #8e5a2c;
+    --felt: linear-gradient(145deg, #2f6b46, #1f4d31);
+    --chair: linear-gradient(180deg, #c25a3c, #93391f);
+    --chair-back: #5a1d12;
+    background: none; box-shadow: none; overflow: visible; border-radius: 0; padding: 0;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .8);
+}
+.rv-kind-okey:hover, .rv-kind-okey:focus-visible { box-shadow: none; }
+.rv-kind-okey:hover .okey, .rv-kind-okey:focus-visible .okey { filter: drop-shadow(0 0 .4cqw var(--primary)) drop-shadow(0 5px 7px rgba(0, 0, 0, .5)); }
+.rv-kind-okey > span:not(.okey) { position: relative; z-index: 1; }
+.rv-kind-okey .rv-table-kind { display: none; }
+.okey { position: absolute; inset: 0; z-index: 0; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .5)); transition: filter .15s; }
+.okey i { position: absolute; display: block; }
+.okey-table {
+    top: 50%; left: 50%; height: 64%; aspect-ratio: 1; transform: translate(-50%, -50%);
+    /* hər küncdə içəri oyuq: dörd hissə, hər birinin çöl küncü dairəvi kəsilib */
+    background:
+        radial-gradient(circle at 0 0, transparent 30%, var(--wood) 31%) top left / 51% 51% no-repeat,
+        radial-gradient(circle at 100% 0, transparent 30%, var(--wood) 31%) top right / 51% 51% no-repeat,
+        radial-gradient(circle at 0 100%, transparent 30%, var(--wood) 31%) bottom left / 51% 51% no-repeat,
+        radial-gradient(circle at 100% 100%, transparent 30%, var(--wood) 31%) bottom right / 51% 51% no-repeat;
+}
+.okey-felt { inset: 24%; border-radius: .3cqw; background: var(--felt); box-shadow: inset 0 0 .4cqw rgba(0, 0, 0, .5), 0 0 0 .25cqw var(--wood-dark); }
+/* stullar künclərdə, oyuğa baxır: söykənəcək (border-top) çölə, 45° dönmüş */
+.okey .okey-c { width: 38%; height: 20%; border-top: .6cqw solid var(--chair-back); }
+.okey .okey-c-tl { left: 4%; top: 4%; transform: translate(-50%, -50%) rotate(-45deg); }
+.okey .okey-c-tr { left: 96%; top: 4%; transform: translate(-50%, -50%) rotate(45deg); }
+.okey .okey-c-bl { left: 4%; top: 96%; transform: translate(-50%, -50%) rotate(-135deg); }
+.okey .okey-c-br { left: 96%; top: 96%; transform: translate(-50%, -50%) rotate(135deg); }
+.rv-table.rv-kind-okey.is-busy {
+    --wood: #f0b04a; --wood-dark: #b87a22;
+    --felt: linear-gradient(145deg, #f7c96f, #e39a32);
+    --chair: linear-gradient(180deg, #f7c96f, #e39a32);
+    --chair-back: #a86c18;
+    background: none; color: var(--dark); text-shadow: none;
+}
+
+/* Divanlı masa (yuxarıdan görünüş): ortada masa, yuxarıda və aşağıda üzbəüz iki divan.
+   Hər divanın arxasında söykənəcək, yanlarında qoltuq, ortasında yastıqlar var. */
+.rv-kind-sofa {
+    --back: linear-gradient(180deg, #7c2b1d, #551a10);
+    --arm: linear-gradient(90deg, #5e1d12, #8a3525 55%, #5e1d12);
+    --cushion: linear-gradient(180deg, #c0553a, #93371f);
+    --wood: linear-gradient(160deg, #a8743f, #7d5228);
+    background: none; box-shadow: none; overflow: visible; border-radius: 0; padding: 0;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .7);
+}
+.rv-kind-sofa:hover, .rv-kind-sofa:focus-visible { box-shadow: none; }
+.rv-kind-sofa:hover .booth, .rv-kind-sofa:focus-visible .booth { filter: drop-shadow(0 0 .4cqw var(--primary)) drop-shadow(0 5px 7px rgba(0, 0, 0, .5)); }
+.rv-kind-sofa > span:not(.booth) { position: relative; z-index: 1; }
+.rv-kind-sofa .rv-table-kind { display: none; }
+.booth { position: absolute; inset: 0; z-index: 0; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .5)); transition: filter .15s; }
+.booth-table { position: absolute; left: 9%; right: 9%; top: 24%; bottom: 24%; border-radius: .7cqw; background: var(--wood);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), inset 0 -2px 3px rgba(0, 0, 0, .25); }
+.sofa { position: absolute; left: 0; right: 0; height: 24%; }
+.sofa-top { top: 0; }
+.sofa-bottom { bottom: 0; transform: rotate(180deg); }
+.sofa i { position: absolute; display: block; }
+.sofa-back { left: 0; right: 0; top: 0; height: 45%; border-radius: 1cqw 1cqw .3cqw .3cqw; background: var(--back); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18); }
+.sofa-arm { top: 0; bottom: 0; width: 1.4cqw; border-radius: .8cqw .8cqw .6cqw .6cqw; background: var(--arm); }
+.sofa-arm-l { left: 0; }
+.sofa-arm-r { right: 0; }
+.sofa-seat { position: absolute; left: 1.5cqw; right: 1.5cqw; top: 36%; bottom: 0; display: flex; gap: .3cqw; }
+.sofa-seat i { position: static; flex: 1; border-radius: .3cqw .3cqw .7cqw .7cqw; background: var(--cushion);
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, .22), inset 0 -.3cqw .4cqw rgba(0, 0, 0, .25); }
+.rv-table.rv-kind-sofa.is-busy {
+    --back: linear-gradient(180deg, #b87a22, #925c12);
+    --arm: linear-gradient(90deg, #9a6214, #d39535 55%, #9a6214);
+    --cushion: linear-gradient(180deg, #f7c96f, #e39a32);
+    --wood: linear-gradient(160deg, #f2b552, #e9a23b);
+    background: none; color: var(--dark); text-shadow: none;
+}
+.rv-table-name { white-space: nowrap; }
+.rv-table-busy { font-size: .72em; font-weight: 700; background: rgba(0, 0, 0, .22); border-radius: 6px; padding: 1px 5px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rv-table.is-busy { background: linear-gradient(160deg, #f2b552, var(--primary) 55%, var(--primary-dark)); color: var(--dark); }
+.rv-table.is-busy .rv-table-busy { background: rgba(255, 255, 255, .45); }
+
+/* Plandakı əşyalar (rezerv olunmur): monitor və qabağındakı boş sahəyə düşən işıq */
+.rv-decor { position: absolute; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+/* monitor çərçivənin sol divarına söykənir */
+.rv-plan-wrap { position: relative; --pad: 18px; }
+.rv-wall-left { left: 0; width: 22px; border-left: 0 !important; border-radius: 0 6px 6px 0 !important; }
+.rv-decor-screen {
+    border-radius: 6px; background: linear-gradient(90deg, #0d0d12, #1f2533); border: 2px solid #3a4152;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, .5), 14cqw 0 18cqw -6cqw rgba(120, 170, 255, .12);
+}
+.rv-decor-screen span {
+    writing-mode: vertical-rl; transform: rotate(180deg); color: #9fb6e6; font-weight: 800;
+    font-size: clamp(8px, 1.6cqw, 14px); letter-spacing: .25em; text-transform: uppercase; white-space: nowrap;
+}
+
+/* Beton sütun (3D): üst səth + sağ və aşağı yan üzlər, beton dənələri, döşəməyə kölgə */
+.rv-decor-pillar {
+    --depth: 1.3cqw;
+    overflow: visible;
+    background:
+        radial-gradient(circle, rgba(0, 0, 0, .22) 18%, transparent 20%) 0 0 / 5px 5px,
+        radial-gradient(circle, rgba(255, 255, 255, .14) 14%, transparent 16%) 2px 3px / 7px 7px,
+        radial-gradient(circle, rgba(0, 0, 0, .12) 12%, transparent 14%) 4px 1px / 9px 9px,
+        linear-gradient(135deg, #a07a58, #8a6446 50%, #77553a);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18), inset 0 0 .6cqw rgba(0, 0, 0, .25);
+    filter: drop-shadow(1.2cqw 1.4cqw .8cqw rgba(0, 0, 0, .6));
+}
+/* sağ üz */
+.rv-decor-pillar::after {
+    content: ""; position: absolute; left: 100%; top: 0; width: var(--depth); height: 100%;
+    background: linear-gradient(90deg, #5e412a, #4a3220);
+    transform: skewY(45deg); transform-origin: left top;
+}
+/* aşağı üz */
+.rv-decor-pillar::before {
+    content: ""; position: absolute; top: 100%; left: 0; width: 100%; height: var(--depth);
+    background: linear-gradient(180deg, #6e4d33, #563b26);
+    transform: skewX(45deg); transform-origin: left top;
+}
+.rv-decor-pillar span {
+    position: relative; z-index: 1; color: rgba(40, 24, 12, .85); font-weight: 900; letter-spacing: .12em;
+    font-size: clamp(6px, 1.05cqw, 11px); text-shadow: 0 1px 0 rgba(255, 255, 255, .25);
+}
+
+/* Pilləkən (yuxarıdan): ardıcıl pillələr, iki yanda məhəccər, qalxdıqca açılan rəng */
+.rv-decor-stairs {
+    border-radius: .3cqw;
+    background:
+        linear-gradient(90deg, rgba(0, 0, 0, .45), rgba(255, 255, 255, .14)),
+        repeating-linear-gradient(90deg, #8a6446 0 2.1cqw, #5a3d27 2.1cqw 2.35cqw, #3e2a1a 2.35cqw 2.5cqw);
+    border-top: .55cqw solid #2e1f13; border-bottom: .55cqw solid #2e1f13;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, .5), inset 0 .15cqw 0 rgba(255, 255, 255, .12);
+}
+.rv-decor-stairs span {
+    background: rgba(20, 10, 6, .72); color: #f3dcc0; border-radius: 50px; padding: .15em .7em;
+    font-weight: 800; font-size: clamp(8px, 1.4cqw, 14px); letter-spacing: .04em; white-space: nowrap;
+}
+.rv-decor-stairs span::before { content: "→ "; color: var(--primary); }
+
+/* 2-ci mərtəbədə masalar çoxdur: dar ekranda "Masa" sözü gizlənir, nömrə böyük görünür */
+@container (max-width: 560px) {
+    #floor-2 .rv-word { display: none; }
+    #floor-2 .rv-table { font-size: 4.4cqw; }
+    #floor-2 .rv-table-busy { font-size: 2.6cqw; padding: 0 2px; }
+}
+@media (max-width: 575.98px) {
+    .rv-plan-wrap { padding: 10px; border-radius: 16px; --pad: 10px; }
+    .rv-wall-left { width: 11px; }
+    .rv-table { border-radius: 7px; }
+    .rv-toolbar { flex-direction: column; align-items: stretch; }
+    .rv-floors { justify-content: center; }
+    .rv-floor-tab { flex: 1; padding: 9px 10px; }
+    .rv-day { justify-content: center; }
+}
+
+.rv-note { margin: 16px 0 0; color: var(--muted); font-size: 14px; }
+
+/* Pəncərə */
+.rv-modal { border: 0; border-radius: 22px; padding: 26px; position: relative; box-shadow: var(--shadow-lg); }
+.rv-close { position: absolute; top: 18px; right: 18px; }
+.rv-modal-head { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; padding-right: 30px; }
+.rv-modal-head small { color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: .5px; font-size: 12px; }
+.rv-modal-head h3 { margin: 0; font-size: 26px; }
+.rv-modal-kind { display: inline-block; margin-top: 4px; background: var(--cream); color: var(--wine); border-radius: 50px; padding: 3px 12px; font-size: 13px; font-weight: 800; }
+.rv-modal-ico { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: var(--wine); color: #fff; font-size: 22px; flex: none; }
+.rv-form label { display: block; font-weight: 800; color: var(--dark); margin-bottom: 6px; font-size: 14px; }
+.rv-form input, .rv-form select {
+    width: 100%; border: 2px solid #eadfd3; background: var(--cream); border-radius: 12px; padding: 11px 13px;
+    font-weight: 700; color: var(--dark); transition: .2s; min-height: 48px;
+}
+.rv-form input:focus, .rv-form select:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 4px rgba(233, 162, 59, .18); }
+.rv-form .is-invalid { border-color: #c0392b; }
+.rv-taken { margin: 0; background: #fff6e6; border-radius: 10px; padding: 8px 12px; font-size: 14px; color: #8a5a10; }
+.rv-gate { text-align: center; }
+.rv-gate-back { color: var(--muted); font-weight: 700; text-decoration: none; }
+.rv-resume { background: #e8f6ec; color: #1e7b3c; border-radius: 10px; padding: 9px 12px; font-size: 14px; font-weight: 700; margin-bottom: 14px; }
+.rv-gate-ico { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; margin: 4px auto 12px; background: var(--cream); color: var(--wine); font-size: 26px; }
+.rv-gate p { color: var(--text); margin-bottom: 16px; }
+.rv-error { margin: 14px 0 0; color: #c0392b; font-weight: 700; font-size: 14px; }
+
+.rv-done { text-align: center; padding: 10px 0; }
+.rv-done-ico { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; margin: 0 auto 14px; background: #27ae60; color: #fff; font-size: 32px; animation: rvPop .4s ease-out; }
+.rv-done p { color: var(--text); margin-bottom: 20px; }
+@keyframes rvPop { 0% { transform: scale(.4); opacity: 0; } 70% { transform: scale(1.1); } 100% { transform: scale(1); opacity: 1; } }
+
+/* Admin siyahısı */
+.rv-status-cancelled td { opacity: .5; text-decoration: line-through; }
+.rv-status-cancelled td:last-child { text-decoration: none; }

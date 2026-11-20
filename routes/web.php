@@ -45,6 +45,12 @@ Route::get('/menu', function () {
     return redirect()->away($url);
 })->name('menu');
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');
+// Masa rezervasiyası: planda masanı seç → tarix, saat, ad, soyad, nömrə
+Route::get('/rezervasiya', [\App\Http\Controllers\Frontend\ReservationController::class, 'index'])->name('reservations');
+Route::get('/rezervasiya/davam', [\App\Http\Controllers\Frontend\ReservationController::class, 'continue'])->name('reservations.continue');
+Route::get('/rezervasiya/mesgul', [\App\Http\Controllers\Frontend\ReservationController::class, 'busy'])->middleware('throttle:60,1')->name('reservations.busy');
+// rezerv etmək — yalnız təsdiqlənmiş hesab (boş-boşuna rezerv olmasın)
+Route::post('/rezervasiya', [\App\Http\Controllers\Frontend\ReservationController::class, 'store'])->middleware(['auth', 'phone.verified', 'throttle:6,1'])->name('reservations.store');
 Route::view('/mexfilik', 'frontend.legal.privacy')->name('privacy'); // Məxfilik siyasəti (Google girişi üçün tələb olunur)
 
 
@@ -197,6 +203,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::post('/hediyyeler/{prize}/istifade', [\App\Http\Controllers\Admin\PrizeController::class, 'redeem'])->name('prizes.redeem');
     // hədiyyənin QR kodu: admin oxudub açanda kod istifadə olunur
     Route::get('/hediyyeler/qr/{code}', [\App\Http\Controllers\Admin\PrizeController::class, 'qr'])->where('code', '[A-Za-z0-9-]+')->name('prizes.qr');
+    Route::get('/rezervasiyalar', [\App\Http\Controllers\Admin\ReservationController::class, 'index'])->name('reservations');
+    Route::post('/rezervasiyalar/{reservation}/legv', [\App\Http\Controllers\Admin\ReservationController::class, 'cancel'])->name('reservations.cancel');
     Route::get('/istifadeciler', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('users');
     Route::get('/istifadeciler/{user}/duzelis', [\App\Http\Controllers\Admin\UserController::class, 'edit'])->name('users.edit');
     Route::put('/istifadeciler/{user}', [\App\Http\Controllers\Admin\UserController::class, 'update'])->name('users.update');

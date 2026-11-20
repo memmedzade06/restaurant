@@ -257,6 +257,8 @@ img { max-width: 100%; }
 .cta-band h2 { color: #fff; margin: 0 0 6px; font-size: clamp(26px, 3vw, 36px); }
 .cta-band p { margin: 0; color: rgba(255, 255, 255, .8); }
 .cta-band .btn { padding: 14px 30px; }
+.cta-band > div:first-child { flex: 1 1 360px; }
+.cta-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
 
 /* ---------- Əlaqə ---------- */
 .contact-card {

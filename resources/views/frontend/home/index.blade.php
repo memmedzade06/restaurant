@@ -121,10 +121,13 @@
     <div class="container">
         <div class="cta-band wow fadeInUp">
             <div>
-                <h2>Masanızı əvvəlcədən sifariş edin</h2>
-                <p>Ad günü, ailəvi məclis və ya dostlarla görüş üçün bizə zəng edin.</p>
+                <h2>Masanızı öncədən rezerv edin</h2>
+                <p>Ad günü, ailəvi məclis və ya dostlarla görüş üçün masanızı saytda seçin və ya bizə zəng edin.</p>
             </div>
-            <a href="tel:+994517171565" class="btn btn-primary"><i class="fa fa-phone-alt me-2"></i>+994 51 717 15 65</a>
+            <div class="cta-actions">
+                <a href="{{ route('reservations') }}" class="btn btn-primary"><i class="fa fa-chair me-2"></i>Masa rezerv et</a>
+                <a href="tel:+994517171565" class="btn btn-ghost"><i class="fa fa-phone-alt me-2"></i>+994 51 717 15 65</a>
+            </div>
         </div>
     </div>
 </section>

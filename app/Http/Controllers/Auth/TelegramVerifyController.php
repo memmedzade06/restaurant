@@ -43,7 +43,10 @@ class TelegramVerifyController extends Controller
             $request->session()->flash('registered', true);
         }
 
-        return response()->json(['verified' => $verified, 'redirect' => route('games.index')]);
+        // rezervasiya pəncərəsindən gəlibsə — ora qayıdır (yarımçıq rezervasiya avtomatik açılır)
+        $redirect = $verified ? ($request->session()->pull('reservation.return') ?: route('games.index')) : route('games.index');
+
+        return response()->json(['verified' => $verified, 'redirect' => $redirect]);
     }
 
     /** Telegram-ın webhook ünvanı (routes/api.php) */
