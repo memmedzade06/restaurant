@@ -30,14 +30,15 @@
                     <input type="search" name="q" value="{{ $q }}" placeholder="Ad, telefon və ya e-poçt" autocomplete="off" aria-controls="usersResults">
                 </div>
                 @if ($filter)<input type="hidden" name="filter" value="{{ $filter }}">@endif
+                @if ($sort)<input type="hidden" name="sort" value="{{ $sort }}">@endif
             </form>
         </div>
 
         <div class="side-card" id="usersResults" aria-live="polite">
             <div class="admin-tabs">
-                <a href="{{ route('admin.users', array_filter(['q' => $q])) }}" class="{{ $filter ? '' : 'active' }}">Hamısı <span>{{ $total }}</span></a>
+                <a href="{{ route('admin.users', array_filter(['q' => $q, 'sort' => $sort])) }}" class="{{ $filter ? '' : 'active' }}">Hamısı <span>{{ $total }}</span></a>
                 @foreach (\App\Http\Controllers\Admin\UserController::FILTERS as $key => $label)
-                    <a href="{{ route('admin.users', array_filter(['q' => $q, 'filter' => $key])) }}" class="{{ $filter === $key ? 'active' : '' }}">{{ $label }} <span>{{ $counts[$key] }}</span></a>
+                    <a href="{{ route('admin.users', array_filter(['q' => $q, 'filter' => $key, 'sort' => $sort])) }}" class="{{ $filter === $key ? 'active' : '' }}">{{ $label }} <span>{{ $counts[$key] }}</span></a>
                 @endforeach
             </div>
 
@@ -47,7 +48,13 @@
                 <div class="table-responsive">
                     <table class="table admin-table align-middle mb-0">
                         <thead>
-                            <tr><th>Ad</th><th>Telefon</th><th>Xallar</th><th>Qeydiyyat</th><th>Son aktivlik</th><th>Hədiyyələr</th><th>Oyunlar</th><th><span class="visually-hidden">Əməliyyat</span></th></tr>
+                            <tr><th>Ad</th><th>Telefon</th><th>
+                                {{-- basanda xalı çox olan birinci; yenə basanda adi sıra (ən yeni qeydiyyat) --}}
+                                <a href="{{ route('admin.users', array_filter(['q' => $q, 'filter' => $filter, 'sort' => $sort ? null : 'points'])) }}"
+                                   class="th-sort {{ $sort ? 'active' : '' }}" title="{{ $sort ? 'Adi sıraya qayıt' : 'Xalı çox olan birinci' }}">
+                                    Xallar <i class="fa {{ $sort ? 'fa-sort-amount-down' : 'fa-sort' }}"></i>
+                                </a>
+                            </th><th>Qeydiyyat</th><th>Son aktivlik</th><th>Hədiyyələr</th><th>Oyunlar</th><th><span class="visually-hidden">Əməliyyat</span></th></tr>
                         </thead>
                         <tbody>
                             @foreach ($users as $u)

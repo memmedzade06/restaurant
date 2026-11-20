@@ -26,6 +26,8 @@ class UserController extends Controller
     public function index(Request $request): View
     {
         $filter = array_key_exists($request->query('filter'), self::FILTERS) ? $request->query('filter') : null;
+        // ?sort=points — xalı çox olan birinci (çoxdan aza); yoxsa ən yeni qeydiyyat birinci
+        $sort = $request->query('sort') === 'points' ? 'points' : null;
         $q = trim((string) $request->query('q'));
         $todayStart = now('Asia/Baku')->startOfDay()->setTimezone(config('app.timezone'));
         $nardDay = NardLeaderboard::dayStart();
@@ -48,6 +50,7 @@ class UserController extends Controller
             ])
             ->withMax(['gameResults as stack_best' => fn ($g) => $g->where('game', 'stack')], 'points')
             ->withSum(['gameResults as nard_today' => fn ($g) => $g->where('game', NardLeaderboard::GAME)->where('created_at', '>=', $nardDay)], 'points')
+            ->when($sort === 'points', fn ($query) => $query->orderByDesc('points'))
             ->latest('id')
             ->paginate(25)
             ->withQueryString();
@@ -56,6 +59,7 @@ class UserController extends Controller
             'users' => $users,
             'q' => $q,
             'filter' => $filter,
+            'sort' => $sort,
             'counts' => collect(self::FILTERS)->map(fn ($label, $key) => $this->applyFilter(User::query(), $key, $todayStart)->count()),
             'total' => User::count(),
         ]);

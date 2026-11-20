@@ -653,3 +653,6 @@ html.cl-noscroll, html.cl-noscroll body { overflow: hidden; }
 .user-type-options:disabled .user-type-option { cursor: not-allowed; opacity: .7; }
 #usersResults, #prizeExact, #prizeResults { transition: opacity .15s; }
 #usersResults.is-loading, #prizeExact.is-loading, #prizeResults.is-loading { opacity: .55; }
+.th-sort { color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; margin: -4px -10px; border-radius: 8px; transition: background .15s, color .15s; }
+.th-sort:hover { background: #faf5ef; color: var(--wine); }
+.th-sort.active { background: var(--wine); color: #fff; }

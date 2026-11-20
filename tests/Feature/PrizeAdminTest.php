@@ -52,7 +52,7 @@ class PrizeAdminTest extends TestCase
         $this->actingAs($admin)->get('/admin/istifadeciler')->assertOk()
             ->assertSee('Siyahıdakı Oyunçu')->assertSee('Təsdiqsiz Yeni')->assertSee('1 kod')->assertSee('indi saytda')
             // e-poçt sütunu yoxdur, yerində xal balansı var
-            ->assertSee('<th>Xallar</th>', false)->assertDontSee('<th>E-poçt</th>', false)->assertSee('2,375');
+            ->assertSee('Xallar <i class="fa fa-sort"></i>', false)->assertDontSee('<th>E-poçt</th>', false)->assertSee('2,375');
         $this->actingAs($admin)->get('/admin/istifadeciler?filter=unverified')->assertOk()
             ->assertSee('Təsdiqsiz Yeni')->assertDontSee('Siyahıdakı Oyunçu');
         $this->actingAs($admin)->get('/admin/istifadeciler?q=7778899')->assertOk()
@@ -153,6 +153,24 @@ class PrizeAdminTest extends TestCase
         // naməlum tip qəbul olunmur
         $this->actingAs($admin)->put(route('admin.users.update', $player), ['type' => 'boss'])->assertSessionHasErrors('type');
         $this->assertSame(User::TYPE_GUEST, $player->fresh()->type);
+    }
+
+    public function test_users_can_be_sorted_by_points_high_to_low(): void
+    {
+        $admin = $this->user(true);
+        $low = $this->user();
+        $low->forceFill(['name' => 'Az Xallı', 'points' => 1])->save();
+        $high = $this->user();
+        $high->forceFill(['name' => 'Çox Xallı', 'points' => 9999])->save();
+        $mid = $this->user();
+        $mid->forceFill(['name' => 'Orta Xallı', 'points' => 50])->save();
+
+        // susmaya görə ən yeni birinci; ?sort=points — çoxdan aza
+        $this->actingAs($admin)->get('/admin/istifadeciler?sort=points')->assertOk()
+            ->assertSeeInOrder(['Çox Xallı', 'Orta Xallı', 'Az Xallı'])
+            ->assertSee('fa-sort-amount-down', false);
+        $this->actingAs($admin)->get('/admin/istifadeciler')->assertOk()
+            ->assertSeeInOrder(['Orta Xallı', 'Çox Xallı', 'Az Xallı']);
     }
 
     public function test_user_type_change_is_admin_only_and_not_for_self(): void
