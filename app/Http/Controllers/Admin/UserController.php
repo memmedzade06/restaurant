@@ -68,7 +68,11 @@ class UserController extends Controller
     /** İstifadəçinin tipini dəyişmək üçün səhifə */
     public function edit(User $user): View
     {
-        return view('frontend.admin.user-edit', ['user' => $user]);
+        return view('frontend.admin.user-edit', [
+            'user' => $user,
+            // dəvət piramidası: bu istifadəçinin link/QR ilə gətirdiyi təsdiqlənmiş profillər (3 səviyyə)
+            'tree' => \App\Services\Referrals::tree($user, 500, true),
+        ]);
     }
 
     /**

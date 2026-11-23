@@ -69,6 +69,39 @@ class AdminUserPointsTest extends TestCase
         $this->assertEquals(3, $u->fresh()->points);
     }
 
+    public function test_admin_sees_users_invite_pyramid_with_verified_profiles_only(): void
+    {
+        $admin = $this->user(true);
+        $owner = $this->user();
+        $mk = function (string $name, User $parent, bool $verified = true) {
+            $u = User::create(['name' => $name, 'email' => 'pt' . uniqid() . '@example.com', 'phone' => '+99451' . random_int(1000000, 9999999), 'password' => 'secret123']);
+            $u->forceFill(['referred_by' => $parent->id, 'phone_verified_at' => $verified ? now() : null, 'referral_rewarded_at' => $verified ? now() : null])->save();
+
+            return $u;
+        };
+        $a = $mk('Aqil Birinci', $owner);
+        $mk('Gizli Təsdiqsiz', $owner, false);       // təsdiqləməyib — admin piramidasında görünmür
+        $b = $mk('Bəhruz İkinci', $a);
+        $mk('Cavid Üçüncü', $b);
+        $mk('Dörd Dördüncü', User::where('name', 'Cavid Üçüncü')->first()); // 4-cü səviyyə — göstərilmir
+
+        $this->actingAs($admin)->get(route('admin.users.edit', $owner))->assertOk()
+            ->assertSee('Dəvət piramidası')
+            ->assertSee('Aqil Birinci')->assertSee('Bəhruz İkinci')->assertSee('Cavid Üçüncü')   // tam ad
+            ->assertSee(\App\Support\Phone::format($a->phone))                                     // əlaqə
+            ->assertSee(route('admin.users.edit', $a))                                             // istifadəçiyə keçid
+            ->assertDontSee('Gizli Təsdiqsiz')->assertDontSee('Dörd Dördüncü')
+            ->assertSee('1 nəfər', false);
+
+        // dəvəti olmayan istifadəçi
+        $this->actingAs($admin)->get(route('admin.users.edit', $this->user()))
+            ->assertOk()->assertSee('profilini təsdiqləyən hələ yoxdur');
+
+        // istifadəçinin öz profilində əvvəlki kimi: qısa ad, təsdiq gözləyənlər də görünür
+        $this->actingAs($owner)->get('/hesabim')->assertOk()
+            ->assertSee('Birinci A')->assertSee('Təsdiqsiz G')->assertDontSee('Aqil Birinci');
+    }
+
     public function test_only_admins_can_change_points(): void
     {
         $player = $this->user(false, 1);

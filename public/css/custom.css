@@ -795,3 +795,5 @@ body.has-verify-bar .site-footer { padding-bottom: 110px; }
     .ref-row { gap: 9px; padding: 8px 10px; }
     .ref-avatar { width: 30px; height: 30px; font-size: 13px; }
 }
+.ref-link { color: inherit; text-decoration: none; }
+.ref-link:hover { color: var(--wine); text-decoration: underline; }

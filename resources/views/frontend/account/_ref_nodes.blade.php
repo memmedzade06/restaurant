@@ -3,7 +3,7 @@
     <li class="ref-node lvl-{{ $n['level'] }}">
         @php $kids = count($n['children']); @endphp
         @if ($kids)
-            <details @if ($n['level'] === 1 && count($nodes) <= 5) open @endif>
+            <details @if ((($admin ?? false) && $n['level'] <= 2) || ($n['level'] === 1 && count($nodes) <= 5)) open @endif>{{-- admin: 2 səviyyəyə qədər açıq --}}
                 <summary>@include('frontend.account._ref_row', ['n' => $n, 'kids' => $kids])</summary>
                 <ul>
                     @include('frontend.account._ref_nodes', ['nodes' => $n['children']])

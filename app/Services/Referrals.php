@@ -100,8 +100,11 @@ class Referrals
      *   'truncated' => bool,  // çox böyük ağacda yalnız ilk $limit nəfər göstərilir
      * ]
      * Hər səviyyə üçün bir sorğu; dövr olsa belə heç kim iki dəfə göstərilmir.
+     *
+     * $forAdmin = true (admin panel): yalnız profilini təsdiqləmiş istifadəçilər göstərilir və
+     * hər düyündə tam ad, telefon, e-poçt da olur (istifadəçinin öz profilində bunlar göstərilmir).
      */
-    public static function tree(User $user, int $limit = 500): array
+    public static function tree(User $user, int $limit = 500, bool $forAdmin = false): array
     {
         // admin dəvətə görə xal almır — ona xal "qazandınız" kimi göstərilmir
         $levels = array_map(fn ($p) => $user->earnsReferralPoints() ? $p : 0.0, self::levels());
@@ -118,8 +121,9 @@ class Referrals
                 continue;
             }
             $rows = User::whereIn('referred_by', $parents)
+                ->when($forAdmin, fn ($q) => $q->verified())
                 ->orderBy('id')
-                ->get(['id', 'name', 'referred_by', 'created_at', 'referral_rewarded_at']);
+                ->get(['id', 'name', 'phone', 'email', 'referred_by', 'created_at', 'referral_rewarded_at']);
 
             $next = [];
             $count = $verified = 0;
@@ -139,12 +143,12 @@ class Referrals
                 $shown++;
                 $byParent[$r->referred_by][] = [
                     'id' => $r->id,
-                    'name' => $r->short_name,
+                    'name' => $forAdmin ? $r->name : $r->short_name,
                     'date' => $r->created_at,
                     'verified' => $isVerified,
                     'level' => $depth + 1,
                     'points' => $isVerified ? $points : 0.0,
-                ];
+                ] + ($forAdmin ? ['contact' => \App\Support\Phone::format($r->phone) ?: ($r->email ?: '')] : []);
             }
             $stats[] = ['count' => $count, 'verified' => $verified, 'points' => $points, 'earned' => round($verified * $points, 3)];
             $parents = $next;

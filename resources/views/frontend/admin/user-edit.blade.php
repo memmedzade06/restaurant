@@ -101,6 +101,13 @@
                 <p class="small text-muted mt-2 mb-0">Balans mənfiyə düşə bilməz. Dəyişiklik loga yazılır.</p>
             </form>
         </div>
+
+        {{-- dəvət piramidası: bu istifadəçinin link/QR ilə gətirdiyi təsdiqlənmiş profillər --}}
+        <div class="side-card mt-4" id="piramida">
+            <h5 class="mb-1"><i class="fa fa-sitemap me-2 text-primary"></i>Dəvət piramidası</h5>
+            <p class="small text-muted mb-3">{{ $user->name }} adlı istifadəçinin linki və ya QR kodu ilə qeydiyyatdan keçib profilini <b>təsdiqləyənlər</b>, onların dəvət etdikləri və s. Ada basanda həmin istifadəçinin səhifəsi açılır.</p>
+            @include('frontend.account._ref_tree', ['tree' => $tree, 'fmt' => fn ($p) => \App\Services\Referrals::format((float) $p), 'admin' => true, 'owner' => $user])
+        </div>
     </div>
 </section>
 @endsection
