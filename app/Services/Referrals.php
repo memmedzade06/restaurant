@@ -58,7 +58,9 @@ class Referrals
      */
     public static function reward(User $user): void
     {
-        if (! $user->referred_by || $user->referral_rewarded_at) {
+        // xal yalnız dəvət olunan profilini təsdiqləyəndə (Telegram, e-poçt kodu və ya Google) yazılır
+        $user->refresh();
+        if (! $user->referred_by || $user->referral_rewarded_at || ! $user->isVerified()) {
             return;
         }
 
@@ -76,11 +78,12 @@ class Referrals
                     break;
                 }
                 $seen[$upId] = true;
-                $up = User::whereKey($upId)->first(['id', 'type', 'referred_by']);
+                $up = User::whereKey($upId)->first(['id', 'type', 'is_admin', 'referred_by', 'phone_verified_at', 'email_verified_at']);
                 if (! $up) {
                     break;
                 }
-                if ($points > 0 && $up->earnsReferralPoints()) {
+                // xalı yalnız təsdiqlənmiş dəvət edən alır; təsdiqlənməmiş olsa da, zəncir yuxarı davam edir
+                if ($points > 0 && $up->isVerified() && $up->earnsReferralPoints()) {
                     User::whereKey($upId)->increment('points', $points);
                 }
                 $upId = $up->referred_by;

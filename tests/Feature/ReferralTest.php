@@ -133,6 +133,32 @@ class ReferralTest extends TestCase
             ->assertSee('3-cü səviyyə')->assertSee('gözləyir');
     }
 
+    public function test_points_only_for_verified_invited_users_and_go_only_to_verified_inviters(): void
+    {
+        $top = $this->invited('Yuxarı Adam', null);
+        $mid = $this->invited('Orta Adam', $top);
+        $mid->forceFill(['phone_verified_at' => null, 'email_verified_at' => null])->save(); // təsdiqlənməmiş dəvət edən
+        $new = $this->invited('Yeni Adam', $mid, false);
+        $new->forceFill(['phone_verified_at' => null, 'email_verified_at' => null])->save();
+
+        // dəvət olunan hələ təsdiqləməyib — heç kimə xal yoxdur, sonra da verilə bilər
+        \App\Services\Referrals::reward($new);
+        $this->assertNull($new->fresh()->referral_rewarded_at);
+        $this->assertEquals(0, $mid->fresh()->points);
+        $this->assertEquals(0, $top->fresh()->points);
+
+        // təsdiqlədi: təsdiqlənməmiş "Orta" xal almır, zəncir yuxarı davam edir — "Yuxarı" 2-ci səviyyə xalını alır
+        $new->forceFill(['phone_verified_at' => now()])->save();
+        \App\Services\Referrals::reward($new);
+        $this->assertNotNull($new->fresh()->referral_rewarded_at);
+        $this->assertEquals(0, $mid->fresh()->points);
+        $this->assertEqualsWithDelta(0.125, (float) $top->fresh()->points, 0.0001);
+
+        // ikinci dəfə xal yazılmır
+        \App\Services\Referrals::reward($new);
+        $this->assertEqualsWithDelta(0.125, (float) $top->fresh()->points, 0.0001);
+    }
+
     public function test_empty_pyramid_shows_hint(): void
     {
         $me = $this->invited('Tək Adam', null);
