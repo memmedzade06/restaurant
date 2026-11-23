@@ -18,13 +18,62 @@ use Illuminate\View\View;
  */
 class MarketController extends Controller
 {
-    /** Marketdəki hədiyyələr (config/market.php) */
+    /** Seçilmiş hədiyyələrin kateqoriyası (config/market.php) */
+    public const FEATURED = 'secilmis';
+
+    /**
+     * Marketdəki bütün hədiyyələr: seçilmişlər (config/market.php) + bütün menyu (config/market_menu.php,
+     * php artisan market:sync-menu ilə yenilənir). Hər birinin "cat" sahəsi kateqoriyasını göstərir.
+     */
     public static function items(): array
     {
-        return collect(config('market.items', []))
-            ->map(fn ($i) => $i + ['cost' => 0, 'icon' => 'fa-gift', 'desc' => ''])
+        $featured = collect(config('market.items', []))->map(fn ($i) => $i + ['cat' => self::FEATURED]);
+        $cats = collect(self::menuCategories())->keyBy('key');
+        $skip = collect(config('market.menu_item_exclude', []))->map(fn ($n) => mb_strtolower(trim($n)))->all();
+        $menu = collect(config('market_menu.items', []))->filter(function ($i) use ($cats, $skip) {
+            $c = $cats->get($i['cat'] ?? null);
+
+            return $c && ! in_array(mb_strtolower(trim($i['label'])), $skip, true)
+                && (empty($c['only']) || preg_match($c['only'], $i['label']));
+        });
+
+        return $featured->concat($menu)
+            ->map(fn ($i) => $i + ['cost' => 0, 'icon' => 'fa-utensils', 'desc' => '', 'image' => null])
             ->filter(fn ($i) => (float) $i['cost'] > 0)
             ->keyBy('key')
+            ->all();
+    }
+
+    /**
+     * Menyu kateqoriyaları: config('market.menu_exclude')-dəkilər (məs. Kabablar) çıxılır,
+     * config('market.menu_filter') ilə adı dəyişdirilir və məhsulları süzülür (məs. Qəlyan Seti → Qəlyan).
+     */
+    private static function menuCategories(): array
+    {
+        $norm = fn ($n) => mb_strtolower(trim($n));
+        $exclude = collect(config('market.menu_exclude', []))->map($norm)->all();
+        $filters = collect(config('market.menu_filter', []))->mapWithKeys(fn ($f, $name) => [$norm($name) => $f]);
+
+        return collect(config('market_menu.categories', []))
+            ->reject(fn ($c) => in_array($norm($c['label']), $exclude, true))
+            ->map(fn ($c) => array_merge($c, $filters->get($norm($c['label']), [])))
+            ->values()->all();
+    }
+
+    /** Kateqoriyalar: [key => [label, image, count, min]] — boş olanlar göstərilmir */
+    public static function categories(): array
+    {
+        $first = collect(config('market.items', []))->first(fn ($i) => ! empty($i['image']));
+        $cats = collect([['key' => self::FEATURED, 'label' => 'Seçilmiş hədiyyələr', 'image' => $first['image'] ?? null, 'featured' => true]])
+            ->concat(self::menuCategories());
+        $items = collect(self::items())->groupBy('cat');
+
+        return $cats->filter(fn ($c) => $items->has($c['key']))
+            ->mapWithKeys(fn ($c) => [$c['key'] => $c + [
+                'count' => $items[$c['key']]->count(),
+                'min' => $items[$c['key']]->min(fn ($i) => (float) $i['cost']),
+                'featured' => false,
+            ]])
             ->all();
     }
 
@@ -43,8 +92,24 @@ class MarketController extends Controller
             ? WheelSpin::where('user_id', $user->id)->whereKey(session('market_bought'))->first()
             : null;
 
+        // əvvəl kateqoriyalar görünür; ?kat=... ilə daxil olanda həmin kateqoriyanın məhsulları
+        $categories = self::categories();
+        $cat = $categories[$request->query('kat')] ?? null;
+        $items = $cat ? array_filter(self::items(), fn ($i) => $i['cat'] === $cat['key']) : [];
+        uasort($items, fn ($a, $b) => (float) $a['cost'] <=> (float) $b['cost']); // ucuzdan bahaya
+
+        // qaydalar pəncərəsi yalnız marketə ilk girəndə açılır (sessiya ərzində bir dəfə) —
+        // kateqoriyalar arasında gəzəndə və alışdan sonra təkrar açılmır
+        $showRules = ! $bought && ! $request->session()->get('market_rules_seen');
+        if ($showRules) {
+            $request->session()->put('market_rules_seen', true);
+        }
+
         return view('frontend.market.index', [
-            'items' => self::items(),
+            'showRules' => $showRules,
+            'categories' => $categories,
+            'cat' => $cat,
+            'items' => $items,
             'verified' => $verified,
             'balance' => $verified ? (float) $user->points : null,
             'left' => $verified ? $this->leftToday($user->id) : null,
@@ -88,9 +153,9 @@ class MarketController extends Controller
         });
 
         return match (true) {
-            $result === 'limit' => redirect()->route('market')->with('market_error', 'Bu gün üçün ' . self::perDay() . ' hədiyyə limitiniz bitib. Sabah yenə gəlin!'),
-            $result === 'points' => redirect()->route('market')->with('market_error', 'Balansınızda kifayət qədər xal yoxdur.'),
-            default => redirect()->route('market')->with('market_bought', $result->id),
+            $result === 'limit' => redirect()->route('market', ['kat' => $item['cat']])->with('market_error', 'Bu gün üçün ' . self::perDay() . ' hədiyyə limitiniz bitib. Sabah yenə gəlin!'),
+            $result === 'points' => redirect()->route('market', ['kat' => $item['cat']])->with('market_error', 'Balansınızda kifayət qədər xal yoxdur.'),
+            default => redirect()->route('market', ['kat' => $item['cat']])->with('market_bought', $result->id),
         };
     }
 

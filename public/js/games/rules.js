@@ -28,9 +28,10 @@
         '<div><span class="eyebrow">Qaydalar</span><h3 class="modal-title" id="gameRulesTitle"></h3></div></div>' +
         '<div class="modal-body"></div>' +
         '<div class="modal-footer"><button type="button" class="btn btn-primary w-100 py-3" data-bs-dismiss="modal">' +
-        '<i class="fa fa-check me-2"></i>Tanış oldum, oyuna başla</button></div>' +
+        '<i class="fa fa-check me-2"></i><span data-ok-text>Tanış oldum, oyuna başla</span></button></div>' +
         '</div></div>';
     modalEl.querySelector('.modal-title').textContent = game;
+    if (src.dataset.rulesOk) modalEl.querySelector('[data-ok-text]').textContent = src.dataset.rulesOk; // məs. marketdə "Tanış oldum"
     modalEl.querySelector('.modal-body').appendChild(body);
     document.body.appendChild(modalEl);
 

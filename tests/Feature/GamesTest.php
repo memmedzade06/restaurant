@@ -55,9 +55,11 @@ class GamesTest extends TestCase
                 ->assertSee('data-game-rules="' . $name . '"', false)
                 ->assertSee('js/games/rules.js', false);
         }
-        // oyunlar siyahısında və marketdə pəncərə yoxdur
+        // oyunlar siyahısında pəncərə yoxdur; marketdə də girəndə qaydalar açılır
         $this->get('/oyunlar')->assertOk()->assertDontSee('data-game-rules', false);
-        $this->get('/hediyye-marketi')->assertOk()->assertDontSee('data-game-rules', false);
+        $this->get('/hediyye-marketi')->assertOk()
+            ->assertSee('data-game-rules="Hədiyyə marketi"', false)
+            ->assertSee('data-rules-ok="Tanış oldum, hədiyyə seç"', false);
     }
 
     public function test_wheel_fifty_percent_is_the_narrowest_sector(): void
