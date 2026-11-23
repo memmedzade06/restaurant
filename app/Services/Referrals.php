@@ -88,6 +88,72 @@ class Referrals
         });
     }
 
+    /**
+     * Dəvət piramidası: $user-in link/QR ilə dəvət etdikləri, onların dəvət etdikləri və s. —
+     * xal verilən səviyyə sayı qədər dərinlikdə (config referral.levels).
+     * Qaytarır: [
+     *   'levels' => [['count' => 3, 'verified' => 2, 'points' => 0.5, 'earned' => 1.0], ...],
+     *   'nodes'  => [['id', 'name', 'date', 'verified', 'level', 'points', 'children' => [...]], ...],
+     *   'truncated' => bool,  // çox böyük ağacda yalnız ilk $limit nəfər göstərilir
+     * ]
+     * Hər səviyyə üçün bir sorğu; dövr olsa belə heç kim iki dəfə göstərilmir.
+     */
+    public static function tree(User $user, int $limit = 500): array
+    {
+        // admin dəvətə görə xal almır — ona xal "qazandınız" kimi göstərilmir
+        $levels = array_map(fn ($p) => $user->earnsReferralPoints() ? $p : 0.0, self::levels());
+        $seen = [$user->id => true];
+        $byParent = [];
+        $stats = [];
+        $parents = [$user->id];
+        $shown = 0;
+        $truncated = false;
+
+        foreach ($levels as $depth => $points) {
+            if (! $parents) {
+                $stats[] = ['count' => 0, 'verified' => 0, 'points' => $points, 'earned' => 0.0];
+                continue;
+            }
+            $rows = User::whereIn('referred_by', $parents)
+                ->orderBy('id')
+                ->get(['id', 'name', 'referred_by', 'created_at', 'referral_rewarded_at']);
+
+            $next = [];
+            $count = $verified = 0;
+            foreach ($rows as $r) {
+                if (isset($seen[$r->id])) {
+                    continue;
+                }
+                $seen[$r->id] = true;
+                $count++;
+                $isVerified = (bool) $r->referral_rewarded_at;
+                $verified += $isVerified ? 1 : 0;
+                $next[] = $r->id;
+                if ($shown >= $limit) {
+                    $truncated = true;
+                    continue;
+                }
+                $shown++;
+                $byParent[$r->referred_by][] = [
+                    'id' => $r->id,
+                    'name' => $r->short_name,
+                    'date' => $r->created_at,
+                    'verified' => $isVerified,
+                    'level' => $depth + 1,
+                    'points' => $isVerified ? $points : 0.0,
+                ];
+            }
+            $stats[] = ['count' => $count, 'verified' => $verified, 'points' => $points, 'earned' => round($verified * $points, 3)];
+            $parents = $next;
+        }
+
+        $build = function (int $parentId) use (&$build, &$byParent): array {
+            return array_map(fn ($n) => $n + ['children' => $build($n['id'])], $byParent[$parentId] ?? []);
+        };
+
+        return ['levels' => $stats, 'nodes' => $build($user->id), 'truncated' => $truncated];
+    }
+
     /** Xalı göstərmək üçün: 3 → "3", 1.5 → "1,5", 0.25 → "0,25", 0.125 → "0,125" */
     public static function format(float $points): string
     {

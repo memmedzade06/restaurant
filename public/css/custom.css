@@ -751,3 +751,47 @@ body.has-verify-bar .site-footer { padding-bottom: 110px; }
 .pw-steps li.active { color: var(--wine); }
 .pw-steps li.active span { background: var(--primary); border-color: var(--primary); color: #fff; box-shadow: 0 0 0 4px rgba(233, 162, 59, .2); }
 .pw-steps li.done span { background: var(--wine); border-color: var(--wine); color: #fff; }
+
+/* Profil: dəvət piramidası */
+.ref-pyramid { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 6px 0 22px; }
+.ref-tier { width: var(--w); min-width: 150px; max-width: 100%; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px 10px; padding: 10px 14px; border-radius: 10px; text-align: center; font-size: 14px; color: #fff;
+    background: linear-gradient(180deg, #a83232, var(--wine)); box-shadow: 0 6px 14px -6px rgba(126,26,26,.55); clip-path: polygon(4% 0, 96% 0, 100% 100%, 0 100%); }
+.ref-tier-me { background: linear-gradient(180deg, #ffd28a, var(--primary)); color: #4a1606; font-weight: 900; clip-path: polygon(10% 0, 90% 0, 100% 100%, 0 100%); }
+.ref-tier:nth-child(3) { background: linear-gradient(180deg, #b84a3a, #8f2a20); }
+.ref-tier:nth-child(4) { background: linear-gradient(180deg, #c7674a, #a1402c); }
+.ref-tier.is-empty { background: #efe5d8; color: var(--muted); box-shadow: none; }
+.ref-tier-name { font-weight: 700; opacity: .9; }
+.ref-tier em { font-style: normal; font-weight: 800; padding: 1px 8px; border-radius: 20px; background: rgba(255,255,255,.2); }
+
+.ref-tree, .ref-tree ul { list-style: none; margin: 0; padding: 0; }
+.ref-tree ul { margin-left: 18px; padding-left: 14px; border-left: 2px dashed #ecdcc8; }
+.ref-node { margin: 6px 0; }
+.ref-node details > summary { list-style: none; cursor: pointer; }
+.ref-node details > summary::-webkit-details-marker { display: none; }
+.ref-row { position: relative; display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 12px; background: #fffaf3; border: 1px solid #f1e5d4; }
+.ref-node details > summary .ref-row { padding-right: 34px; }
+.ref-node details > summary .ref-row::after { content: "\f078"; font-family: "Font Awesome 5 Free", "Font Awesome 6 Free", FontAwesome; font-weight: 900; position: absolute; right: 12px; font-size: 12px; color: var(--muted); transition: transform .2s; }
+.ref-node details[open] > summary .ref-row::after { transform: rotate(180deg); }
+.ref-node details > summary:hover .ref-row { border-color: var(--primary); }
+.ref-node details > summary:focus-visible { outline: none; }
+.ref-node details > summary:focus-visible .ref-row { outline: 3px solid var(--primary); outline-offset: 2px; }
+.ref-tree ul .ref-row::before { content: ""; position: absolute; left: -16px; top: 50%; width: 14px; border-top: 2px dashed #ecdcc8; }
+.ref-avatar { flex: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; color: #fff; background: var(--wine); }
+.ref-avatar.lvl-2 { background: #a1402c; }
+.ref-avatar.lvl-3 { background: #c7674a; }
+.ref-who { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.ref-who b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--wine-dark); }
+.ref-who small { color: var(--muted); font-size: 12px; }
+.ref-status { flex: none; font-size: 13px; font-weight: 800; white-space: nowrap; }
+.ref-status i { margin-right: 4px; }
+.ref-status.ok { color: #1e7b4f; }
+.ref-status.wait { color: var(--muted); }
+.ref-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.ref-legend i { margin-right: 4px; }
+@media (max-width: 575.98px) {
+    .ref-tier { font-size: 13px; padding: 8px 10px; min-width: 120px; }
+    .ref-tree ul { margin-left: 8px; padding-left: 10px; }
+    .ref-tree ul .ref-row::before { left: -12px; width: 10px; }
+    .ref-row { gap: 9px; padding: 8px 10px; }
+    .ref-avatar { width: 30px; height: 30px; font-size: 13px; }
+}

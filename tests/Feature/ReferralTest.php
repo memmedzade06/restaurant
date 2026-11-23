@@ -89,6 +89,58 @@ class ReferralTest extends TestCase
         $this->assertSame($code, $u->fresh()->referral_code);
     }
 
+    /** Ağac üçün istifadəçi: $parent-in linki ilə gəlib, $rewarded — profilini təsdiqləyib, xal yazılıb */
+    private function invited(string $name, ?User $parent, bool $rewarded = true): User
+    {
+        $u = User::create([
+            'name' => $name,
+            'email' => 't' . uniqid() . '@example.com',
+            'phone' => '+99451' . random_int(1000000, 9999999),
+            'password' => 'secret123',
+        ]);
+        $u->forceFill(['referred_by' => $parent?->id, 'referral_rewarded_at' => $rewarded ? now() : null, 'phone_verified_at' => now()])->save();
+
+        return $u;
+    }
+
+    public function test_profile_shows_invite_pyramid_three_levels_deep(): void
+    {
+        $me = $this->invited('Mən Özüm', null);
+        $b = $this->invited('Bəhram Babayev', $me);           // 1-ci səviyyə
+        $c = $this->invited('Cəmilə Cəfərova', $me, false);   // 1-ci, təsdiq gözləyir
+        $d = $this->invited('Dadaş Dadaşov', $b);             // 2-ci
+        $e = $this->invited('Elnur Eyvazov', $d);             // 3-cü
+        $this->invited('Fərid Fərzəliyev', $e);               // 4-cü — göstərilmir (xal 3 səviyyəyə qədər)
+        $this->invited('Kənar Adam', null);                    // başqasının dəvəti deyil
+
+        $tree = \App\Services\Referrals::tree($me);
+        $this->assertSame([2, 1, 1], array_column($tree['levels'], 'count'));
+        $this->assertSame([1, 1, 1], array_column($tree['levels'], 'verified'));
+        $this->assertEqualsWithDelta(0.25, $tree['levels'][0]['earned'], 0.0001);
+        $this->assertSame(['Babayev B', 'Cəfərova C'], array_column($tree['nodes'], 'name'));
+        $this->assertSame('Dadaşov D', $tree['nodes'][0]['children'][0]['name']);
+        $this->assertSame('Eyvazov E', $tree['nodes'][0]['children'][0]['children'][0]['name']);
+        $this->assertSame([], $tree['nodes'][0]['children'][0]['children'][0]['children']);
+
+        // dövr olsa belə (məs. baza əl ilə dəyişdirilib) ağac sonsuz getmir
+        $me->forceFill(['referred_by' => $e->id])->save();
+        $this->assertSame([2, 1, 1], array_column(\App\Services\Referrals::tree($me->fresh())['levels'], 'count'));
+
+        $this->actingAs($me)->get('/hesabim')->assertOk()
+            ->assertSee('Dəvət piramidam')
+            ->assertSee('Babayev B')->assertSee('Cəfərova C')->assertSee('Dadaşov D')->assertSee('Eyvazov E')
+            ->assertDontSee('Fərzəliyev')->assertDontSee('Kənar')
+            ->assertSee('3-cü səviyyə')->assertSee('gözləyir');
+    }
+
+    public function test_empty_pyramid_shows_hint(): void
+    {
+        $me = $this->invited('Tək Adam', null);
+        $this->actingAs($me)->get('/hesabim')->assertOk()
+            ->assertSee('Dəvət piramidam')
+            ->assertSee('Hələ heç kim sizin linkinizlə qeydiyyatdan keçməyib');
+    }
+
     public function test_link_remembers_code_and_redirects_to_registration(): void
     {
         $u = $this->verifiedUser();

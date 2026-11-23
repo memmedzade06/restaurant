@@ -18,7 +18,7 @@
         $refStats[] = ['points' => $pts, 'done' => $done];
     }
     $refWaiting = $me->referrals()->whereNull('referral_rewarded_at')->count();
-    $refRecent = $me->referrals()->latest('id')->take(10)->get(['id', 'name', 'created_at', 'referral_rewarded_at']);
+    $refTree = \App\Services\Referrals::tree($me); // dəvət piramidası: kim sizin linkinizlə gəlib, onlar kimi gətirib
     $levelNames = ['Dəvət etdiyiniz dostlar', 'Dostlarınızın dəvət etdikləri', 'Onların dəvət etdikləri'];
 
     // Oyunlar. Nərd: yalnız dostla oyunlar; nəticələr hər gecə silinir, qalib olduğu günlər qalır
@@ -160,21 +160,12 @@
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    @if ($refRecent->isNotEmpty())
-                        <h6 class="acc-sub">Son dəvət etdikləriniz</h6>
-                        <ul class="account-list ref-list">
-                            @foreach ($refRecent as $r)
-                                <li><span>{{ $r->short_name }} · {{ $r->created_at->timezone('Asia/Baku')->format('d.m.Y') }}</span>
-                                    @if ($r->referral_rewarded_at)
-                                        <b class="text-success">+{{ $fmt($refPoints) }} xal</b>
-                                    @else
-                                        <b class="text-muted">təsdiq gözləyir</b>
-                                    @endif
-                                </li>
-                            @endforeach
-                        </ul>
-                    @endif
+                <div class="acc-card mt-4" id="piramida">
+                    <div class="acc-head"><span class="acc-ico"><i class="fa fa-sitemap"></i></span><h5>Dəvət piramidam</h5></div>
+                    <p class="acc-note">Sizin link və ya QR kodunuzla qeydiyyatdan keçənlər və onların dəvət etdikləri. Adın yanına basanda onun dəvət etdikləri açılır.</p>
+                    @include('frontend.account._ref_tree', ['tree' => $refTree, 'fmt' => $fmt])
                 </div>
             </div>
 
