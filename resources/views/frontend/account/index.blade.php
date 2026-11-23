@@ -137,6 +137,10 @@
                             @endif
                         </ul>
                     </div>
+
+                    {{-- xal tarixçəsi: balans necə yığılıb --}}
+                    <h6 class="acc-sub" id="tarixce"><i class="fa fa-history me-2"></i>Xal tarixçəsi</h6>
+                    @include('frontend.account._points_history', ['history' => \App\Services\Points::history($me, 30)])
                 </div>
 
                 <div class="acc-card mt-4">

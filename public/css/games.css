@@ -714,3 +714,11 @@ html.cl-noscroll, html.cl-noscroll body { overflow: hidden; }
 .points-modes input:focus-visible + span { outline: 3px solid var(--primary); outline-offset: 2px; }
 a.user-points-link { color: inherit; text-decoration: none; border-bottom: 1px dashed currentColor; }
 a.user-points-link:hover { color: var(--wine); }
+
+/* Liderlər: əvvəlcə 5 nəfər, "Hamısını göstər" ilə 10 */
+.leaders li[hidden] { display: none; }
+.leaders-more { display: inline-flex; align-items: center; margin-top: 10px; padding: 7px 16px; border: 1px solid #eedfcd; border-radius: 50px; background: #fffaf3; color: var(--wine); font-weight: 800; font-size: 14px; cursor: pointer; transition: background .15s, border-color .15s; }
+.leaders-more:hover { background: #fff4e0; border-color: var(--primary); }
+.leaders-more:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.leaders-more[aria-expanded="true"] i { transform: rotate(180deg); }
+.leaders-more i { transition: transform .2s; }

@@ -73,7 +73,7 @@ class Referrals
 
             $seen = [$user->id => true]; // zəncirdə dövr olsa belə, heç kim iki dəfə xal almasın
             $upId = $user->referred_by;
-            foreach (self::levels() as $points) {
+            foreach (self::levels() as $i => $points) {
                 if (! $upId || isset($seen[$upId])) {
                     break;
                 }
@@ -85,6 +85,7 @@ class Referrals
                 // xalı yalnız təsdiqlənmiş dəvət edən alır; təsdiqlənməmiş olsa da, zəncir yuxarı davam edir
                 if ($points > 0 && $up->isVerified() && $up->earnsReferralPoints()) {
                     User::whereKey($upId)->increment('points', $points);
+                    Points::log($upId, $points, 'referral', ['level' => $i + 1], $user->id); // tarixçə
                 }
                 $upId = $up->referred_by;
             }

@@ -31,6 +31,7 @@ class GameController extends Controller
             'leaders' => NardLeaderboard::today(),
             'lastWinners' => NardLeaderboard::yesterdayWinners(),
             'stackLeaders' => $this->stackLeaders(10),
+            'pointsLeaders' => self::pointsLeaders(10),
             'onlineUsers' => User::online()->orderByDesc('last_seen_at')->limit(30)->get(['id', 'name', 'last_seen_at']),
             'onlineCount' => User::online()->count(),
         ]);
@@ -269,7 +270,7 @@ class GameController extends Controller
         }
         $userId = $user->id;
 
-        return DB::transaction(function () use ($userId, $points) {
+        return DB::transaction(function () use ($userId, $points, $score) {
             User::whereKey($userId)->lockForUpdate()->first(); // eyni anda iki sorğu limiti keçməsin
             if ($this->stackBonusLeft($userId) <= 0) {
                 return 0;
@@ -277,6 +278,7 @@ class GameController extends Controller
             $key = $this->stackBonusKey($userId);
             Cache::put($key, (int) Cache::get($key, 0) + 1, now('Asia/Baku')->endOfDay());
             User::whereKey($userId)->increment('points', $points);
+            \App\Services\Points::log($userId, $points, 'stack', ['score' => $score]); // tarixçə
 
             return $points;
         });
@@ -784,6 +786,23 @@ class GameController extends Controller
             ->limit($limit)
             ->with('user:id,name')
             ->get();
+    }
+
+    /**
+     * Xal liderləri: balansında ən çox xal olan təsdiqlənmiş qonaqlar (admin və ofisiant yox).
+     * _leaders şablonu üçün eyni formada: user_id, points, user.
+     */
+    public static function pointsLeaders(int $limit = 10): Collection
+    {
+        return User::query()
+            ->verified()
+            ->where('points', '>', 0)
+            ->where('is_admin', false)
+            ->where(fn ($q) => $q->where('type', User::TYPE_GUEST)->orWhereNull('type'))
+            ->orderByDesc('points')->orderBy('id')
+            ->limit($limit)
+            ->get(['id', 'name', 'points'])
+            ->map(fn (User $u) => (object) ['user_id' => $u->id, 'points' => (float) $u->points, 'user' => $u]);
     }
 
     private function stackBest(int $userId): int

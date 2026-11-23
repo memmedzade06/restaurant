@@ -82,7 +82,7 @@
                                     <td>
                                         {{-- dəvət xalları (balans) — Hədiyyə marketində hədiyyəyə çevrilir --}}
                                         {{-- basanda xalı dəyişmək üçün düzəliş səhifəsi açılır --}}
-                                        <a href="{{ route('admin.users.edit', $u) }}#xal" class="user-points-link" title="Xalı dəyiş">
+                                        <a href="{{ route('admin.users.edit', $u) }}#tarixce" class="user-points-link" title="Xal tarixçəsi">
                                             @if ($u->points > 0)
                                                 <span class="user-points"><i class="fa fa-star"></i>{{ \App\Services\Referrals::format((float) $u->points) }}</span>
                                             @else

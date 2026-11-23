@@ -97,7 +97,7 @@
 
                     <div class="side-card">
                         <h5><i class="fa fa-trophy me-2 text-primary"></i>Liderlər</h5>
-                        @include('frontend.games._leaders', ['leaders' => $leaders, 'unit' => 'stəkan'])
+                        @include('frontend.games._leaders', ['leaders' => $leaders, 'unit' => 'stəkan', 'initial' => 5])
                     </div>
 
                     <div class="side-card" data-game-rules="Stəkan qülləsi">

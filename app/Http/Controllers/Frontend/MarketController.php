@@ -148,6 +148,7 @@ class MarketController extends Controller
                 'expires_at' => now()->addDays(max(1, (int) config('market.code_valid_days', 30))),
             ]);
             $this->countToday($user->id);
+            \App\Services\Points::log($user->id, -$cost, 'market', ['label' => $item['label'], 'code' => $coupon->code, 'key' => $item['key']]); // tarixçə
 
             return $coupon;
         });

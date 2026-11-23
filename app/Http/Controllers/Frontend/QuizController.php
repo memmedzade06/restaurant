@@ -456,6 +456,7 @@ class QuizController extends Controller
             Cache::put($key, (float) Cache::get($key, 0) + $give, $endOfDay);
             Cache::put($bestKey, $stage, $endOfDay);
             User::whereKey($user->id)->increment('points', $give);
+            \App\Services\Points::log($user->id, $give, 'quiz', ['stage' => $stage]); // tarixçə
 
             return [$give, false];
         });

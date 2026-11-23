@@ -797,3 +797,27 @@ body.has-verify-bar .site-footer { padding-bottom: 110px; }
 }
 .ref-link { color: inherit; text-decoration: none; }
 .ref-link:hover { color: var(--wine); text-decoration: underline; }
+
+/* Xal tarixçəsi (profil və admin) */
+.ph-sum { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.ph-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 50px; font-size: 13px; font-weight: 700; color: var(--wine-dark); background: #fff4e0; }
+.ph-chip i { color: var(--primary-dark); }
+.ph-chip b { color: #1e7b4f; }
+.ph-chip.minus b { color: #b3261e; }
+.ph-chip.old { background: #f1ebe4; }
+.ph-chip.old b { color: var(--wine-dark); }
+.ph-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 520px; overflow-y: auto; }
+.ph-row { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 12px; background: #fffaf3; border: 1px solid #f1e5d4; }
+.ph-ico { flex: none; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #fff; background: var(--wine); }
+.ph-ico.src-quiz { background: #2f6db3; }
+.ph-ico.src-stack { background: #a1402c; }
+.ph-ico.src-market { background: var(--primary-dark); }
+.ph-ico.src-admin { background: #5b5b5b; }
+.ph-what { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.ph-what b { font-size: 14px; color: var(--wine-dark); }
+.ph-what small { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.ph-right { flex: none; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.25; }
+.ph-right small { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.ph-amt { font-size: 15px; font-variant-numeric: tabular-nums; }
+.ph-amt.plus { color: #1e7b4f; }
+.ph-amt.minus { color: #b3261e; }

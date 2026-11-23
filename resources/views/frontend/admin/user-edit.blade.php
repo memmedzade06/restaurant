@@ -102,6 +102,12 @@
             </form>
         </div>
 
+        {{-- xal tarixçəsi: balans necə yığılıb --}}
+        <div class="side-card mt-4" id="tarixce">
+            <h5 class="mb-3"><i class="fa fa-history me-2 text-primary"></i>Xal tarixçəsi</h5>
+            @include('frontend.account._points_history', ['history' => $history, 'admin' => true])
+        </div>
+
         {{-- dəvət piramidası: bu istifadəçinin link/QR ilə gətirdiyi təsdiqlənmiş profillər --}}
         <div class="side-card mt-4" id="piramida">
             <h5 class="mb-1"><i class="fa fa-sitemap me-2 text-primary"></i>Dəvət piramidası</h5>

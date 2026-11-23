@@ -38,7 +38,7 @@ class AdminUserPointsTest extends TestCase
         $this->actingAs($admin)->get(route('admin.users.edit', $u))->assertOk()
             ->assertSee('Xal balansı')->assertSee(route('admin.users.points', $u));
         $this->actingAs($admin)->get(route('admin.users'))->assertOk()
-            ->assertSee(route('admin.users.edit', $u) . '#xal', false);
+            ->assertSee(route('admin.users.edit', $u) . '#tarixce', false);
 
         $this->change($admin, $u, ['mode' => 'add', 'amount' => '2.5', 'reason' => 'Turnir'])
             ->assertRedirect(route('admin.users.edit', $u))->assertSessionHas('success');

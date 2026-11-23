@@ -72,6 +72,8 @@ class UserController extends Controller
             'user' => $user,
             // dəvət piramidası: bu istifadəçinin link/QR ilə gətirdiyi təsdiqlənmiş profillər (3 səviyyə)
             'tree' => \App\Services\Referrals::tree($user, 500, true),
+            // xal tarixçəsi: balans necə yığılıb (dəvət, oyunlar, market, admin)
+            'history' => \App\Services\Points::history($user, 200),
         ]);
     }
 
@@ -126,7 +128,7 @@ class UserController extends Controller
         ]);
         $amount = round((float) $data['amount'], 3);
 
-        $result = \Illuminate\Support\Facades\DB::transaction(function () use ($user, $data, $amount) {
+        $result = \Illuminate\Support\Facades\DB::transaction(function () use ($user, $data, $amount, $request) {
             // eyni anda oyundan xal yazılsa da, hesab düz qalsın
             $old = (float) User::whereKey($user->id)->lockForUpdate()->value('points');
             $new = match ($data['mode']) {
@@ -139,6 +141,8 @@ class UserController extends Controller
                 return ['error' => 'Balans mənfiyə düşə bilməz — istifadəçinin cəmi ' . \App\Services\Referrals::format($old) . ' xalı var.'];
             }
             User::whereKey($user->id)->update(['points' => $new]);
+            \App\Services\Points::log($user->id, $new - $old, 'admin', ['mode' => $data['mode'], 'from' => $old, 'to' => $new],
+                null, $request->user()->id, $data['reason'] ?? null); // tarixçə
 
             return ['old' => $old, 'new' => $new];
         });

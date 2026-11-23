@@ -348,9 +348,16 @@
             <div class="{{ config('games.nard.enabled') ? 'col-md-6' : 'col-12' }}">
                 <div class="side-card h-100">
                     <h5><i class="fa fa-trophy me-2 text-primary"></i>Stəkan qülləsi liderləri</h5>
-                    @include('frontend.games._leaders', ['leaders' => $stackLeaders, 'unit' => 'stəkan'])
+                    @include('frontend.games._leaders', ['leaders' => $stackLeaders, 'unit' => 'stəkan', 'initial' => 5])
                 </div>
             </div>
+        </div>
+
+        {{-- xal liderləri: balansında ən çox xal olanlar --}}
+        <div class="side-card mt-4" id="xal-liderleri">
+            <h5><i class="fa fa-star me-2 text-primary"></i>Xal liderləri</h5>
+            <p class="small text-muted mb-2">Oyunlarda və dostlarını dəvət edərək ən çox xal toplayanlar. Xalları <a href="{{ route('market') }}">Hədiyyə marketində</a> hədiyyəyə çevirmək olar.</p>
+            @include('frontend.games._leaders', ['leaders' => $pointsLeaders, 'unit' => 'xal', 'initial' => 5, 'decimals' => true])
         </div>
 
         <div class="side-card mt-4 mb-0" id="online-box" data-url="{{ route('games.online') }}">
