@@ -104,7 +104,7 @@
     }
 
     /** Xal haqqında qeyd (mərhələ sonunda) */
-    function pointsNote(bonus, left) {
+    function pointsNote(bonus, left, d) {
         if (cfg.staff) return ''; // ofisiant və admin oyundan xal almır
         if (!cfg.canEarn) {
             return cfg.stagePoints > 0
@@ -112,6 +112,10 @@
                 : '';
         }
         if (bonus > 0) return `<br><span class="qz-bonus">⭐ +${fmt(bonus)} xal balansınıza yazıldı!</span>`;
+        // bu mərhələyə görə bu gün artıq xal alınıb — xal yalnız daha yüksək mərhələlər üçün
+        if (d && d.repeat && !(left !== null && left <= 0)) {
+            return `<br><small class="text-muted">Bu mərhələyə görə bu gün artıq xal almısınız. Növbəti xal <b>${ordinal(d.bestStage + 1)} mərhələni</b> keçəndə yazılır.</small>`;
+        }
         if (left !== null && left <= 0) return '<br><small class="text-muted">Bu günün xal limiti bitib — sabah yenə qazanın.</small>';
         return '';
     }
@@ -257,7 +261,7 @@
         $('.qz-verify').hidden = true;
         $('.qz-stage-title').textContent = `${ordinal(d.stage)} mərhələ keçildi! 🎉`;
         $('.qz-stage-note').innerHTML = `Cəmi düz cavab: <b>${total}</b>. Növbəti mərhələdə suallar daha çətindir, canlar yenilənir.` +
-            pointsNote(d.bonus, d.pointsLeft);
+            pointsNote(d.bonus, d.pointsLeft, d);
         show('stageDone');
     }
 
@@ -268,7 +272,7 @@
         $('.qz-over-note').innerHTML =
             `Düz cavab: <b>${total}</b><br>Keçilən mərhələ: <b>${passed}</b>` +
             (record ? '<br><span class="qz-new-record">⭐ Yeni rekord!</span>' : '') +
-            (d ? pointsNote(d.bonus, d.pointsLeft) : '');
+            (d ? pointsNote(d.bonus, d.pointsLeft, d) : '');
         renderRecord();
         show('over');
     }

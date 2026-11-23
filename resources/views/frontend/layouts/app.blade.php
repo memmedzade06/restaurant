@@ -47,7 +47,7 @@
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
     <link href="{{ asset('css/custom.css') }}?v=32" rel="stylesheet">
-    <link href="{{ asset('css/games.css') }}?v=60" rel="stylesheet">
+    <link href="{{ asset('css/games.css') }}?v=61" rel="stylesheet">
     @yield('css')
 </head>
 
@@ -151,7 +151,10 @@
         </div>
     </footer>
 
-    <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top" aria-label="Yuxarı"><i class="bi bi-arrow-up"></i></a>
+    {{-- "yuxarı" düyməsi oyunlarda və hədiyyə marketində yoxdur — oyunun/piştaxtanın düymələrinin üstünə düşür --}}
+    @unless (request()->routeIs('games.*', 'market'))
+        <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top" aria-label="Yuxarı"><i class="bi bi-arrow-up"></i></a>
+    @endunless
 </div>
 
 <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>

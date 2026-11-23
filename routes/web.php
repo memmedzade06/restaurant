@@ -212,5 +212,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/istifadeciler', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('users');
     Route::get('/istifadeciler/{user}/duzelis', [\App\Http\Controllers\Admin\UserController::class, 'edit'])->name('users.edit');
     Route::put('/istifadeciler/{user}', [\App\Http\Controllers\Admin\UserController::class, 'update'])->name('users.update');
+    Route::put('/istifadeciler/{user}/xal', [\App\Http\Controllers\Admin\UserController::class, 'updatePoints'])->name('users.points');
     Route::delete('/istifadeciler/{user}', [\App\Http\Controllers\Admin\UserController::class, 'destroy'])->name('users.destroy');
 });

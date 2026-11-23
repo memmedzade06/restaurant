@@ -106,7 +106,7 @@ class PointsByUserTypeTest extends TestCase
         foreach ([User::TYPE_GUEST => true, User::TYPE_WAITER => false, User::TYPE_ADMIN => false] as $type => $earns) {
             $u = $this->user($type);
             Cache::flush();
-            $given = (float) $this->invokePrivate($controller, 'awardStage', $u, 3); // xal 3-cü mərhələdən
+            $given = (float) $this->invokePrivate($controller, 'awardStage', $u, 3)[0]; // xal 3-cü mərhələdən
 
             $earns ? $this->assertGreaterThan(0, $given, "{$type} xal almalıdır") : $this->assertSame(0.0, $given, "{$type} xal almamalıdır");
             $this->assertEqualsWithDelta($given, (float) $u->fresh()->points, 0.0001);
@@ -127,10 +127,22 @@ class PointsByUserTypeTest extends TestCase
         // 1-ci və 2-ci mərhələ qonağa xal vermir
         $controller = app(QuizController::class);
         $u = $this->user();
-        $this->assertSame(0.0, (float) $this->invokePrivate($controller, 'awardStage', $u, 1));
-        $this->assertSame(0.0, (float) $this->invokePrivate($controller, 'awardStage', $u, 2));
-        $this->assertSame(0.25, (float) $this->invokePrivate($controller, 'awardStage', $u, 3));
+        $this->assertSame(0.0, (float) $this->invokePrivate($controller, 'awardStage', $u, 1)[0]);
+        $this->assertSame(0.0, (float) $this->invokePrivate($controller, 'awardStage', $u, 2)[0]);
+        $this->assertSame(0.25, (float) $this->invokePrivate($controller, 'awardStage', $u, 3)[0]);
         $this->assertEqualsWithDelta(0.25, (float) $u->fresh()->points, 0.0001);
+
+        // yeni oyunda 3-cü mərhələni təkrar keçmək xal vermir — yalnız növbəti mərhələlər
+        $this->assertSame([0, true], $this->invokePrivate($controller, 'awardStage', $u, 3));
+        $this->assertSame(0.0, (float) $this->invokePrivate($controller, 'awardStage', $u, 2)[0]);
+        $this->assertSame(0.5, (float) $this->invokePrivate($controller, 'awardStage', $u, 4)[0]);
+        $this->assertSame([0, true], $this->invokePrivate($controller, 'awardStage', $u, 4));
+        $this->assertEqualsWithDelta(0.75, (float) $u->fresh()->points, 0.0001);
+
+        // sabah yenidən 3-cü mərhələdən xal qazanmaq olur
+        $this->travel(1)->days();
+        $this->assertSame(0.25, (float) $this->invokePrivate($controller, 'awardStage', $u, 3)[0]);
+        $this->assertEqualsWithDelta(1.0, (float) $u->fresh()->points, 0.0001);
 
         // səhifələrdə də 3-cü mərhələdən yazılır
         $this->actingAs($u)->get(route('games.quiz'))->assertOk()

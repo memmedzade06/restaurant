@@ -101,6 +101,7 @@
                                     <b>{{ \App\Http\Controllers\Frontend\QuizController::ordinal($s) }} — +{{ \App\Services\Referrals::format(\App\Http\Controllers\Frontend\QuizController::stageReward($s)) }}</b>{{ $s < $quiz['pointsFrom'] + 3 ? ',' : ' …' }}
                                 @endfor
                                 (gündə ən çox <b>{{ \App\Services\Referrals::format($quiz['maxPerDay']) }} xal</b>). Xalları Hədiyyə marketində hədiyyəyə çevirə bilərsiniz.</li>
+                            <li>Hər mərhələyə görə xal <b>gündə bir dəfə</b> verilir: yeni oyunda eyni mərhələni təkrar keçmək xal vermir — xal yalnız bu gün çatdığınız ən yüksək mərhələdən <b>sonrakılar</b> üçün yazılır.</li>
                         @endif
                     </ul>
                 </div>
@@ -111,5 +112,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/quiz.js') }}?v=10"></script>
+<script src="{{ asset('js/games/quiz.js') }}?v=11"></script>
 @endsection

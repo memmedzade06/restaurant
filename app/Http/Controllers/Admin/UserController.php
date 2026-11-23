@@ -100,6 +100,61 @@ class UserController extends Controller
     }
 
     /**
+     * İstifadəçinin xal balansını dəyişir: yeni balans yazmaq ("set"), əlavə etmək ("add") və ya çıxmaq ("sub").
+     * Balans mənfiyə düşə bilməz. Hər dəyişiklik loga yazılır (kim, kimə, nə qədər, səbəb).
+     */
+    public function updatePoints(Request $request, User $user): RedirectResponse
+    {
+        // "2,5" də yazmaq olsun — onluq vergül nöqtəyə çevrilir
+        if (is_string($request->input('amount'))) {
+            $request->merge(['amount' => str_replace(',', '.', trim($request->input('amount')))]);
+        }
+        $data = $request->validate([
+            'mode' => ['required', Rule::in(['set', 'add', 'sub'])],
+            'amount' => ['required', 'numeric', 'min:0', 'max:100000', 'regex:/^\d+(\.\d{1,3})?$/'],
+            'reason' => ['nullable', 'string', 'max:200'],
+        ], [
+            'amount.required' => 'Xal miqdarını yazın.',
+            'amount.numeric' => 'Xal rəqəm olmalıdır.',
+            'amount.min' => 'Xal mənfi ola bilməz.',
+            'amount.max' => 'Xal çox böyükdür.',
+            'amount.regex' => 'Xal ən çox 3 onluq rəqəmlə yazılır (məs. 2.5 və ya 0.125).',
+        ]);
+        $amount = round((float) $data['amount'], 3);
+
+        $result = \Illuminate\Support\Facades\DB::transaction(function () use ($user, $data, $amount) {
+            // eyni anda oyundan xal yazılsa da, hesab düz qalsın
+            $old = (float) User::whereKey($user->id)->lockForUpdate()->value('points');
+            $new = match ($data['mode']) {
+                'set' => $amount,
+                'add' => $old + $amount,
+                'sub' => $old - $amount,
+            };
+            $new = round($new, 3);
+            if ($new < 0) {
+                return ['error' => 'Balans mənfiyə düşə bilməz — istifadəçinin cəmi ' . \App\Services\Referrals::format($old) . ' xalı var.'];
+            }
+            User::whereKey($user->id)->update(['points' => $new]);
+
+            return ['old' => $old, 'new' => $new];
+        });
+
+        if (isset($result['error'])) {
+            return back()->withInput()->with('points_error', $result['error']);
+        }
+
+        logger()->info('Admin istifadəçinin xalını dəyişdi', [
+            'admin_id' => $request->user()->id, 'user_id' => $user->id, 'mode' => $data['mode'],
+            'amount' => $amount, 'from' => $result['old'], 'to' => $result['new'], 'reason' => $data['reason'] ?? null,
+        ]);
+
+        $fmt = fn ($p) => \App\Services\Referrals::format((float) $p);
+
+        return redirect()->route('admin.users.edit', $user)
+            ->with('success', "Xal dəyişdi: {$fmt($result['old'])} → {$fmt($result['new'])} xal.");
+    }
+
+    /**
      * İstifadəçini birdəfəlik silir. Onunla bağlı oyun nəticələri, hədiyyə kodları, nərd oyunları və
      * dəvətləri bazada avtomatik silinir; onun dəvət etdikləri isə "dəvət edən: yoxdur" olaraq qalır
      * (artıq yazılmış xallar geri alınmır). Admin özünü və başqa admini silə bilməz.

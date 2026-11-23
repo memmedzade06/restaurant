@@ -103,11 +103,14 @@ class QuizController extends Controller
         } elseif ($game['index'] + 1 >= count($game['queue'])) {
             // mərhələ keçildi
             $game['passed'] = $game['stage'];
+            [$bonus, $repeat] = $this->awardStage($request->user(), $game['stage']);
             $result += [
                 'stageDone' => true,
                 'stage' => $game['stage'],
                 'needVerify' => $this->mustVerify($request, $game),
-                'bonus' => $this->awardStage($request->user(), $game['stage']),
+                'bonus' => $bonus,
+                'repeat' => $repeat, // bu mərhələyə görə bu gün artıq xal alınıb
+                'bestStage' => $this->bestStageFor($request->user()),
                 // bu gün üçün sual qalmayıb (gün ərzində təkrar sual verilmir)
                 'allDone' => $this->leftToday($game) === 0,
             ];
@@ -378,6 +381,12 @@ class QuizController extends Controller
         return max(0, round($this->settings()['maxPerDay'] - (float) Cache::get($this->dailyKey($userId), 0), 3));
     }
 
+    /** Bu gün xal alınmış ən yüksək mərhələ (xal qazana bilməyənlər üçün null) */
+    private function bestStageFor(?User $user): ?int
+    {
+        return $user && $user->isVerified() && $user->earnsGamePoints() ? (int) Cache::get($this->bestKey($user->id), 0) : null;
+    }
+
     private function pointsLeftFor(?User $user): ?float
     {
         return $user && $user->isVerified() && $user->earnsGamePoints() ? $this->pointsLeftToday($user->id) : null;
@@ -413,25 +422,42 @@ class QuizController extends Controller
         return "{$n}-{$suffix}";
     }
 
-    /** Mərhələ keçildi: təsdiqlənmiş oyunçuya xal (bu günün limiti çatana qədər). Qaytarır: yazılan xal */
-    private function awardStage(?User $user, int $stage): float
+    /** Bu gün xal yazılmış ən yüksək mərhələ (yeni oyunda təkrar keçiləndə xal verilmir) */
+    private function bestKey(int $userId): string
+    {
+        return "quiz_best_stage:{$userId}:" . now('Asia/Baku')->toDateString();
+    }
+
+    /**
+     * Mərhələ keçildi: təsdiqlənmiş oyunçuya xal (bu günün limiti çatana qədər).
+     * Bu gün xal alınmış mərhələni (və ondan aşağını) yeni oyunda təkrar keçmək xal vermir —
+     * xal yalnız bu günün ən yüksək xallı mərhələsindən sonrakılar üçün yazılır.
+     * Qaytarır: [yazılan xal, mərhələ bu gün artıq xal veribmi]
+     */
+    private function awardStage(?User $user, int $stage): array
     {
         $points = self::stageReward($stage);
         if (! $user || ! $user->isVerified() || ! $user->earnsGamePoints() || $points <= 0) {
-            return 0;
+            return [0, false];
         }
 
-        return DB::transaction(function () use ($user, $points) {
+        return DB::transaction(function () use ($user, $stage, $points) {
             User::whereKey($user->id)->lockForUpdate()->first(); // eyni anda iki sorğu limiti keçməsin
+            $bestKey = $this->bestKey($user->id);
+            if ($stage <= (int) Cache::get($bestKey, 0)) {
+                return [0, true];
+            }
             $give = min($points, $this->pointsLeftToday($user->id));
             if ($give <= 0) {
-                return 0;
+                return [0, false];
             }
             $key = $this->dailyKey($user->id);
-            Cache::put($key, (float) Cache::get($key, 0) + $give, now('Asia/Baku')->endOfDay());
+            $endOfDay = now('Asia/Baku')->endOfDay();
+            Cache::put($key, (float) Cache::get($key, 0) + $give, $endOfDay);
+            Cache::put($bestKey, $stage, $endOfDay);
             User::whereKey($user->id)->increment('points', $give);
 
-            return $give;
+            return [$give, false];
         });
     }
 

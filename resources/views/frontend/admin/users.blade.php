@@ -81,11 +81,14 @@
                                     </td>
                                     <td>
                                         {{-- dəvət xalları (balans) — Hədiyyə marketində hədiyyəyə çevrilir --}}
-                                        @if ($u->points > 0)
-                                            <span class="user-points"><i class="fa fa-star"></i>{{ \App\Services\Referrals::format((float) $u->points) }}</span>
-                                        @else
-                                            <span class="text-muted">0</span>
-                                        @endif
+                                        {{-- basanda xalı dəyişmək üçün düzəliş səhifəsi açılır --}}
+                                        <a href="{{ route('admin.users.edit', $u) }}#xal" class="user-points-link" title="Xalı dəyiş">
+                                            @if ($u->points > 0)
+                                                <span class="user-points"><i class="fa fa-star"></i>{{ \App\Services\Referrals::format((float) $u->points) }}</span>
+                                            @else
+                                                <span class="text-muted">0</span>
+                                            @endif
+                                        </a>
                                     </td>
                                     <td>{{ $u->created_at->timezone('Asia/Baku')->format('d.m.Y H:i') }}</td>
                                     <td>
