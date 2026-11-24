@@ -25,6 +25,7 @@
                             <b>{{ $quiz['lives'] }} səhv</b> etsəniz, oyun bitir.</p>
                         @if ($quiz['stagePoints'] > 0)
                             <p class="qz-earn"><i class="fa fa-star me-1"></i>{{ $quiz['pointsFromLabel'] }} mərhələdən: <b>+{{ \App\Services\Referrals::format($quiz['stagePoints']) }} xal</b>@if ($quiz['stageStep'] > 0), hər növbəti mərhələdə <b>+{{ \App\Services\Referrals::format($quiz['stageStep']) }}</b> çox @else hər mərhələ üçün @endif
+                                @if ($quiz['bonusFrom'])<br>{{ $quiz['bonusFromLabel'] }} mərhələdən: <b>+{{ \App\Services\Referrals::format($quiz['bonusPoints']) }} xal</b> hər mərhələ üçün @endif
                                 {{-- ofisiant və admin xal almır, amma onlara xəbərdarlıq göstərilmir --}}
                                 @if ($quiz['staff'])
                                 @elseif ($quiz['canEarn'] && $quiz['pointsLeft'] <= 0)
@@ -103,7 +104,8 @@
                                         <b>{{ \App\Http\Controllers\Frontend\QuizController::ordinal($s) }} — +{{ \App\Services\Referrals::format(\App\Http\Controllers\Frontend\QuizController::stageReward($s)) }}</b>{{ $s < $quiz['pointsFrom'] + 3 ? ',' : ' …' }}
                                     @endfor
                                 @else
-                                    <b>+{{ \App\Services\Referrals::format($quiz['stagePoints']) }} xal</b> yazılır
+                                    <b>+{{ \App\Services\Referrals::format($quiz['stagePoints']) }} xal</b> yazılır{{ $quiz['bonusFrom'] ? ',' : '' }}
+                                    @if ($quiz['bonusFrom']) <b>{{ $quiz['bonusFromLabel'] }} mərhələdən</b> başlayaraq isə <b>+{{ \App\Services\Referrals::format($quiz['bonusPoints']) }} xal</b>@endif
                                 @endif
                                 (gündə ən çox <b>{{ \App\Services\Referrals::format($quiz['maxPerDay']) }} xal</b>). Xalları Hədiyyə marketində hədiyyəyə çevirə bilərsiniz.</li>
                             <li>Hər mərhələyə görə xal <b>gündə bir dəfə</b> verilir: yeni oyunda eyni mərhələni təkrar keçmək xal vermir — xal yalnız bu gün çatdığınız ən yüksək mərhələdən <b>sonrakılar</b> üçün yazılır.</li>

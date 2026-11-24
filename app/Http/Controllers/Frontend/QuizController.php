@@ -400,7 +400,8 @@ class QuizController extends Controller
 
     /**
      * N-ci mərhələnin xalı: firstPaidStage()-dən əvvəl — 0, həmin mərhələ — stage_points,
-     * hər növbəti — stage_points_step qədər çox (step 0 — hamısı eyni).
+     * hər növbəti — stage_points_step qədər çox (step 0 — hamısı eyni);
+     * bonusStage()-dən başlayaraq isə bonus_stage_points (məs. 7-ci mərhələdən 0,5).
      */
     public static function stageReward(int $stage): float
     {
@@ -408,10 +409,22 @@ class QuizController extends Controller
         if ($stage < $from) {
             return 0;
         }
+        $bonusFrom = self::bonusStage();
+        if ($bonusFrom && $stage >= $bonusFrom) {
+            return round(max(0, (float) config('quiz.bonus_stage_points', 0.5)), 3);
+        }
         $base = max(0, (float) config('quiz.stage_points', 0.25));
         $step = max(0, (float) config('quiz.stage_points_step', 0.25));
 
         return round($base + ($stage - $from) * $step, 3);
+    }
+
+    /** Artırılmış xalın başladığı mərhələ (config quiz.bonus_from_stage); 0 və ya ilk xallı mərhələdən kiçik — yoxdur */
+    public static function bonusStage(): ?int
+    {
+        $s = (int) config('quiz.bonus_from_stage', 0);
+
+        return $s > self::firstPaidStage() ? $s : null;
     }
 
     /** Sıra sayı: 1 → "1-ci", 3 → "3-cü", 6 → "6-cı", 9 → "9-cu", 10 → "10-cu" */
@@ -479,6 +492,9 @@ class QuizController extends Controller
             'pointsFrom' => self::firstPaidStage(),
             'pointsFromLabel' => self::ordinal(self::firstPaidStage()),
             'stageStep' => max(0, (float) config('quiz.stage_points_step', 0.25)),
+            'bonusFrom' => self::bonusStage(),
+            'bonusFromLabel' => self::bonusStage() ? self::ordinal(self::bonusStage()) : null,
+            'bonusPoints' => self::bonusStage() ? self::stageReward(self::bonusStage()) : 0,
             'maxPerDay' => max(0, (float) config('quiz.max_points_per_day', 2)),
             'guestStages' => max(1, (int) config('quiz.guest_stages', 2)),
         ];
