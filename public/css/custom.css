@@ -863,10 +863,10 @@ body.has-verify-bar .site-footer { padding-bottom: 110px; }
 .em-ref { background: var(--wine); }
 /* Kupon: QR kodun yanında (oyun pəncərəsində yer az olur) */
 .coupon-row { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
-div.coupon-row .prize-code { margin-bottom: 0; font-size: 20px; padding: 10px 14px; letter-spacing: 2px; }
+div.coupon-row .prize-code { margin-bottom: 0; font-size: 16px; padding: 8px 10px; letter-spacing: 1px; }
 .coupon-row .prize-qr { margin: 0; }
-.coupon-row .prize-qr svg { width: 92px; height: 92px; }
-.coupon-row .prize-qr small { font-size: 10px; max-width: 100px; line-height: 1.2; text-align: center; }
+.coupon-row .prize-qr svg { width: 124px; height: 124px; }
+.coupon-row .prize-qr small { font-size: 10px; max-width: 124px; line-height: 1.2; text-align: center; }
 .coupon-note { font-size: 12px; margin: 8px 0 0; color: var(--muted); }
 /* Stəkan: kupon qazananda nəticə kartı yığcam olur */
 .nb-result-box.has-prize { padding: 16px 16px 14px; max-width: 360px; }
