@@ -46,7 +46,7 @@
     <link href="{{ asset('lib/owlcarousel/assets/owl.carousel.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/custom.css') }}?v=40" rel="stylesheet">
+    <link href="{{ asset('css/custom.css') }}?v=42" rel="stylesheet">
     <link href="{{ asset('css/games.css') }}?v=62" rel="stylesheet">
     @yield('css')
 </head>
@@ -169,6 +169,7 @@
 <script src="{{ asset('js/password-toggle.js') }}?v=1"></script>{{-- şifrə sahələrində göz düyməsi --}}
 @include('frontend.partials.registered-modal')
 @include('frontend.partials.points-market-modal')
+@include('frontend.partials.earn-more')
 @auth
 <script>
     // "İndi saytda": səhifə açıq olduqca serverə siqnal göndəririk

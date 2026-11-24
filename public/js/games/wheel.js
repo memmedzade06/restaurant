@@ -167,7 +167,7 @@
                     ? (state.claimed.used
                         ? '<p class="small text-muted mb-0">Kod restoranda istifadə olunub. Sabah yenə fırladın!</p>'
                         : `<p class="small text-muted mb-0">Kodun vaxtı <b>${esc(state.claimed.expires)}</b>-də bitib. Sabah yenə fırladın!</p>`)
-                    : `<p class="small text-muted mb-0">Kodu ofisianta göstərin. ${esc(state.claimed.expires)} tarixinədək etibarlıdır. Kod <a href="/hediyyelerim">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>`)
+                    : `<p class="small text-muted mb-0">Kodu ofisianta göstərin. ${esc(state.claimed.expires)} tarixinədək etibarlıdır. Kod <a href="/hediyyelerim">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>` + (window.earnMoreHtml ? window.earnMoreHtml() : ''))
                 + fun;
         } else if (state.last) {
             const left = state.attemptsLeft;

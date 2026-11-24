@@ -157,7 +157,20 @@
                         @else
                             <p class="acc-note">Instagram səhifəmizi izləyin, sonra öz Instagram adınızı yazın. Admin izləməni yoxlayıb təsdiqləyəndə balansınıza <b>+{{ $fmt($igReward) }} xal</b> yazılır (bir dəfə).</p>
                             @if ($ig && $ig->status === \App\Models\InstagramFollow::REJECTED)
-                                <div class="alert-soft mb-3"><i class="fa fa-times-circle me-2"></i><b>{{ '@' . $ig->username }}</b> izləyicilərimiz arasında tapılmadı. Səhifəni izlədiyinizə və adı düzgün yazdığınıza əmin olub yenidən göndərin.</div>
+                                {{-- rədd xəbərdarlığı 1 dəqiqə göstərilir, sonra silinir və bu brauzerdə bir daha çıxmır --}}
+                                <div class="alert-soft mb-3 ig-reject" id="igReject" data-key="igRejectSeen:{{ $ig->id }}:{{ $ig->reviewed_at?->timestamp }}"><i class="fa fa-times-circle me-2"></i><b>{{ '@' . $ig->username }}</b> izləyicilərimiz arasında tapılmadı. Səhifəni izlədiyinizə və adı düzgün yazdığınıza əmin olub yenidən göndərin.</div>
+                                <script>
+                                    (function () {
+                                        var el = document.getElementById('igReject'), key = el.dataset.key;
+                                        var seen = function () { try { return localStorage.getItem(key); } catch (e) { return null; } };
+                                        if (seen()) { el.remove(); return; }
+                                        setTimeout(function () {
+                                            try { localStorage.setItem(key, '1'); } catch (e) {}
+                                            el.classList.add('is-hiding');
+                                            setTimeout(function () { el.remove(); }, 500);
+                                        }, 60000);
+                                    })();
+                                </script>
                             @endif
                             @error('instagram') <div class="alert-soft mb-3">{{ $message }}</div> @enderror
                             <div class="ig-steps">
@@ -173,7 +186,7 @@
                     </div>
                 @endif
 
-                <div class="acc-card mt-4">
+                <div class="acc-card mt-4" id="devet">
                     <div class="acc-head"><span class="acc-ico"><i class="fa fa-user-plus"></i></span><h5>Dostlarını dəvət et</h5></div>
                     <p class="acc-note">Linki və ya QR kodu paylaşın. Kimsə onunla qeydiyyatdan keçib profilini təsdiqləyəndə balansınıza <b>{{ $fmt($refPoints) }} xal</b> əlavə olunur.
                         @if (count($refLevels) > 1)

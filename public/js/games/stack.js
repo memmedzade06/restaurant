@@ -595,7 +595,8 @@
         const box = overlay.querySelector('.st-prize');
         box.innerHTML = `<div class="prize-code">${esc(d.prize.code)}</div>` +
             `<p class="small text-muted mb-3">Kodu ofisianta göstərin. ${esc(d.prize.expires)} tarixinədək etibarlıdır. ` +
-            `Kod <a href="${cfg.prizesUrl}">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>`;
+            `Kod <a href="${cfg.prizesUrl}">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>` +
+            (window.earnMoreHtml ? window.earnMoreHtml() : ''); // daha çox xal: Instagram və dəvət
         box.hidden = false;
         overlay.querySelector('.st-again').textContent = 'Yeni oyun';
         overlay.hidden = false;

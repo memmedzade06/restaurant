@@ -496,7 +496,8 @@
         } else {
             body += '<div class="prize-code">' + esc(c.code) + '</div>'
                 + '<p class="claimed-at"><i class="fa fa-clock me-1"></i>Götürülüb: <b>' + esc(c.claimed_at) + '</b></p>'
-                + '<p class="cl-note">Kodu ofisianta göstərin. <b>' + esc(c.expires) + '</b>-dək etibarlıdır. Kod <a href="' + URL.prizes + '">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>';
+                + '<p class="cl-note">Kodu ofisianta göstərin. <b>' + esc(c.expires) + '</b>-dək etibarlıdır. Kod <a href="' + URL.prizes + '">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>'
+                + (window.earnMoreHtml ? window.earnMoreHtml() : ''); // daha çox xal: Instagram və dəvət
         }
         // hədiyyə götürülüb — kran əyləncə üçün oynanmağa davam edə bilər (hədiyyəsiz)
         dialog(body + '<p class="cl-note">İstəsəniz, əyləncə üçün oynamağa davam edə bilərsiniz — hədiyyə verilmir.</p>',
