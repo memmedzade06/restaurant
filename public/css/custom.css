@@ -821,3 +821,5 @@ body.has-verify-bar .site-footer { padding-bottom: 110px; }
 .ph-amt { font-size: 15px; font-variant-numeric: tabular-nums; }
 .ph-amt.plus { color: #1e7b4f; }
 .ph-amt.minus { color: #b3261e; }
+/* Xal xatırlatması (Oyunlar səhifəsi): hədiyyə ikonu qızılı fonda */
+.success-ico.points-ico { background: linear-gradient(135deg, #f2b84b, #d98a1c); box-shadow: 0 14px 30px rgba(217, 138, 28, .35); }
