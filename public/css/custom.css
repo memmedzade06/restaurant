@@ -542,21 +542,36 @@ body.has-verify-bar .site-footer { padding-bottom: 110px; }
     background: var(--grain), linear-gradient(90deg, var(--wood-d), var(--wood) 4%, var(--wood-l) 50%, var(--wood) 96%, var(--wood-d));
     box-shadow: inset 0 2px 0 rgba(255,255,255,.22), 0 24px 40px -14px rgba(58,13,13,.55); }
 .shop-shelves { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); column-gap: 0; row-gap: 0; padding: 30px 0 4px; border-radius: 4px 4px 0 0;
+    /* vitrinin içi qaranlıqdır: işıq yalnız malların üzərinə düşür */
     background:
-        radial-gradient(ellipse 55% 120px at 50% 0, rgba(255,222,160,.6), transparent 75%),
-        linear-gradient(180deg, rgba(40,15,0,.35), transparent 50px),
-        linear-gradient(90deg, rgba(40,15,0,.28), transparent 8%, transparent 92%, rgba(40,15,0,.28)),
-        repeating-linear-gradient(90deg, #ecd6b0 0 46px, #e3c89d 46px 48px);
-    box-shadow: inset 0 0 0 2px var(--wood-xd), inset 0 12px 20px -10px rgba(0,0,0,.6); }
-/* üstdə işıq zolağı */
-.shop-shelves::before { content: ""; position: absolute; left: 8%; right: 8%; top: 6px; height: 5px; border-radius: 4px; background: #fff8e2;
-    box-shadow: 0 0 8px 2px rgba(255,214,140,.95), 0 0 34px 10px rgba(255,214,140,.4); }
+        linear-gradient(180deg, rgba(0,0,0,.45), transparent 60px),
+        linear-gradient(90deg, rgba(0,0,0,.45), transparent 9%, transparent 91%, rgba(0,0,0,.45)),
+        repeating-linear-gradient(90deg, #3b2213 0 46px, #331d10 46px 48px);
+    box-shadow: inset 0 0 0 2px var(--wood-xd), inset 0 14px 24px -10px rgba(0,0,0,.8); }
+/* üstdə zəif işıq zolağı */
+.shop-shelves::before { content: ""; position: absolute; left: 8%; right: 8%; top: 6px; height: 4px; border-radius: 4px; background: #fff3d2; opacity: .75;
+    box-shadow: 0 0 8px 2px rgba(255,214,140,.7), 0 0 26px 6px rgba(255,214,140,.2); }
 
 .shelf-item { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 26px 0 16px; background: none; border: 0; cursor: pointer; font: inherit; color: inherit; perspective: 600px; }
+/* hər malın üstündə kiçik spot lampa ... */
+.shelf-item::after { content: ""; position: absolute; z-index: 3; top: 0; left: 50%; width: 30px; height: 6px; margin-left: -15px; border-radius: 0 0 8px 8px; pointer-events: none;
+    background: linear-gradient(180deg, #2a170c, #4a2c18 60%, #fff6dc 61%);
+    box-shadow: 0 3px 6px 1px rgba(255,220,150,.85), 0 6px 18px 4px rgba(255,205,120,.35); }
+/* ... və ondan mala doğru düşən işıq konusu, rəfin üstündə işıq ləkəsi */
+.shelf-item::before { content: ""; position: absolute; z-index: 0; top: 4px; left: 50%; width: 220px; max-width: 100%; height: calc(100% - 8px); transform: translateX(-50%); pointer-events: none;
+    background:
+        radial-gradient(ellipse 50% 22px at 50% calc(100% - 56px), rgba(255,226,165,.8), transparent 80%),
+        linear-gradient(180deg, rgba(255,232,180,.75), rgba(255,214,140,.3) 65%, rgba(255,214,140,.12) 100%);
+    clip-path: polygon(42% 0, 58% 0, 98% 100%, 2% 100%);
+    -webkit-mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 56px), transparent calc(100% - 40px));
+    mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 56px), transparent calc(100% - 40px));
+    filter: blur(6px); transition: opacity .25s ease, filter .25s ease; }
+.shelf-item:hover::before, .shelf-item.is-selected::before { opacity: 1; filter: blur(6px) brightness(1.3); }
+.shelf-item.locked::before { opacity: .55; }
 /* mal */
 .shelf-prod { position: relative; z-index: 2; width: 96px; height: 96px; margin-bottom: -10px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 40px; color: var(--wine);
     background: linear-gradient(160deg, #fff, #fff1d6);
-    box-shadow: 0 3px 0 #e9d6b6, 0 6px 0 #caa97c, 0 14px 12px -4px rgba(40,15,0,.55);
+    box-shadow: 0 3px 0 #e9d6b6, 0 6px 0 #caa97c, 0 14px 12px -4px rgba(0,0,0,.7), 0 -4px 26px 2px rgba(255,214,140,.38);
     transform-origin: 50% 100%; transition: transform .25s ease, box-shadow .25s ease; }
 .shelf-prod.has-img { width: 96px; height: 96px; padding: 4px; background: #fff; }
 .shelf-prod img, .counter-prod img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }

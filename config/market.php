@@ -30,9 +30,10 @@ return [
         'Samovar Çayı (armudu stəkan)',
     ],
 
-    // Menyu kateqoriyasının adını dəyiş və yalnız uyğun məhsulları saxla ("only" — məhsul adına regex)
+    // Menyu kateqoriyasının adını dəyiş və yalnız uyğun məhsulları saxla ("only" — məhsul adına regex);
+    // "image" — kateqoriyanın şəklini əvəz edir (menyu sinxronizasiyası bunu dəyişmir)
     'menu_filter' => [
-        'Qəlyan Seti' => ['label' => 'Qəlyan', 'only' => '/^Qəlyan/u'], // yalnız qəlyanlar, "Set ..." kombolar yox
+        'Qəlyan Seti' => ['label' => 'Qəlyan', 'only' => '/^Qəlyan/u', 'image' => 'images/market/qelyan.jpg'], // yalnız qəlyanlar, "Set ..." kombolar yox
     ],
 
     // Seçilmiş hədiyyələr (ayrıca "Seçilmiş hədiyyələr" kateqoriyası). Boşdursa kateqoriya görünmür —
