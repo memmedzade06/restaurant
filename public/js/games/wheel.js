@@ -158,7 +158,11 @@
                 : (state.funReason === 'attempts'
                     ? 'Bu günün cəhdləri bitdi — çarxı əyləncə üçün istədiyiniz qədər fırlada bilərsiniz, amma hədiyyə verilmir.'
                     : 'Çarxı əyləncə üçün istədiyiniz qədər fırlada bilərsiniz — hədiyyə verilmir.')}</div>` : '';
-        if (state.claimed && state.claimed.expired) {
+        if (state.fun && funLast) {
+            // əyləncə fırlatmasından sonra yalnız onun nəticəsi: kod və QR yaranmır, bugünkü kupon təkrar göstərilmir
+            html = warn + fun + (state.claimed && !state.claimed.expired
+                ? '<p class="small text-muted mt-2 mb-0">Bugünkü kuponunuz <a href="/hediyyelerim">Hədiyyələrim</a> səhifəsindədir.</p>' : '');
+        } else if (state.claimed && state.claimed.expired) {
             // kodun vaxtı bitib və ya istifadə olunub (bazadan da silinir) — kod göstərilmir, bu gün yenidən fırlatmaq olmur
             html = `<span class="eyebrow">Bugünkü hədiyyəniz</span><h3>${esc(state.claimed.label)}</h3>` +
                 (state.claimed.used
