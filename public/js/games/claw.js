@@ -396,6 +396,9 @@
         claw.state = claw.state === 'ready' ? 'idle' : claw.state;
         input.target = null;
         el.box.innerHTML = html + '<div class="st-choice cl-choice"></div>';
+        // kupon kartı: bütün ekranın ortasında və yığcam (showClaimed əlavə edir)
+        el.result.classList.remove('is-prize');
+        el.box.classList.remove('has-prize');
         var bar = el.box.querySelector('.cl-choice');
         actions.forEach(function (a) {
             var b = document.createElement(a.href ? 'a' : 'button');
@@ -494,15 +497,16 @@
                 ? '<p class="cl-note">Kod restoranda istifadə olunub. Sabah yenə oynayın!</p>'
                 : '<p class="cl-note">Kodun vaxtı <b>' + esc(c.expires) + '</b>-də bitib. Sabah yenə oynayın!</p>';
         } else {
-            body += '<div class="prize-code">' + esc(c.code) + '</div>'
+            body += '<div class="coupon-row"><div class="prize-code">' + esc(c.code) + '</div></div>'
                 + '<p class="claimed-at"><i class="fa fa-clock me-1"></i>Götürülüb: <b>' + esc(c.claimed_at) + '</b></p>'
-                + '<p class="cl-note">Kodu ofisianta göstərin. <b>' + esc(c.expires) + '</b>-dək etibarlıdır. Kod <a href="' + URL.prizes + '">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>'
+                + '<p class="cl-note">Kodu ofisianta göstərin. <b>' + esc(c.expires) + '</b>-dək etibarlıdır. <a href="' + URL.prizes + '">Hədiyyələrim</a>-də də saxlanılır.</p>'
                 + (window.earnMoreHtml ? window.earnMoreHtml() : ''); // daha çox xal: Instagram və dəvət
         }
         // hədiyyə götürülüb — kran əyləncə üçün oynanmağa davam edə bilər (hədiyyəsiz)
         dialog(body + '<p class="cl-note">İstəsəniz, əyləncə üçün oynamağa davam edə bilərsiniz — hədiyyə verilmir.</p>',
             [{ label: '<i class="fa fa-play me-2"></i>Əyləncə üçün oyna', fn: playAgain, primary: true },
              { label: 'Bağla', fn: closeDialog }]);
+        if (!c.expired) { el.result.classList.add('is-prize'); el.box.classList.add('has-prize'); }
     }
 
     function showDayClosed() {

@@ -91,6 +91,8 @@
         overlay.hidden = true;
         offer.hidden = true;
         overlay.querySelector('.st-prize').hidden = true;
+        overlay.querySelector('.nb-result-box').classList.remove('has-prize');
+        overlay.classList.remove('is-prize');
         overlay.querySelector('.st-again').textContent = 'Yenidən oyna';
         resumeBtn.hidden = true;
         startHint.hidden = false;
@@ -591,11 +593,13 @@
 
         overlay.querySelector('.st-score').textContent = g.score;
         overlay.querySelector('.st-title').textContent = 'Təbriklər! 🎉';
-        overlay.querySelector('.st-note').innerHTML = `<b>${esc(d.prize.label)}</b> qazandınız.` + bonusNote(d.bonus);
+        overlay.querySelector('.st-note').innerHTML = `${g.score} stəkan — <b>${esc(d.prize.label)}</b> qazandınız.` + bonusNote(d.bonus);
+        overlay.querySelector('.nb-result-box').classList.add('has-prize'); // yığcam: hesab gizli, QR kodun yanında
+        overlay.classList.add('is-prize'); // kupon kartı bütün ekranın ortasında (oyun sahəsi telefonda kiçikdir)
         const box = overlay.querySelector('.st-prize');
-        box.innerHTML = `<div class="prize-code">${esc(d.prize.code)}</div>` +
-            `<p class="small text-muted mb-3">Kodu ofisianta göstərin. ${esc(d.prize.expires)} tarixinədək etibarlıdır. ` +
-            `Kod <a href="${cfg.prizesUrl}">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>` +
+        box.innerHTML = `<div class="coupon-row"><div class="prize-code">${esc(d.prize.code)}</div></div>` +
+            `<p class="coupon-note">Kodu ofisianta göstərin. ${esc(d.prize.expires)}-dək etibarlıdır. ` +
+            `<a href="${cfg.prizesUrl}">Hədiyyələrim</a>-də də saxlanılır.</p>` +
             (window.earnMoreHtml ? window.earnMoreHtml() : ''); // daha çox xal: Instagram və dəvət
         box.hidden = false;
         overlay.querySelector('.st-again').textContent = 'Yeni oyun';
@@ -607,6 +611,8 @@
         overlay.hidden = true;
         resumeBtn.hidden = true;
         overlay.querySelector('.st-prize').hidden = true;
+        overlay.querySelector('.nb-result-box').classList.remove('has-prize');
+        overlay.classList.remove('is-prize');
         if (g.state === 'over' && g.tower.length) { g.state = 'swing'; music.start(); }
     }
 

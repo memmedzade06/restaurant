@@ -160,7 +160,7 @@
                     : 'Çarxı əyləncə üçün istədiyiniz qədər fırlada bilərsiniz — hədiyyə verilmir.')}</div>` : '';
         if (state.claimed) {
             html = `<span class="eyebrow">Hədiyyəniz 🎉</span><h3>${esc(state.claimed.label)}</h3>` +
-                `<div class="prize-code${state.claimed.expired || state.claimed.used ? ' no-qr' : ''}">${esc(state.claimed.code)}</div>` +
+                `<div class="coupon-row"><div class="prize-code${state.claimed.expired || state.claimed.used ? ' no-qr' : ''}">${esc(state.claimed.code)}</div></div>` +
                 (state.claimed.claimed_at ? `<p class="claimed-at"><i class="fa fa-clock me-1"></i>Götürülüb: <b>${esc(state.claimed.claimed_at)}</b></p>` : '') +
                 (state.claimed.expired
                     // kodun vaxtı bitib (bazadan da silinir) — bu gün yenidən fırlatmaq olmur
@@ -229,6 +229,8 @@
         if (!modal || modal.hidden) return;
         modalBody.innerHTML = resultBox.innerHTML;
         modalBody.querySelectorAll('[data-act]').forEach(b => { b.disabled = busy || !!run; });
+        // etibarlı kupon: pəncərə bütün ekranın ortasında (çarxın üstündə yer azdır)
+        modal.classList.toggle('is-prize', !!modalBody.querySelector('.coupon-row .prize-code:not(.no-qr)'));
     }
     // modal bağlananda çarxın altında "Nəticə" düyməsi — nəticəni yenidən açmaq üçün
     function updateReopen() {

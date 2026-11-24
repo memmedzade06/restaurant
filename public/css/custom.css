@@ -851,14 +851,36 @@ body.has-verify-bar .site-footer { padding-bottom: 110px; }
 .ig-pending { padding: 12px 14px; border-radius: 12px; background: #fff7e6; color: #7a4a06; }
 .ig-reject { transition: opacity .5s ease, transform .5s ease; }
 .ig-reject.is-hiding { opacity: 0; transform: translateY(-6px); }
-/* Kupon qazananda: daha çox xal qazanmaq yolları (Instagram, dəvət) */
-.earn-more { margin: 14px 0 4px; padding: 12px; border-radius: 14px; text-align: left; background: #fff7e6; border: 1px dashed #e9a23b; }
-.earn-more-title { font-weight: 800; color: #7a4a06; margin-bottom: 8px; font-size: 15px; }
-.earn-more-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin-bottom: 6px; border-radius: 10px; background: #fff; color: #3b2a20; font-size: 14px; line-height: 1.3; text-decoration: none; box-shadow: 0 2px 6px rgba(60,30,0,.08); }
+/* Kupon qazananda: daha çox xal qazanmaq yolları (Instagram, dəvət) — yığcam, iki sütun */
+.earn-more { margin: 10px 0 4px; padding: 8px; border-radius: 12px; text-align: center; background: #fff7e6; border: 1px dashed #e9a23b; }
+.earn-more-title { font-weight: 800; color: #7a4a06; margin-bottom: 6px; font-size: 13px; }
+.earn-more-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; }
+.earn-more-item { display: flex; align-items: center; gap: 6px; padding: 6px 7px; border-radius: 9px; background: #fff; color: #3b2a20; font-size: 12px; line-height: 1.25; text-align: left; text-decoration: none; box-shadow: 0 2px 6px rgba(60,30,0,.08); }
 .earn-more-item:hover { color: #3b2a20; background: #fffaf0; }
-.earn-more-item > span:nth-child(2) { flex: 1; }
-.earn-more-item > .fa-chevron-right { color: #c08a3e; font-size: 12px; }
-.em-ico { flex: none; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; }
+.earn-more-item b { white-space: nowrap; color: #a35d0a; }
+.em-ico { flex: none; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; }
 .em-ig { background: linear-gradient(45deg, #f09433, #dc2743 50%, #bc1888); }
 .em-ref { background: var(--wine); }
-.earn-more small { display: block; color: #8a6f5c; font-size: 12px; margin-top: 2px; }
+/* Kupon: QR kodun yanında (oyun pəncərəsində yer az olur) */
+.coupon-row { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+div.coupon-row .prize-code { margin-bottom: 0; font-size: 20px; padding: 10px 14px; letter-spacing: 2px; }
+.coupon-row .prize-qr { margin: 0; }
+.coupon-row .prize-qr svg { width: 92px; height: 92px; }
+.coupon-row .prize-qr small { font-size: 10px; max-width: 100px; line-height: 1.2; text-align: center; }
+.coupon-note { font-size: 12px; margin: 8px 0 0; color: var(--muted); }
+/* Stəkan: kupon qazananda nəticə kartı yığcam olur */
+.nb-result-box.has-prize { padding: 16px 16px 14px; max-width: 360px; }
+.nb-result-box.has-prize h3 { font-size: 20px; margin-bottom: 4px; }
+.nb-result-box.has-prize .st-score { display: none; }
+.nb-result-box.has-prize .st-note { margin-bottom: 8px; font-size: 14px; }
+.nb-result-box.has-prize .st-choice { margin-top: 10px; }
+.st-result { overflow-y: auto; }
+.st-result.is-prize { position: fixed; z-index: 1060; padding: 12px 0; }
+/* Çarx: kupon pəncərəsi bütün ekranın ortasında */
+.wheel-modal.is-prize { position: fixed; z-index: 1060; border-radius: 0; padding: 12px 0; background: rgba(42, 15, 12, .6); }
+.wheel-modal.is-prize .wheel-modal-card { max-height: calc(100vh - 24px); }
+/* Kran: kupon kartı yığcam */
+.nb-result-box.has-prize .cl-prize { font-size: 21px; margin: 2px 0 8px; }
+.nb-result-box.has-prize .claimed-at { font-size: 13px; margin: 8px 0 2px; }
+.nb-result-box.has-prize .cl-note { font-size: 12.5px; margin: 4px 0; }
+.nb-result-box.has-prize .eyebrow { margin-bottom: 0; }
