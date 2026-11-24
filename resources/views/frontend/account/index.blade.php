@@ -57,6 +57,7 @@
                             <a href="{{ route('admin.prizes') }}"><span><i class="fa fa-gift me-2"></i>Hədiyyə kodları <small class="acc-badge">{{ $prizesActive }} aktiv</small></span><i class="fa fa-arrow-right"></i></a>
                             <a href="{{ route('admin.users') }}"><span><i class="fa fa-users me-2"></i>İstifadəçilər <small class="acc-badge">{{ $usersTotal }}</small></span><i class="fa fa-arrow-right"></i></a>
                             <a href="{{ route('admin.reservations') }}"><span><i class="fa fa-chair me-2"></i>Rezervasiyalar <small class="acc-badge">{{ $reservationsToday }} bu gün</small></span><i class="fa fa-arrow-right"></i></a>
+                            <a href="{{ route('admin.instagram') }}"><span><i class="fab fa-instagram me-2"></i>Instagram izləmə <small class="acc-badge">{{ \App\Models\InstagramFollow::where('status', 'pending')->count() }} gözləyir</small></span><i class="fa fa-arrow-right"></i></a>
                         </div>
                         <div class="acc-stats four mt-3 mb-0">
                             <div><b>{{ $usersTotal }}</b><span>Cəmi qeydiyyat</span></div>
@@ -142,6 +143,35 @@
                     <h6 class="acc-sub" id="tarixce"><i class="fa fa-history me-2"></i>Xal tarixçəsi</h6>
                     @include('frontend.account._points_history', ['history' => \App\Services\Points::history($me, 30)])
                 </div>
+
+                {{-- Instagram səhifəmizi izlə: adını yazır, admin yoxlayıb təsdiqləyəndə bir dəfəlik xal --}}
+                @if ($me->earnsGamePoints())
+                    @php($ig = \App\Models\InstagramFollow::where('user_id', $me->id)->first())
+                    @php($igReward = \App\Models\InstagramFollow::reward())
+                    <div class="acc-card mt-4 ig-card" id="instagram">
+                        <div class="acc-head"><span class="acc-ico ig-ico"><i class="fab fa-instagram"></i></span><h5>Instagram-da izlə — xal qazan</h5></div>
+                        @if ($ig && $ig->status === \App\Models\InstagramFollow::APPROVED)
+                            <div class="alert-ok mb-0"><i class="fa fa-check-circle me-2"></i>Təşəkkürlər! <b>{{ '@' . $ig->username }}</b> təsdiqləndi, balansınıza <b>+{{ $fmt($ig->points) }} xal</b> yazıldı.</div>
+                        @elseif ($ig && $ig->status === \App\Models\InstagramFollow::PENDING)
+                            <div class="ig-pending"><i class="fa fa-hourglass-half me-2"></i>Sorğunuz göndərilib: <b>{{ '@' . $ig->username }}</b>. Admin izləməni yoxlayan kimi <b>+{{ $fmt($igReward) }} xal</b> balansınıza yazılacaq.</div>
+                        @else
+                            <p class="acc-note">Instagram səhifəmizi izləyin, sonra öz Instagram adınızı yazın. Admin izləməni yoxlayıb təsdiqləyəndə balansınıza <b>+{{ $fmt($igReward) }} xal</b> yazılır (bir dəfə).</p>
+                            @if ($ig && $ig->status === \App\Models\InstagramFollow::REJECTED)
+                                <div class="alert-soft mb-3"><i class="fa fa-times-circle me-2"></i><b>{{ '@' . $ig->username }}</b> izləyicilərimiz arasında tapılmadı. Səhifəni izlədiyinizə və adı düzgün yazdığınıza əmin olub yenidən göndərin.</div>
+                            @endif
+                            @error('instagram') <div class="alert-soft mb-3">{{ $message }}</div> @enderror
+                            <div class="ig-steps">
+                                <a href="{{ config('social.instagram.url') }}" target="_blank" rel="noopener" class="btn btn-ig"><i class="fab fa-instagram me-2"></i>1. {{ '@' . config('social.instagram.handle') }} səhifəsini izlə</a>
+                                <form method="POST" action="{{ route('account.instagram') }}" class="ig-form">
+                                    @csrf
+                                    <label for="igUser" class="visually-hidden">Instagram adınız</label>
+                                    <div class="ig-input"><span>@</span><input type="text" id="igUser" name="username" value="{{ old('username', $ig?->username) }}" placeholder="instagram_adiniz" maxlength="60" autocapitalize="none" autocomplete="off" spellcheck="false" required></div>
+                                    <button type="submit" class="btn btn-primary">2. Göndər</button>
+                                </form>
+                            </div>
+                        @endif
+                    </div>
+                @endif
 
                 <div class="acc-card mt-4">
                     <div class="acc-head"><span class="acc-ico"><i class="fa fa-user-plus"></i></span><h5>Dostlarını dəvət et</h5></div>

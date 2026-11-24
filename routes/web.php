@@ -117,6 +117,8 @@ Route::middleware('auth')->group(function () {
         // Profildə: Google hesabını bağla (sonra "Google ilə davam et" eyni hesaba aparsın)
         Route::get('/hesabim/google', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'link'])->middleware('throttle:20,1')->name('account.google');
         Route::get('/hediyyelerim', [\App\Http\Controllers\Frontend\PrizeController::class, 'index'])->name('prizes');
+        // Instagram səhifəmizi izləyən adını göndərir — admin təsdiqləyəndə xal
+        Route::post('/hesabim/instagram', [\App\Http\Controllers\Frontend\InstagramFollowController::class, 'store'])->middleware('throttle:6,1')->name('account.instagram');
     });
 
     // "İndi saytda" siqnalları (açıq səhifədən avtomatik göndərilir)
@@ -214,4 +216,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::put('/istifadeciler/{user}', [\App\Http\Controllers\Admin\UserController::class, 'update'])->name('users.update');
     Route::put('/istifadeciler/{user}/xal', [\App\Http\Controllers\Admin\UserController::class, 'updatePoints'])->name('users.points');
     Route::delete('/istifadeciler/{user}', [\App\Http\Controllers\Admin\UserController::class, 'destroy'])->name('users.destroy');
+    Route::get('/instagram', [\App\Http\Controllers\Admin\InstagramFollowController::class, 'index'])->name('instagram');
+    Route::post('/instagram/{follow}/tesdiq', [\App\Http\Controllers\Admin\InstagramFollowController::class, 'approve'])->name('instagram.approve');
+    Route::post('/instagram/{follow}/redd', [\App\Http\Controllers\Admin\InstagramFollowController::class, 'reject'])->name('instagram.reject');
 });

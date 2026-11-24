@@ -15,7 +15,7 @@
     <div class="ph-sum">
         @foreach ($history['totals'] as $src => $t)
             <span class="ph-chip {{ $t['total'] < 0 ? 'minus' : '' }}">
-                <i class="fa {{ \App\Models\PointLog::SOURCES[$src][1] }}"></i>{{ \App\Models\PointLog::SOURCES[$src][0] }}
+                <i class="{{ \App\Models\PointLog::iconClass($src) }}"></i>{{ \App\Models\PointLog::SOURCES[$src][0] }}
                 <b>{{ $sign($t['total']) }}{{ $f($t['total']) }}</b>
             </span>
         @endforeach
@@ -29,7 +29,7 @@
     <ul class="ph-list">
         @foreach ($history['logs'] as $log)
             <li class="ph-row">
-                <span class="ph-ico src-{{ $log->source }}"><i class="fa {{ $log->icon() }}"></i></span>
+                <span class="ph-ico src-{{ $log->source }}"><i class="{{ $log->icon() }}"></i></span>
                 <span class="ph-what">
                     <b>{{ $log->sourceLabel() }}</b>
                     <small>{{ $log->describe($admin) }}@if ($admin && $log->restored) · <em>bərpa olunub</em>@endif</small>

@@ -7,7 +7,7 @@ use App\Models\User;
 
 /**
  * Xal tarixçəsi: balans dəyişəndə çağırılır (balansı dəyişən tranzaksiyanın içində).
- * Mənbələr: referral | quiz | stack | market | admin (PointLog::SOURCES).
+ * Mənbələr: referral | quiz | stack | market | instagram | admin (PointLog::SOURCES).
  */
 class Points
 {

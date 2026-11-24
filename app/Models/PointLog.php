@@ -19,6 +19,7 @@ class PointLog extends Model
         'quiz' => ['Bilik Yarışı', 'fa-question'],
         'stack' => ['Stəkan qülləsi', 'fa-layer-group'],
         'market' => ['Hədiyyə marketi', 'fa-gift'],
+        'instagram' => ['Instagram izləmə', 'fab fa-instagram'],
         'admin' => ['Admin düzəlişi', 'fa-user-shield'],
     ];
 
@@ -53,7 +54,15 @@ class PointLog extends Model
 
     public function icon(): string
     {
-        return self::SOURCES[$this->source][1] ?? 'fa-star';
+        return self::iconClass($this->source);
+    }
+
+    /** İkonun tam sinfi: brend ikonları (fab ...) olduğu kimi, qalanları "fa ..." */
+    public static function iconClass(string $source): string
+    {
+        $icon = self::SOURCES[$source][1] ?? 'fa-star';
+
+        return str_starts_with($icon, 'fab ') ? $icon : 'fa ' . $icon;
     }
 
     /** Sətrin izahı. $forAdmin — tam adlar, kupon kodu, adminin adı */
@@ -68,6 +77,7 @@ class PointLog extends Model
                 . (isset($m['level']) ? ' · ' . QuizController::ordinal((int) $m['level']) . ' səviyyə' : ''),
             'quiz' => isset($m['stage']) ? QuizController::ordinal((int) $m['stage']) . ' mərhələ keçildi' : 'Mərhələ keçildi',
             'stack' => isset($m['score']) ? $m['score'] . ' stəkan — bonus' : 'Bonus',
+            'instagram' => isset($m['username']) ? '@' . $m['username'] . ' — izləmə təsdiqləndi' : 'İzləmə təsdiqləndi',
             'market' => ($m['label'] ?? 'Hədiyyə') . ($forAdmin && ! empty($m['code']) ? ' · ' . $m['code'] : ''),
             'admin' => trim(($forAdmin && $this->admin ? $this->admin->name : '') . ($this->note ? ($forAdmin && $this->admin ? ' — ' : '') . $this->note : '')) ?: 'Balans düzəldildi',
             default => '',

@@ -12,11 +12,7 @@
 
 <section class="section pt-4">
     <div class="container">
-        <div class="admin-nav">
-            <a href="{{ route('admin.prizes') }}"><i class="fa fa-gift me-1"></i>Hədiyyə kodları</a>
-            <a href="{{ route('admin.users') }}" class="active"><i class="fa fa-users me-1"></i>İstifadəçilər</a>
-            <a href="{{ route('admin.reservations') }}"><i class="fa fa-chair me-1"></i>Rezervasiyalar</a>
-        </div>
+        @include('frontend.admin._nav', ['active' => 'users'])
 
         @foreach (['success' => 'success', 'error' => 'danger'] as $key => $cls)
             @if (session($key))

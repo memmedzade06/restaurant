@@ -18,11 +18,7 @@
     <div class="container">
         {{-- ofisiant yalnız rezervasiyaları görür: admin menyusu və ləğv düyməsi ona göstərilmir --}}
         @if (auth()->user()->is_admin)
-            <div class="admin-nav">
-                <a href="{{ route('admin.prizes') }}"><i class="fa fa-gift me-1"></i>Hədiyyə kodları</a>
-                <a href="{{ route('admin.users') }}"><i class="fa fa-users me-1"></i>İstifadəçilər</a>
-                <a href="{{ route('admin.reservations') }}" class="active"><i class="fa fa-chair me-1"></i>Rezervasiyalar</a>
-            </div>
+            @include('frontend.admin._nav', ['active' => 'reservations'])
         @endif
 
         @foreach (['success' => 'success', 'error' => 'danger'] as $key => $cls)
