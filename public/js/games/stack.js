@@ -113,8 +113,14 @@
     const CAP_UP_FROM = 50, CAP_UP_STEP = 5, SPEED_CAP_MAX = 600;
     const placed = () => g.tower.length - 1; // oyunçunun qoyduğu stəkan sayı
     const boost = () => placed() < BOOST_FROM ? 1 : BOOST + (placed() - BOOST_FROM) * BOOST_STEP;
-    const speedCap = () => placed() < CAP_UP_FROM ? SPEED_CAP
+    const baseCap = () => placed() < CAP_UP_FROM ? SPEED_CAP
         : Math.min(SPEED_CAP_MAX, SPEED_CAP + (placed() - CAP_UP_FROM + 1) * CAP_UP_STEP);
+    // Qəlyan hədiyyəsinin həddindən (60 stəkan) sonra oyun çətinləşir: hədd birdəfəlik +HARD_JUMP qalxır,
+    // sonra hər stəkanda +HARD_STEP, ən çoxu HARD_CAP_MAX (60-da ~595, 70-də ~700, 73-dən 720)
+    const HARD_FROM = Number(Object.keys(cfg.prizes).find(m => cfg.prizes[m].key === 'stack_hookah')) || 60;
+    const HARD_JUMP = 40, HARD_STEP = 6, HARD_CAP_MAX = 720;
+    const speedCap = () => placed() < HARD_FROM ? baseCap()
+        : Math.min(HARD_CAP_MAX, baseCap() + HARD_JUMP + (placed() - HARD_FROM) * HARD_STEP);
 
     // BOOST_FROM-dan sonra "hiylələr" (indi söndürülüb — stəkan yalnız sürətlənir, qəfil hərəkət etmir):
     //  1) hər stəkan öz sürəti ilə gəlir — TRICK_SPEED = [1, 1] olanda hamısı eyni sürətlə;
@@ -476,7 +482,7 @@
         // növbəti stəkan kənardan başlasın — hansı kənardan (sağ/sol), təsadüfi seçilir
         startFromRandomSide();
         newSwing();
-        if (placed() === BOOST_FROM || placed() === CAP_UP_FROM) {
+        if (placed() === BOOST_FROM || placed() === CAP_UP_FROM || placed() === HARD_FROM) {
             g.popups.push({text: 'Diqqət! Sürət artdı!', x: LW / 2, y: topBottomY() - GH - 60, life: 2, warn: true});
         }
         // bonus: bu gün hələ alınmayıbsa — xəbər veririk (xal oyun bitəndə server yoxlayıb yazır)
