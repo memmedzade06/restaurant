@@ -24,7 +24,7 @@
                         <p>Hər mərhələdə <b>{{ $quiz['perStage'] }} sual</b>. Hər suala <b>{{ $quiz['seconds'] }} saniyə</b> vaxt var.<br>
                             <b>{{ $quiz['lives'] }} səhv</b> etsəniz, oyun bitir.</p>
                         @if ($quiz['stagePoints'] > 0)
-                            <p class="qz-earn"><i class="fa fa-star me-1"></i>{{ $quiz['pointsFromLabel'] }} mərhələdən: <b>+{{ \App\Services\Referrals::format($quiz['stagePoints']) }} xal</b>@if ($quiz['stageStep'] > 0), hər növbəti mərhələdə <b>+{{ \App\Services\Referrals::format($quiz['stageStep']) }}</b> çox @endif
+                            <p class="qz-earn"><i class="fa fa-star me-1"></i>{{ $quiz['pointsFromLabel'] }} mərhələdən: <b>+{{ \App\Services\Referrals::format($quiz['stagePoints']) }} xal</b>@if ($quiz['stageStep'] > 0), hər növbəti mərhələdə <b>+{{ \App\Services\Referrals::format($quiz['stageStep']) }}</b> çox @else hər mərhələ üçün @endif
                                 {{-- ofisiant və admin xal almır, amma onlara xəbərdarlıq göstərilmir --}}
                                 @if ($quiz['staff'])
                                 @elseif ($quiz['canEarn'] && $quiz['pointsLeft'] <= 0)
@@ -96,10 +96,15 @@
                         <li>{{ $quiz['perStage'] }} sualı keçəndə növbəti mərhələ başlayır, canlar yenilənir. Birinci mərhələ asandır, sonra suallar getdikcə çətinləşir.</li>
                         <li>İlk <b>{{ $quiz['guestStages'] }} mərhələni</b> hamı oynaya bilər. Davam etmək üçün <b>profilinizi təsdiqləməlisiniz</b>.</li>
                         @if ($quiz['stagePoints'] > 0)
-                            <li>Xal <b>{{ $quiz['pointsFromLabel'] }} mərhələdən</b> başlayır: həmin mərhələdən sonra hər keçilən mərhələ üçün balansınıza xal yazılır və mərhələ artdıqca xal da artır:
-                                @for ($s = $quiz['pointsFrom']; $s < $quiz['pointsFrom'] + 4; $s++)
-                                    <b>{{ \App\Http\Controllers\Frontend\QuizController::ordinal($s) }} — +{{ \App\Services\Referrals::format(\App\Http\Controllers\Frontend\QuizController::stageReward($s)) }}</b>{{ $s < $quiz['pointsFrom'] + 3 ? ',' : ' …' }}
-                                @endfor
+                            <li>Xal <b>{{ $quiz['pointsFromLabel'] }} mərhələdən</b> başlayır: həmin mərhələdən sonra hər keçilən mərhələ üçün balansınıza
+                                @if ($quiz['stageStep'] > 0)
+                                    xal yazılır və mərhələ artdıqca xal da artır:
+                                    @for ($s = $quiz['pointsFrom']; $s < $quiz['pointsFrom'] + 4; $s++)
+                                        <b>{{ \App\Http\Controllers\Frontend\QuizController::ordinal($s) }} — +{{ \App\Services\Referrals::format(\App\Http\Controllers\Frontend\QuizController::stageReward($s)) }}</b>{{ $s < $quiz['pointsFrom'] + 3 ? ',' : ' …' }}
+                                    @endfor
+                                @else
+                                    <b>+{{ \App\Services\Referrals::format($quiz['stagePoints']) }} xal</b> yazılır
+                                @endif
                                 (gündə ən çox <b>{{ \App\Services\Referrals::format($quiz['maxPerDay']) }} xal</b>). Xalları Hədiyyə marketində hədiyyəyə çevirə bilərsiniz.</li>
                             <li>Hər mərhələyə görə xal <b>gündə bir dəfə</b> verilir: yeni oyunda eyni mərhələni təkrar keçmək xal vermir — xal yalnız bu gün çatdığınız ən yüksək mərhələdən <b>sonrakılar</b> üçün yazılır.</li>
                         @endif
@@ -112,5 +117,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/quiz.js') }}?v=11"></script>
+<script src="{{ asset('js/games/quiz.js') }}?v=12"></script>
 @endsection

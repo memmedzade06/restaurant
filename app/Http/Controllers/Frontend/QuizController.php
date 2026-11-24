@@ -400,7 +400,7 @@ class QuizController extends Controller
 
     /**
      * N-ci mərhələnin xalı: firstPaidStage()-dən əvvəl — 0, həmin mərhələ — stage_points,
-     * hər növbəti — stage_points_step qədər çox.
+     * hər növbəti — stage_points_step qədər çox (step 0 — hamısı eyni).
      */
     public static function stageReward(int $stage): float
     {
