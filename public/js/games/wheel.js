@@ -158,16 +158,19 @@
                 : (state.funReason === 'attempts'
                     ? 'Bu günün cəhdləri bitdi — çarxı əyləncə üçün istədiyiniz qədər fırlada bilərsiniz, amma hədiyyə verilmir.'
                     : 'Çarxı əyləncə üçün istədiyiniz qədər fırlada bilərsiniz — hədiyyə verilmir.')}</div>` : '';
-        if (state.claimed) {
+        if (state.claimed && state.claimed.expired) {
+            // kodun vaxtı bitib və ya istifadə olunub (bazadan da silinir) — kod göstərilmir, bu gün yenidən fırlatmaq olmur
+            html = `<span class="eyebrow">Bugünkü hədiyyəniz</span><h3>${esc(state.claimed.label)}</h3>` +
+                (state.claimed.used
+                    ? '<p class="small text-muted mb-0">Kod restoranda istifadə olunub. Sabah yenə fırladın!</p>'
+                    : `<p class="small text-muted mb-0">Kodun vaxtı <b>${esc(state.claimed.expires)}</b>-də bitib. Sabah yenə fırladın!</p>`)
+                + fun;
+        } else if (state.claimed) {
             html = `<span class="eyebrow">Hədiyyəniz 🎉</span><h3>${esc(state.claimed.label)}</h3>` +
-                `<div class="coupon-row"><div class="prize-code${state.claimed.expired || state.claimed.used ? ' no-qr' : ''}">${esc(state.claimed.code)}</div></div>` +
+                `<div class="coupon-row"><div class="prize-code">${esc(state.claimed.code)}</div></div>` +
                 (state.claimed.claimed_at ? `<p class="claimed-at"><i class="fa fa-clock me-1"></i>Götürülüb: <b>${esc(state.claimed.claimed_at)}</b></p>` : '') +
-                (state.claimed.expired
-                    // kodun vaxtı bitib (bazadan da silinir) — bu gün yenidən fırlatmaq olmur
-                    ? (state.claimed.used
-                        ? '<p class="small text-muted mb-0">Kod restoranda istifadə olunub. Sabah yenə fırladın!</p>'
-                        : `<p class="small text-muted mb-0">Kodun vaxtı <b>${esc(state.claimed.expires)}</b>-də bitib. Sabah yenə fırladın!</p>`)
-                    : `<p class="small text-muted mb-0">Kodu ofisianta göstərin. ${esc(state.claimed.expires)} tarixinədək etibarlıdır. Kod <a href="/hediyyelerim">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>` + (window.earnMoreHtml ? window.earnMoreHtml() : ''))
+                `<p class="small text-muted mb-0">Kodu ofisianta göstərin. ${esc(state.claimed.expires)} tarixinədək etibarlıdır. Kod <a href="/hediyyelerim">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>` +
+                (window.earnMoreHtml ? window.earnMoreHtml() : '')
                 + fun;
         } else if (state.last) {
             const left = state.attemptsLeft;
