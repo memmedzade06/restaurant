@@ -1087,3 +1087,12 @@ body.has-chat-fab.has-verify-bar .back-to-top { bottom: 218px; }
 .date-select select:nth-child(3) { flex: 0 0 88px; }   /* il */
 .bday-form { flex-direction: column; }
 .bday-form .btn { width: 100%; }
+
+/* Admin: hamıya mesaj */
+.broadcast-audience { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid #f0e4d4; border-radius: 12px; margin-bottom: 8px; cursor: pointer; }
+.broadcast-audience:has(input:checked) { border-color: var(--primary); background: #fff8ea; }
+.broadcast-audience input { margin-top: 4px; accent-color: var(--wine); }
+.broadcast-history { display: flex; flex-direction: column; gap: 10px; }
+.broadcast-item { padding: 12px 14px; border-radius: 12px; background: var(--cream); border: 1px solid #f0e4d4; }
+.broadcast-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+.broadcast-body { white-space: pre-wrap; word-break: break-word; color: var(--text); }

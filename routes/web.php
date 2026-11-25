@@ -231,6 +231,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::post('/instagram/{follow}/redd', [\App\Http\Controllers\Admin\InstagramFollowController::class, 'reject'])->name('instagram.reject');
     // İstifadəçilərdən gələn mesajlar: söhbətlər və cavab
     Route::get('/mesajlar', [\App\Http\Controllers\Admin\SupportController::class, 'index'])->name('support');
+    // Hamıya mesaj (/{user} ünvanından əvvəl olmalıdır)
+    Route::get('/mesajlar/hamiya', [\App\Http\Controllers\Admin\BroadcastController::class, 'index'])->name('support.broadcast');
+    Route::post('/mesajlar/hamiya', [\App\Http\Controllers\Admin\BroadcastController::class, 'store'])->middleware('throttle:5,1')->name('support.broadcast.store');
     Route::get('/mesajlar/{user}', [\App\Http\Controllers\Admin\SupportController::class, 'show'])->name('support.show');
     Route::post('/mesajlar/{user}', [\App\Http\Controllers\Admin\SupportController::class, 'reply'])->middleware('throttle:30,1')->name('support.reply');
     Route::get('/mesajlar/{user}/yeni', [\App\Http\Controllers\Admin\SupportController::class, 'poll'])->middleware('throttle:poll')->name('support.poll');

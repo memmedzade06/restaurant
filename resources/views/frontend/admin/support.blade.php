@@ -17,7 +17,8 @@
         <div class="side-card">
             <div class="d-flex flex-wrap align-items-center gap-2">
                 <a href="{{ route('admin.support') }}" class="btn btn-sm {{ $filter === 'all' ? 'btn-wine' : 'btn-outline-secondary' }}">Hamısı</a>
-                <a href="{{ route('admin.users') }}" class="btn btn-sm btn-primary ms-auto order-last" title="İstifadəçilər siyahısında ✉ düyməsini basın"><i class="fa fa-plus me-1"></i>Yeni mesaj</a>
+                <a href="{{ route('admin.support.broadcast') }}" class="btn btn-sm btn-wine ms-auto order-last"><i class="fa fa-bullhorn me-1"></i>Hamıya mesaj</a>
+                <a href="{{ route('admin.users') }}" class="btn btn-sm btn-primary order-last" title="İstifadəçilər siyahısında ✉ düyməsini basın"><i class="fa fa-plus me-1"></i>Yeni mesaj</a>
                 <a href="{{ route('admin.support', ['filter' => 'unread']) }}" class="btn btn-sm {{ $filter === 'unread' ? 'btn-wine' : 'btn-outline-secondary' }}">
                     Oxunmamış <span class="ms-1">({{ $unreadThreads }})</span></a>
             </div>

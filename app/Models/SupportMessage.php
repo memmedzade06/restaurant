@@ -11,7 +11,7 @@ class SupportMessage extends Model
 {
     public const MAX_LENGTH = 2000;
 
-    protected $fillable = ['user_id', 'sender_id', 'from_admin', 'body', 'read_at'];
+    protected $fillable = ['user_id', 'sender_id', 'from_admin', 'broadcast_id', 'body', 'read_at'];
 
     protected $casts = [
         'from_admin' => 'boolean',
@@ -49,7 +49,9 @@ class SupportMessage extends Model
             'id' => $this->id,
             'body' => $this->body,
             'mine' => $this->from_admin === $viewerIsAdmin,
-            'author' => $this->from_admin ? ($viewerIsAdmin ? ($this->sender?->short_name ?? 'Admin') : '50 Qəpik') : null,
+            'author' => $this->from_admin
+                ? ($viewerIsAdmin ? ($this->broadcast_id ? 'Hamıya · ' : '') . ($this->sender?->short_name ?? 'Admin') : '50 Qəpik')
+                : null,
             'time' => $local->isToday() ? $local->format('H:i') : $local->format('d.m.Y H:i'),
             'read' => $this->read_at !== null, // öz mesajında: ✓ göndərilib, ✓✓ qarşı tərəf oxuyub
         ];
