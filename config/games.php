@@ -105,11 +105,11 @@ return [
         // Bonus mərhələləri: [stəkan sayı => xal]. Təsdiqlənmiş qonaq bir oyunda mərhələyə çatanda balansına xal yazılır.
         // Hər mərhələ gündə BİR dəfə: bu gün 30 stəkana görə alıbsa, həmin gün 30-a görə yox, yalnız yuxarı mərhələlərə görə alır.
         // Bir oyunda bir neçə mərhələ keçilsə — hamısı (məs. 65 stəkan: 0,25 + 0,5 + 0,75). Gündə ən çox — cəmi.
-        // .env: STACK_BONUS_TIERS="30:0.25,40:0.5,60:0.75"
+        // .env: STACK_BONUS_TIERS="30:0.25,50:0.5,60:0.75"
         'bonus' => [
             'tiers' => (function () {
                 $tiers = [];
-                foreach (explode(',', (string) env('STACK_BONUS_TIERS', '30:0.25,40:0.5,60:0.75')) as $pair) {
+                foreach (explode(',', (string) env('STACK_BONUS_TIERS', '30:0.25,50:0.5,60:0.75')) as $pair) {
                     [$score, $points] = array_map('trim', explode(':', $pair) + [1 => 0]);
                     if ((int) $score > 0 && (float) $points > 0) {
                         $tiers[(int) $score] = (float) $points;
