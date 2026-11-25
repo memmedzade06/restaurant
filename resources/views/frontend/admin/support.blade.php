@@ -17,6 +17,7 @@
         <div class="side-card">
             <div class="d-flex flex-wrap align-items-center gap-2">
                 <a href="{{ route('admin.support') }}" class="btn btn-sm {{ $filter === 'all' ? 'btn-wine' : 'btn-outline-secondary' }}">Hamısı</a>
+                <a href="{{ route('admin.users') }}" class="btn btn-sm btn-primary ms-auto order-last" title="İstifadəçilər siyahısında ✉ düyməsini basın"><i class="fa fa-plus me-1"></i>Yeni mesaj</a>
                 <a href="{{ route('admin.support', ['filter' => 'unread']) }}" class="btn btn-sm {{ $filter === 'unread' ? 'btn-wine' : 'btn-outline-secondary' }}">
                     Oxunmamış <span class="ms-1">({{ $unreadThreads }})</span></a>
             </div>
@@ -24,7 +25,8 @@
 
         <div class="side-card">
             @if ($threads->isEmpty())
-                <p class="text-muted mb-0">{{ $filter === 'unread' ? 'Oxunmamış mesaj yoxdur.' : 'Hələ heç kim yazmayıb.' }}</p>
+                <p class="text-muted mb-0">{{ $filter === 'unread' ? 'Oxunmamış mesaj yoxdur.' : 'Hələ yazışma yoxdur.' }}</p>
+                <p class="small text-muted mt-2 mb-0"><i class="fa fa-info-circle me-1"></i>İstifadəçiyə özünüz yazmaq üçün: <a href="{{ route('admin.users') }}">İstifadəçilər</a> siyahısında <i class="fa fa-comment-dots"></i> düyməsini basın.</p>
             @else
                 <div class="support-threads">
                     @foreach ($threads as $t)

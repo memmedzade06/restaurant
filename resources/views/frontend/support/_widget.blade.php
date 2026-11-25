@@ -59,7 +59,11 @@
             </div>
         </div>
         <button type="button" class="chat-fab-label" id="chatFabLabel" tabindex="-1" aria-hidden="true">
-            <b>Sualınız var?</b> Bizə yazın
+            @if ($userUnread)
+                <b>Yeni mesajınız var!</b> Oxuyun
+            @else
+                <b>Sualınız var?</b> Bizə yazın
+            @endif
             <span class="chat-typing" aria-hidden="true"><i></i><i></i><i></i></span>
         </button>
         <button type="button" @class(['chat-fab', 'chat-fab-pulse', 'is-online' => $adminOnline]) id="chatFab" data-online-ring aria-label="Adminə yaz" aria-expanded="false" aria-controls="chatPanel">

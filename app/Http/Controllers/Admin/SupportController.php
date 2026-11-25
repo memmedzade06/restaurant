@@ -44,6 +44,7 @@ class SupportController extends Controller
 
     public function show(User $user): View
     {
+        abort_if($user->is_admin, 404); // adminlər bir-birinə buradan yazmır
         $messages = SupportMessage::with('sender:id,name')->where('user_id', $user->id)
             ->latest('id')->take(self::HISTORY)->get()->reverse()->values();
 
@@ -57,6 +58,7 @@ class SupportController extends Controller
 
     public function reply(Request $request, User $user): JsonResponse|RedirectResponse
     {
+        abort_if($user->is_admin, 404);
         $data = $request->validate([
             'body' => ['required', 'string', 'max:' . SupportMessage::MAX_LENGTH],
         ], [

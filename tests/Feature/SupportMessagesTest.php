@@ -104,6 +104,39 @@ class SupportMessagesTest extends TestCase
         $this->actingAs($user)->get(route('home'))->assertSee('chat-status online', false);
     }
 
+    public function test_admin_starts_conversation_and_user_sees_it_in_profile_and_widget(): void
+    {
+        $user = $this->user();
+        $admin = $this->user(true);
+
+        // adminin giriş nöqtələri: istifadəçilər siyahısı və düzəliş səhifəsi
+        $this->actingAs($admin)->get(route('admin.users'))->assertOk()->assertSee(route('admin.support.show', $user));
+        $this->actingAs($admin)->get(route('admin.users.edit', $user))->assertOk()->assertSee('Mesaj yaz');
+        $this->actingAs($admin)->get(route('admin.support'))->assertOk()->assertSee('Yeni mesaj');
+
+        // yazışma olmadan profildə Mesajlar kartı yoxdur
+        $this->actingAs($user)->get(route('account'))->assertOk()->assertDontSee('id="mesajlar"', false);
+
+        // istifadəçi heç yazmayıb — admin ilk mesajı göndərir
+        $this->actingAs($admin)->get(route('admin.support.show', $user))->assertOk()->assertSee('Bu istifadəçi ilə yazışma yoxdur.');
+        $this->actingAs($admin)->postJson(route('admin.support.reply', $user), ['body' => 'Salam! Bu gün sizə 20% endirim var.'])->assertCreated();
+
+        // profildə: Mesajlar kartı, "1 yeni" və mesajın mətni; küncdə: "Yeni mesajınız var!"
+        $this->actingAs($user)->get(route('account'))->assertOk()
+            ->assertSee('id="mesajlar"', false)->assertSee('1 yeni')->assertSee('Bu gün sizə 20% endirim var.')
+            ->assertSeeInOrder(['id="xallar"', 'id="mesajlar"'], false);
+        $this->actingAs($user)->get(route('home'))->assertSee('Yeni mesajınız var!');
+
+        // söhbəti açanda oxunur — kart qalır, amma "yeni" yox
+        $this->actingAs($user)->get(route('support'))->assertOk()->assertSee('Bu gün sizə 20% endirim var.');
+        $this->actingAs($user)->get(route('account'))->assertSee('id="mesajlar"', false)->assertDontSee('1 yeni');
+        $this->actingAs($user)->get(route('home'))->assertDontSee('Yeni mesajınız var!');
+
+        // admin hesabına söhbət açılmır
+        $this->actingAs($admin)->get(route('admin.support.show', $admin))->assertNotFound();
+        $this->actingAs($admin)->postJson(route('admin.support.reply', $admin), ['body' => 'x'])->assertNotFound();
+    }
+
     public function test_users_only_see_their_own_conversation(): void
     {
         $a = $this->user();

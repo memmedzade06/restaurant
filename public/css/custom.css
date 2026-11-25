@@ -1068,3 +1068,12 @@ body.has-chat-fab.has-verify-bar .back-to-top { bottom: 218px; }
 
 /* Hesabım: sağ sütunun ilk kartı profil kartı ilə bir səviyyədə başlasın */
 .acc-col > .acc-card:first-child { margin-top: 0 !important; }
+
+/* Hesabım: Mesajlar kartı (admindən gələn son mesaj) */
+.acc-messages.has-unread { border: 2px solid var(--primary); background: linear-gradient(180deg, #fff8ea, #fff); }
+.acc-msg-last { display: block; padding: 12px 14px; border-radius: 14px; background: var(--cream); border: 1px solid #f0e4d4; color: var(--text); }
+.acc-msg-last:hover { border-color: var(--primary); color: var(--text); }
+.acc-msg-from { display: flex; justify-content: space-between; gap: 10px; font-weight: 800; color: var(--wine); margin-bottom: 4px; }
+.acc-msg-from small { font-weight: 600; color: var(--muted); }
+.acc-msg-text { display: block; white-space: pre-wrap; word-break: break-word; }
+.acc-messages.has-unread .acc-msg-text { font-weight: 700; }

@@ -80,6 +80,28 @@
                 </div>
             </div>
 
+            {{-- Mesajlar: admindən gələn (və ya adminə yazılan) son mesaj; yeni mesaj varsa diqqət çəkir --}}
+            @unless ($me->is_admin)
+                @php
+                    $msgLast = \App\Models\SupportMessage::where('user_id', $me->id)->latest('id')->first();
+                    $msgUnread = \App\Models\SupportMessage::unreadForUser($me->id)->count();
+                @endphp
+                @if ($msgLast)
+                    <div class="col-12">
+                        <div @class(['acc-card', 'acc-messages', 'has-unread' => $msgUnread]) id="mesajlar">
+                            <div class="acc-head"><span class="acc-ico"><i class="fa fa-comments"></i></span>
+                                <h5>Mesajlar @if ($msgUnread)<span class="badge bg-danger ms-1">{{ $msgUnread }} yeni</span>@endif</h5>
+                                <a href="{{ route('support') }}" class="acc-more">Söhbətə keç <i class="fa fa-arrow-right ms-1"></i></a></div>
+                            <a href="{{ route('support') }}" class="acc-msg-last">
+                                <span class="acc-msg-from">{{ $msgLast->from_admin ? '50 Qəpik' : 'Siz' }}
+                                    <small>{{ $msgLast->created_at->timezone('Asia/Baku')->format('d.m.Y H:i') }}</small></span>
+                                <span class="acc-msg-text">{{ \Illuminate\Support\Str::limit($msgLast->body, 220) }}</span>
+                            </a>
+                        </div>
+                    </div>
+                @endif
+            @endunless
+
             @if ($me->is_admin)
                 {{-- Yalnız admin: idarəetmə paneli (yuxarı menyuda link yoxdur — buradan keçilir) --}}
                 @php

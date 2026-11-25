@@ -113,6 +113,9 @@
                                         </small>
                                     </td>
                                     <td class="text-end text-nowrap">
+                                        @unless ($u->is_admin)
+                                            <a href="{{ route('admin.support.show', $u) }}" class="btn-user-edit me-1" title="Mesaj yaz" aria-label="{{ $u->name }} — mesaj yaz"><i class="fa fa-comment-dots"></i></a>
+                                        @endunless
                                         <a href="{{ route('admin.users.edit', $u) }}" class="btn-user-edit" title="Düzəliş et" aria-label="{{ $u->name }} — düzəliş et"><i class="fa fa-pen"></i></a>
                                         @unless ($u->is_admin || $u->id === auth()->id())
                                             <form method="POST" action="{{ route('admin.users.destroy', $u) }}" class="d-inline-block ms-1"

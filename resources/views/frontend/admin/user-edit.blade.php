@@ -39,6 +39,9 @@
                 <dt>Hazırkı tip</dt>
                 <dd><span class="user-type user-type-{{ $user->type }}">{{ $user->type_label }}</span></dd>
             </dl>
+            @unless ($user->is_admin)
+                <a href="{{ route('admin.support.show', $user) }}" class="btn btn-sm btn-outline-secondary mb-3"><i class="fa fa-comment-dots me-1"></i>Mesaj yaz</a>
+            @endunless
 
             <form method="POST" action="{{ route('admin.users.update', $user) }}">
                 @csrf
