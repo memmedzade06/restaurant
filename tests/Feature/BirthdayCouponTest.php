@@ -49,7 +49,8 @@ class BirthdayCouponTest extends TestCase
         $u = $this->user(['points' => 2]);
 
         $this->actingAs($u)->get(route('account'))->assertOk()
-            ->assertSee('Ad günü hədiyyəsi')->assertSee('+1 xal')->assertSee(route('account.birthday'));
+            ->assertSee('Ad günü hədiyyəsi')->assertSee('+1 xal')->assertSee(route('account.birthday'))
+            ->assertDontSee('@if')->assertDontSee('@endif'); // Blade direktivləri mətnə düşməsin
 
         $this->actingAs($u)->post(route('account.birthday'), ['birth_date' => '1995-08-14'])
             ->assertRedirect(route('account') . '#ad-gunu')->assertSessionHas('birthday_saved', 1.0);

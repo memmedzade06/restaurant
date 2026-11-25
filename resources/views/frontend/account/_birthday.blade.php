@@ -15,7 +15,14 @@
         @switch($bd['state'])
             @case($B::NO_DATE)
                 @php($bdBonus = \App\Support\Birthday::setPoints() > 0 && ! \App\Models\PointLog::where('user_id', $me->id)->where('source', 'birthday')->exists())
-                <p class="bday-lead">Ad gününüzdə <b>masaya 50% endirim</b> kuponu hədiyyə edirik! Doğum tarixinizi yazın@if ($bdBonus) və dərhal <b class="bday-bonus">+{{ \App\Services\Referrals::format(\App\Support\Birthday::setPoints()) }} xal</b> qazanın@endif.</p>
+                <p class="bday-lead">
+                    Ad gününüzdə <b>masaya 50% endirim</b> kuponu hədiyyə edirik!
+                    @if ($bdBonus)
+                        Doğum tarixinizi yazın və dərhal <b class="bday-bonus">+{{ \App\Services\Referrals::format(\App\Support\Birthday::setPoints()) }} xal</b> qazanın.
+                    @else
+                        Doğum tarixinizi yazın.
+                    @endif
+                </p>
                 <form method="POST" action="{{ route('account.birthday') }}" class="bday-form">
                     @csrf
                     <input type="date" name="birth_date" value="{{ old('birth_date') }}" max="{{ now('Asia/Baku')->subYears(5)->toDateString() }}" min="1920-01-02" required aria-label="Doğum tarixi">
