@@ -59,7 +59,11 @@
             el.classList.toggle('online', !!on);
             el.querySelector('.chat-status-text').textContent = on ? el.dataset.on : el.dataset.off;
         });
-        document.querySelectorAll('.chat-fab-online').forEach(function (d) { d.hidden = !on; });
+        // küncdəki düymənin halqası: admin saytdadırsa yaşıl
+        document.querySelectorAll('[data-online-ring]').forEach(function (f) {
+            f.classList.toggle('is-online', !!on);
+            f.title = on ? 'Admin onlayndır' : '';
+        });
     }
 
     function setTicks(el, read) {

@@ -1021,8 +1021,8 @@ a.chat-fab-label:hover { color: var(--text); }
 .chat-status.online .chat-status-dot { display: inline-block; }
 .chat-status.online .chat-status-text { font-weight: 700; }
 @keyframes chatOnline { 0% { box-shadow: 0 0 0 0 rgba(47, 211, 107, .6); } 70%, 100% { box-shadow: 0 0 0 7px rgba(47, 211, 107, 0); } }
-.chat-fab-online { position: absolute; bottom: 4px; right: 4px; width: 16px; height: 16px; border-radius: 50%; background: #2fd36b; border: 3px solid #fff; }
-.chat-fab-online[hidden] { display: none; }
+/* Admin saytdadırsa: düymənin nazik ağ halqası yaşıl olur */
+.chat-fab.is-online { border-color: #2fd36b; }
 .chat-page-head { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; margin-bottom: 8px; border-bottom: 1px solid #f0e4d4; }
 .chat-page-head b { display: block; color: var(--dark); }
 .chat-page-head .chat-status { color: var(--muted); font-size: 13px; }
