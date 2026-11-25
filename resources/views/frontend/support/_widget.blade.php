@@ -64,7 +64,6 @@
         </button>
         <button type="button" class="chat-fab chat-fab-pulse" id="chatFab" aria-label="Adminə yaz" aria-expanded="false" aria-controls="chatPanel">
             <i class="fa fa-comments chat-fab-open"></i>
-            <i class="fa fa-times chat-fab-close"></i>
             <span class="chat-fab-badge" @if (! $userUnread) hidden @endif>{{ $userUnread }}</span>
             <span class="chat-fab-online" title="Admin onlayndır" @if (! $adminOnline) hidden @endif></span>
         </button>

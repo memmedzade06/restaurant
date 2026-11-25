@@ -924,9 +924,6 @@ div.coupon-row .prize-code { margin-bottom: 0; font-size: 16px; padding: 8px 10p
 .chat-fab { position: fixed; right: 22px; bottom: 22px; z-index: 1045; width: 76px; height: 76px; border-radius: 50%; border: 3px solid #fff; display: grid; place-items: center; background: linear-gradient(135deg, #a52525, var(--wine) 55%, var(--wine-dark)); color: #fff; font-size: 32px; box-shadow: 0 12px 30px rgba(58, 13, 13, .35); cursor: pointer; transition: transform .15s ease, background .15s ease; }
 .chat-fab:hover { background: var(--wine-dark); color: #fff; transform: scale(1.06); }
 .chat-fab:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
-.chat-fab-close { display: none; }
-.chat-widget.is-open .chat-fab-open { display: none; }
-.chat-widget.is-open .chat-fab-close { display: inline; }
 .chat-fab-badge { position: absolute; top: -4px; right: -4px; min-width: 26px; height: 26px; padding: 0 7px; border-radius: 13px; background: var(--primary); color: var(--dark); font-size: 13px; font-weight: 800; line-height: 26px; text-align: center; box-shadow: 0 0 0 3px #fff; }
 .chat-fab-badge[hidden] { display: none; }
 .chat-panel { position: fixed; right: 22px; bottom: 112px; z-index: 1046; width: 370px; max-width: calc(100vw - 32px); height: min(560px, calc(100vh - 130px)); display: flex; flex-direction: column; background: #fff; border-radius: 22px; box-shadow: 0 24px 60px rgba(30, 11, 11, .3); overflow: hidden; animation: chatPanelIn .2s ease-out; }
@@ -1031,3 +1028,12 @@ a.chat-fab-label:hover { color: var(--text); }
 .chat-page-head .chat-status { color: var(--muted); font-size: 13px; }
 .chat-page-head .chat-status.online { color: #1f9d55; }
 .chat-page-head .chat-panel-logo { background: var(--cream); }
+
+/* Pəncərə açıq olanda küncdəki düymə gizlənir (✕ yoxdur — bağlamaq başlıqdakı düymə ilə), pəncərə aşağı enir */
+.chat-widget.is-open .chat-fab { display: none; }
+.chat-widget.is-open .chat-panel { bottom: 22px; height: min(600px, calc(100vh - 44px)); }
+body.has-verify-bar .chat-widget.is-open .chat-panel { bottom: 110px; height: min(560px, calc(100vh - 140px)); }
+@media (max-width: 575.98px) {
+    .chat-widget.is-open .chat-panel { bottom: 8px; height: calc(100vh - 16px); height: calc(100dvh - 16px); }
+    body.has-verify-bar .chat-widget.is-open .chat-panel { bottom: 8px; height: calc(100dvh - 16px); }
+}
