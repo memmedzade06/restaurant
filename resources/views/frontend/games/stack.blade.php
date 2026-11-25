@@ -107,8 +107,12 @@
                             <li>Yuxarıda stəkan sağa-sola yellənir.</li>
                             <li>Toxunun — stəkan düşüb qüllənin üstünə düşür.</li>
                             <li><b>10 saniyə</b> toxunmasanız, oyun bitir (son 3 saniyədə xəbərdarlıq çıxır).</li>
-                            @if ($bonus['points'] > 0)
-                                <li><b>{{ $bonus['score'] }} stəkan</b> — balansınıza <b>+{{ \App\Services\Referrals::format($bonus['points']) }} xal bonus</b> (gündə {{ $bonus['per_day'] }} dəfə)</li>
+                            @if ($bonus['tiers'])
+                                <li>Xal bonusu (hər mərhələ gündə bir dəfə):
+                                    @foreach ($bonus['tiers'] as $t)
+                                        <b>{{ $t['score'] }} stəkan — +{{ \App\Services\Referrals::format($t['points']) }} xal</b>@if (! $loop->last), @endif
+                                    @endforeach
+                                </li>
                             @endif
                             @foreach ($prizes as $min => $p)
                                 @if ($loop->last)
@@ -129,5 +133,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/stack.js') }}?v=130"></script>
+<script src="{{ asset('js/games/stack.js') }}?v=131"></script>
 @endsection

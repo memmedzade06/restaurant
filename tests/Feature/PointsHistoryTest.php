@@ -41,7 +41,7 @@ class PointsHistoryTest extends TestCase
     {
         Cache::flush();
         config(['referral.levels' => [0.5, 0.25, 0.125], 'quiz.points_from_stage' => 3, 'quiz.stage_points' => 0.25, 'quiz.stage_points_step' => 0.25]);
-        config(['games.stack.bonus' => ['score' => 40, 'points' => 0.5, 'per_day' => 2]]);
+        config(['games.stack.bonus' => ['tiers' => [40 => 0.5]]]);
         config(['market.items' => [['key' => 'market_tea', 'label' => 'Çaynik çay', 'cost' => 1, 'icon' => 'fa-mug-hot', 'desc' => 'Çay']], 'market_menu' => ['categories' => [], 'items' => []]]);
 
         $top = $this->user('Böyük Dəvətçi');
@@ -74,7 +74,7 @@ class PointsHistoryTest extends TestCase
         // admin: tam adlar, kupon kodu, adminin adı və səbəb
         $this->actingAs($admin)->get(route('admin.users.edit', $me))->assertOk()
             ->assertSee('Xal tarixçəsi')
-            ->assertSee('Nigar Hüseynova')->assertSee('3-cü mərhələ keçildi')->assertSee('42 stəkan — bonus')
+            ->assertSee('Nigar Hüseynova')->assertSee('3-cü mərhələ keçildi')->assertSee('40 stəkan mərhələsi — bonus')
             ->assertSee('Çaynik çay · ' . $code)->assertSee('Baş Admin — Turnir mükafatı')
             ->assertDontSee('Əvvəlki xallar');
 

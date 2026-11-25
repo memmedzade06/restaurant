@@ -77,7 +77,7 @@ class PointLog extends Model
                     : 'silinmiş istifadəçi')
                 . (isset($m['level']) ? ' · ' . QuizController::ordinal((int) $m['level']) . ' səviyyə' : ''),
             'quiz' => isset($m['stage']) ? QuizController::ordinal((int) $m['stage']) . ' mərhələ keçildi' : 'Mərhələ keçildi',
-            'stack' => isset($m['score']) ? $m['score'] . ' stəkan — bonus' : 'Bonus',
+            'stack' => isset($m['tier']) ? $m['tier'] . ' stəkan mərhələsi — bonus' : (isset($m['score']) ? $m['score'] . ' stəkan — bonus' : 'Bonus'),
             'instagram' => isset($m['username']) ? '@' . $m['username'] . ' — izləmə təsdiqləndi' : 'İzləmə təsdiqləndi',
             'birthday' => 'Doğum tarixi əlavə olundu',
             'market' => ($m['label'] ?? 'Hədiyyə') . ($forAdmin && ! empty($m['code']) ? ' · ' . $m['code'] : ''),

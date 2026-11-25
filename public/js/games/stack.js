@@ -491,9 +491,10 @@
         if (placed() === BOOST_FROM || placed() === CAP_UP_FROM || placed() === HARD_FROM) {
             g.popups.push({text: 'Diqqət! Sürət artdı!', x: LW / 2, y: topBottomY() - GH - 60, life: 2, warn: true});
         }
-        // bonus: bu gün hələ alınmayıbsa — xəbər veririk (xal oyun bitəndə server yoxlayıb yazır)
-        if (cfg.canSave && cfg.bonus && cfg.bonus.left > 0 && g.score === cfg.bonus.score) {
-            g.popups.push({text: `🎉 ${cfg.bonus.score} stəkan! +${fmtPoints(cfg.bonus.points)} xal bonus`, x: LW / 2, y: topBottomY() - GH - 90, life: 2.6});
+        // bonus mərhələsi (30, 40, 60...): bu gün hələ alınmayıbsa — xəbər veririk (xal oyun bitəndə server yoxlayıb yazır)
+        const tier = cfg.canSave && cfg.bonus && (cfg.bonus.tiers || []).find(t => t.score === g.score && !t.done);
+        if (tier) {
+            g.popups.push({text: `🎉 ${tier.score} stəkan! +${fmtPoints(tier.points)} xal bonus`, x: LW / 2, y: topBottomY() - GH - 90, life: 2.6});
         }
 
         checkPrize();
@@ -2658,8 +2659,9 @@
 
     /** Server bonus yazıbsa — nəticə pəncərəsində göstəririk */
     function bonusNote(points) {
+        // nəticə yazıldı: bu oyunda çatılan mərhələlərin bonusu bu gün artıq alınıb (yenidən xəbər verilməsin)
+        if (cfg.bonus && cfg.bonus.tiers) cfg.bonus.tiers.forEach(t => { if (t.score <= g.score) t.done = true; });
         if (!points || points <= 0) return '';
-        if (cfg.bonus) cfg.bonus.left = Math.max(0, cfg.bonus.left - 1);
         return `<br><span class="st-bonus">⭐ +${fmtPoints(points)} xal bonus balansınıza yazıldı!</span>`;
     }
 

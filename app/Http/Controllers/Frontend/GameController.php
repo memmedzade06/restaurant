@@ -49,7 +49,7 @@ class GameController extends Controller
             'prizes' => $this->stackPrizes(),
             'prizeLeft' => $verified ? $this->stackPrizesLeft($user->id) : null,
             // xal bonusu yalnız qonaqlara (ofisiant və admin oynaya bilər, amma xal almır)
-            'bonus' => $this->stackBonusConfig() + ['left' => $verified && $user->earnsGamePoints() ? $this->stackBonusLeft($user->id) : 0],
+            'bonus' => $this->stackBonusInfo($verified && $user->earnsGamePoints() ? $user->id : null),
             // ?hava=rain kimi baxış rejimi; yoxsa canlı hava səhifə açılandan sonra ayrıca sorğu ilə gəlir
             // (xidmət bir neçə saniyə cavab verə bilər — səhifə bunu gözləməsin)
             'weather' => BakuWeather::preview($request->query('hava')),
@@ -237,50 +237,62 @@ class GameController extends Controller
     }
 
     /** ['score' => neçə stəkan, 'points' => neçə xal, 'per_day' => gündə neçə dəfə] */
-    private function stackBonusConfig(): array
+    /** Bonus mərhələləri: [stəkan sayı => xal], artan sıra ilə */
+    private function stackBonusTiers(): array
     {
-        return [
-            'score' => max(1, (int) config('games.stack.bonus.score', 40)),
-            'points' => max(0, (float) config('games.stack.bonus.points', 0.5)),
-            'per_day' => max(0, (int) config('games.stack.bonus.per_day', 2)),
-        ];
+        $tiers = array_filter((array) config('games.stack.bonus.tiers', []), fn ($p, $s) => (int) $s > 0 && (float) $p > 0, ARRAY_FILTER_USE_BOTH);
+        ksort($tiers);
+
+        return array_map('floatval', $tiers);
     }
 
-    private function stackBonusKey(int $userId): string
+    /** Bu gün bonusu artıq alınmış mərhələlər (xal tarixçəsindən — keş silinsə də limit qalır) */
+    private function stackBonusDone(int $userId): array
     {
-        return "stack_bonus:{$userId}:" . $this->today();
+        $since = now('Asia/Baku')->startOfDay()->setTimezone(config('app.timezone'));
+
+        return \App\Models\PointLog::where('user_id', $userId)->where('source', 'stack')->where('created_at', '>=', $since)
+            ->get(['meta'])->map(fn ($l) => (int) ($l->meta['tier'] ?? 0))->filter()->unique()->values()->all();
     }
 
-    /** Bu gün daha neçə dəfə bonus almaq olar */
-    private function stackBonusLeft(int $userId): int
+    /** Səhifə üçün: mərhələlər və bu gün alınıb-alınmadığı ($userId null — xal almır, hamısı "alınıb" sayılır) */
+    private function stackBonusInfo(?int $userId): array
     {
-        return max(0, $this->stackBonusConfig()['per_day'] - (int) Cache::get($this->stackBonusKey($userId), 0));
+        $done = $userId ? $this->stackBonusDone($userId) : null;
+
+        return ['tiers' => collect($this->stackBonusTiers())->map(fn ($points, $score) => [
+            'score' => $score, 'points' => $points, 'done' => $done === null || in_array($score, $done, true),
+        ])->values()->all()];
     }
 
     /**
-     * Bonus: oyunçu kifayət qədər stəkan yığıbsa və bu günün limiti bitməyibsə — balansına xal yazılır.
-     * Çağıran tərəf oyunun gedişatını artıq yoxlayıb. Qaytarır: yazılan xal (0 — bonus yoxdur).
+     * Bonus: oyunçu bir oyunda mərhələyə (30, 40, 60 stəkan...) çatıbsa və həmin mərhələnin bonusunu bu gün almayıbsa —
+     * balansına xal yazılır. Bir oyunda keçilən bütün mərhələlər üçün (hər biri gündə bir dəfə).
+     * Çağıran tərəf oyunun gedişatını artıq yoxlayıb. Qaytarır: yazılan xalların cəmi (0 — bonus yoxdur).
      * Xal yalnız qonaqlara yazılır — ofisiant və admin oyundan xal qazanmır.
      */
     private function awardStackBonus(User $user, int $score): float
     {
-        ['score' => $need, 'points' => $points] = $this->stackBonusConfig();
-        if ($points <= 0 || $score < $need || ! $user->earnsGamePoints()) {
+        $reached = array_filter($this->stackBonusTiers(), fn ($tier) => $score >= $tier, ARRAY_FILTER_USE_KEY);
+        if (! $reached || ! $user->earnsGamePoints()) {
             return 0;
         }
         $userId = $user->id;
 
-        return DB::transaction(function () use ($userId, $points, $score) {
-            User::whereKey($userId)->lockForUpdate()->first(); // eyni anda iki sorğu limiti keçməsin
-            if ($this->stackBonusLeft($userId) <= 0) {
-                return 0;
+        return DB::transaction(function () use ($userId, $reached, $score) {
+            User::whereKey($userId)->lockForUpdate()->first(); // eyni anda iki sorğu eyni mərhələni iki dəfə verməsin
+            $done = $this->stackBonusDone($userId);
+            $total = 0.0;
+            foreach ($reached as $tier => $points) {
+                if (in_array($tier, $done, true)) {
+                    continue; // bu mərhələnin bonusu bu gün alınıb
+                }
+                User::whereKey($userId)->increment('points', $points);
+                \App\Services\Points::log($userId, $points, 'stack', ['score' => $score, 'tier' => $tier]); // tarixçə
+                $total += $points;
             }
-            $key = $this->stackBonusKey($userId);
-            Cache::put($key, (int) Cache::get($key, 0) + 1, now('Asia/Baku')->endOfDay());
-            User::whereKey($userId)->increment('points', $points);
-            \App\Services\Points::log($userId, $points, 'stack', ['score' => $score]); // tarixçə
 
-            return $points;
+            return $total;
         });
     }
 

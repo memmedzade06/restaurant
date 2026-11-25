@@ -86,7 +86,7 @@ class PointsByUserTypeTest extends TestCase
 
     public function test_stack_bonus_only_for_guests(): void
     {
-        config(['games.stack.bonus' => ['score' => 10, 'points' => 0.5, 'per_day' => 3]]);
+        config(['games.stack.bonus' => ['tiers' => [10 => 0.5]]]);
         $controller = app(GameController::class);
 
         foreach ([User::TYPE_GUEST => 0.5, User::TYPE_WAITER => 0.0, User::TYPE_ADMIN => 0.0] as $type => $expected) {

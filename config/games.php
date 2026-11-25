@@ -102,12 +102,23 @@ return [
             return $prizes + [$finish => ['key' => 'stack_coupon_30', 'label' => '30 AZN kupon']];
         })(),
         'prizes_per_day' => (int) env('STACK_PRIZES_PER_DAY', 1), // istifadəçiyə gündə neçə hədiyyə
-        // Bonus: bu qədər stəkan yığan təsdiqlənmiş oyunçunun balansına xal yazılır (gündə per_day dəfə).
-        // Xallar Hədiyyə marketində hədiyyəyə çevrilir — ona görə gündəlik limit var.
+        // Bonus mərhələləri: [stəkan sayı => xal]. Təsdiqlənmiş qonaq bir oyunda mərhələyə çatanda balansına xal yazılır.
+        // Hər mərhələ gündə BİR dəfə: bu gün 30 stəkana görə alıbsa, həmin gün 30-a görə yox, yalnız yuxarı mərhələlərə görə alır.
+        // Bir oyunda bir neçə mərhələ keçilsə — hamısı (məs. 65 stəkan: 0,25 + 0,5 + 0,75). Gündə ən çox — cəmi.
+        // .env: STACK_BONUS_TIERS="30:0.25,40:0.5,60:0.75"
         'bonus' => [
-            'score' => (int) env('STACK_BONUS_SCORE', 40),
-            'points' => (float) env('STACK_BONUS_POINTS', 0.5),
-            'per_day' => (int) env('STACK_BONUS_PER_DAY', 2),
+            'tiers' => (function () {
+                $tiers = [];
+                foreach (explode(',', (string) env('STACK_BONUS_TIERS', '30:0.25,40:0.5,60:0.75')) as $pair) {
+                    [$score, $points] = array_map('trim', explode(':', $pair) + [1 => 0]);
+                    if ((int) $score > 0 && (float) $points > 0) {
+                        $tiers[(int) $score] = (float) $points;
+                    }
+                }
+                ksort($tiers);
+
+                return $tiers;
+            })(),
         ],
         // Saxtakarlığa qarşı: oyun başlayandan bəri ən azı (stəkan sayı × bu qədər) saniyə keçməlidir.
         // Hər stəkan 1 xal verdiyi üçün stəkan sayı = xal.
