@@ -59,11 +59,9 @@
             </div>
         </div>
         <button type="button" class="chat-fab-label" id="chatFabLabel" tabindex="-1" aria-hidden="true">
-            @if ($userUnread)
-                <b>Yeni mesajınız var!</b> Oxuyun
-            @else
-                <b>Sualınız var?</b> Bizə yazın
-            @endif
+            {{-- oxunmamış mesaj varsa — "Yeni mesajınız var!"; oxunan kimi (səhifə yenilənmədən) adi yazıya qayıdır --}}
+            <span class="chat-label-new" @if (! $userUnread) hidden @endif><b>Yeni mesajınız var!</b> Oxuyun</span>
+            <span class="chat-label-default" @if ($userUnread) hidden @endif><b>Sualınız var?</b> Bizə yazın</span>
             <span class="chat-typing" aria-hidden="true"><i></i><i></i><i></i></span>
         </button>
         <button type="button" @class(['chat-fab', 'chat-fab-pulse', 'is-online' => $adminOnline]) id="chatFab" data-online-ring aria-label="Adminə yaz" aria-expanded="false" aria-controls="chatPanel">
@@ -79,7 +77,14 @@
             var badge = fab.querySelector('.chat-fab-badge');
             var KEY = 'supportChatOpen';
 
-            function setBadge(n) { badge.textContent = n; badge.hidden = !n; }
+            var label = document.getElementById('chatFabLabel');
+            function setBadge(n) {
+                badge.textContent = n;
+                badge.hidden = !n;
+                // yanındakı yazı da: yeni mesaj varsa "Yeni mesajınız var!", oxunubsa — "Sualınız var? Bizə yazın"
+                label.querySelector('.chat-label-new').hidden = !n;
+                label.querySelector('.chat-label-default').hidden = !!n;
+            }
 
             function open(focus) {
                 panel.hidden = false;
