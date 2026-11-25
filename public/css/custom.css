@@ -1065,3 +1065,6 @@ body.has-chat-fab.has-verify-bar .back-to-top { bottom: 218px; }
 .bday-done { display: flex; align-items: center; gap: 14px; border: 2px solid var(--primary); background: #fff8ea; }
 .bday-done .bday-ready-emoji { font-size: 36px; }
 .bday-bar .verify-bar-text span b { display: inline; font-size: inherit; color: var(--wine); }
+
+/* Hesabım: sağ sütunun ilk kartı profil kartı ilə bir səviyyədə başlasın */
+.acc-col > .acc-card:first-child { margin-top: 0 !important; }

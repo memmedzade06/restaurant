@@ -43,6 +43,43 @@
 <section class="section pt-4 account-page">
     <div class="container">
         <div class="row g-4">
+            {{-- Bildirişlər (məs. Google hesabı bağlandı) — profil kartı aşağıda olduğu üçün yuxarıda göstərilir --}}
+            @if (session('status') || $errors->has('google'))
+                <div class="col-12">
+                    @if (session('status'))
+                        <div class="alert-ok text-start mb-0"><i class="fa fa-check-circle me-2"></i>{{ session('status') }}</div>
+                    @endif
+                    @error('google') <div class="alert-soft text-start mb-0">{{ $message }}</div> @enderror
+                </div>
+            @endif
+
+            {{-- Xallar: profilə girəndə ən yuxarıda --}}
+            <div class="col-12">
+                <div class="acc-card" id="xallar">
+                    <div class="acc-head"><span class="acc-ico"><i class="fa fa-star"></i></span><h5>Xallar</h5>
+                        <a href="{{ route('market') }}" class="acc-more"><i class="fa fa-gift me-1"></i>Hədiyyə marketi <i class="fa fa-arrow-right ms-1"></i></a></div>
+                    <div class="points-box">
+                        <div class="points-balance">
+                            <span class="points-num">{{ $fmt($me->points) }}</span>
+                            <span class="points-label">xal</span>
+                        </div>
+                        <ul class="account-list points-levels">
+                            @foreach ($refStats as $i => $s)
+                                <li><span>{{ $levelNames[$i] ?? ($i + 1) . '-ci səviyyə' }} <small>({{ $fmt($s['points']) }} xal)</small></span>
+                                    <b>{{ $s['done'] }} nəfər @if ($s['done'])<em>+{{ $fmt($s['done'] * $s['points']) }}</em>@endif</b></li>
+                            @endforeach
+                            @if ($refWaiting)
+                                <li><span>Təsdiq gözləyir</span><b>{{ $refWaiting }} nəfər</b></li>
+                            @endif
+                        </ul>
+                    </div>
+
+                    {{-- xal tarixçəsi: balans necə yığılıb --}}
+                    <h6 class="acc-sub" id="tarixce"><i class="fa fa-history me-2"></i>Xal tarixçəsi</h6>
+                    @include('frontend.account._points_history', ['history' => \App\Services\Points::history($me, 30)])
+                </div>
+            </div>
+
             @if ($me->is_admin)
                 {{-- Yalnız admin: idarəetmə paneli (yuxarı menyuda link yoxdur — buradan keçilir) --}}
                 @php
@@ -84,72 +121,16 @@
                 </div>
             @endif
 
-            {{-- Sol: şəxsi məlumatlar və çıxış --}}
-            <div class="col-lg-4">
-                <div class="acc-card acc-profile">
-                    <div class="acc-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($me->name, 0, 1)) }}</div>
-                    <h4 class="acc-name">{{ $me->name }}</h4>
-                    <span class="acc-verified"><i class="fa fa-check-circle me-1"></i>{{ $me->phone_verified_at ? 'Telegram ilə təsdiqlənib' : ($me->google_id ? 'Google ilə təsdiqlənib' : 'E-poçt ilə təsdiqlənib') }}</span>
-                    <ul class="account-list acc-details">
-                        @if ($me->phone)
-                            <li><span><i class="fa fa-phone-alt me-2"></i>Telefon</span><b>{{ \App\Support\Phone::format($me->phone) }}</b></li>
-                        @endif
-                        @if ($me->email)
-                            <li><span><i class="fa fa-envelope me-2"></i>E-poçt</span><b>{{ $me->email }}</b></li>
-                        @endif
-                        @if ($me->google_id)
-                            <li><span><i class="fab fa-google me-2"></i>Google</span><b class="text-success"><i class="fa fa-check me-1"></i>bağlıdır</b></li>
-                        @endif
-                        <li><span><i class="fa fa-calendar-alt me-2"></i>Qeydiyyat</span><b>{{ $me->created_at->format('d.m.Y') }}</b></li>
-                    </ul>
-
-                    @if (session('status'))
-                        <div class="alert-ok text-start"><i class="fa fa-check-circle me-2"></i>{{ session('status') }}</div>
-                    @endif
-                    @error('google') <div class="alert-soft text-start mb-3">{{ $message }}</div> @enderror
-
-                    {{-- Google bağlanmayıbsa: sonra "Google ilə davam et" eyni hesaba aparsın deyə --}}
-                    @if (! $me->google_id && \App\Http\Controllers\Auth\GoogleAuthController::enabled())
-                        <div class="acc-google">
-                            @include('frontend.partials.google-button', ['href' => route('account.google'), 'label' => 'Google hesabını bağla', 'dividerFirst' => null, 'noDivider' => true])
-                            <small class="hint">Bağlasanız, növbəti dəfə <b>"Google ilə davam et"</b> ilə də bu hesaba daxil ola bilərsiniz.</small>
-                        </div>
-                    @endif
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button type="submit" class="btn btn-wine w-100 py-2"><i class="fa fa-sign-out-alt me-2"></i>Çıxış</button>
-                    </form>
+            {{-- Sol: ad günü hədiyyəsi (ofisiant və adminə göstərilmir — onda sağ sütun tam en olur) --}}
+            @php($bdShow = \App\Support\Birthday::status($me)['state'] !== \App\Support\Birthday::NOT_ELIGIBLE)
+            @if ($bdShow)
+                <div class="col-lg-4 acc-col">
+                    @include('frontend.account._birthday')
                 </div>
+            @endif
 
-                @include('frontend.account._birthday')
-            </div>
-
-            {{-- Sağ: xallar və dəvət --}}
-            <div class="col-lg-8">
-                <div class="acc-card" id="xallar">
-                    <div class="acc-head"><span class="acc-ico"><i class="fa fa-star"></i></span><h5>Xallar</h5>
-                        <a href="{{ route('market') }}" class="acc-more"><i class="fa fa-gift me-1"></i>Hədiyyə marketi <i class="fa fa-arrow-right ms-1"></i></a></div>
-                    <div class="points-box">
-                        <div class="points-balance">
-                            <span class="points-num">{{ $fmt($me->points) }}</span>
-                            <span class="points-label">xal</span>
-                        </div>
-                        <ul class="account-list points-levels">
-                            @foreach ($refStats as $i => $s)
-                                <li><span>{{ $levelNames[$i] ?? ($i + 1) . '-ci səviyyə' }} <small>({{ $fmt($s['points']) }} xal)</small></span>
-                                    <b>{{ $s['done'] }} nəfər @if ($s['done'])<em>+{{ $fmt($s['done'] * $s['points']) }}</em>@endif</b></li>
-                            @endforeach
-                            @if ($refWaiting)
-                                <li><span>Təsdiq gözləyir</span><b>{{ $refWaiting }} nəfər</b></li>
-                            @endif
-                        </ul>
-                    </div>
-
-                    {{-- xal tarixçəsi: balans necə yığılıb --}}
-                    <h6 class="acc-sub" id="tarixce"><i class="fa fa-history me-2"></i>Xal tarixçəsi</h6>
-                    @include('frontend.account._points_history', ['history' => \App\Services\Points::history($me, 30)])
-                </div>
-
+            {{-- Sağ: Instagram və dəvət --}}
+            <div class="{{ $bdShow ? 'col-lg-8' : 'col-12' }} acc-col">
                 {{-- Instagram səhifəmizi izlə: adını yazır, admin yoxlayıb təsdiqləyəndə bir dəfəlik xal --}}
                 @if ($me->earnsGamePoints())
                     @php($ig = \App\Models\InstagramFollow::where('user_id', $me->id)->first())
@@ -266,6 +247,39 @@
                 </div>
             </div>
 
+
+            {{-- Şəxsi məlumatlar və çıxış — ən aşağıda --}}
+            <div class="col-lg-6 mx-auto">
+                <div class="acc-card acc-profile">
+                    <div class="acc-avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr($me->name, 0, 1)) }}</div>
+                    <h4 class="acc-name">{{ $me->name }}</h4>
+                    <span class="acc-verified"><i class="fa fa-check-circle me-1"></i>{{ $me->phone_verified_at ? 'Telegram ilə təsdiqlənib' : ($me->google_id ? 'Google ilə təsdiqlənib' : 'E-poçt ilə təsdiqlənib') }}</span>
+                    <ul class="account-list acc-details">
+                        @if ($me->phone)
+                            <li><span><i class="fa fa-phone-alt me-2"></i>Telefon</span><b>{{ \App\Support\Phone::format($me->phone) }}</b></li>
+                        @endif
+                        @if ($me->email)
+                            <li><span><i class="fa fa-envelope me-2"></i>E-poçt</span><b>{{ $me->email }}</b></li>
+                        @endif
+                        @if ($me->google_id)
+                            <li><span><i class="fab fa-google me-2"></i>Google</span><b class="text-success"><i class="fa fa-check me-1"></i>bağlıdır</b></li>
+                        @endif
+                        <li><span><i class="fa fa-calendar-alt me-2"></i>Qeydiyyat</span><b>{{ $me->created_at->format('d.m.Y') }}</b></li>
+                    </ul>
+
+                    {{-- Google bağlanmayıbsa: sonra "Google ilə davam et" eyni hesaba aparsın deyə --}}
+                    @if (! $me->google_id && \App\Http\Controllers\Auth\GoogleAuthController::enabled())
+                        <div class="acc-google">
+                            @include('frontend.partials.google-button', ['href' => route('account.google'), 'label' => 'Google hesabını bağla', 'dividerFirst' => null, 'noDivider' => true])
+                            <small class="hint">Bağlasanız, növbəti dəfə <b>"Google ilə davam et"</b> ilə də bu hesaba daxil ola bilərsiniz.</small>
+                        </div>
+                    @endif
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="btn btn-wine w-100 py-2"><i class="fa fa-sign-out-alt me-2"></i>Çıxış</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </section>
