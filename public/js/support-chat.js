@@ -38,12 +38,43 @@
         var meta = document.createElement('div');
         meta.className = 'chat-meta';
         meta.textContent = (m.author ? m.author + ' · ' : '') + m.time;
+        if (m.mine) {
+            // WhatsApp kimi: ✓ — göndərilib, ✓✓ — qarşı tərəf oxuyub
+            var ticks = document.createElement('span');
+            ticks.innerHTML = '<i class="fa"></i>';
+            meta.appendChild(ticks);
+            setTicks(ticks, m.read);
+        }
         wrap.appendChild(bubble);
         wrap.appendChild(meta);
         this.box.appendChild(wrap);
         if (this.empty) this.empty.hidden = true;
         if (m.id > this.after) this.after = m.id;
         return true;
+    };
+
+    /** "Admin onlayndır" yazısı və küncdəki düymənin yaşıl nöqtəsi */
+    function setOnline(on) {
+        document.querySelectorAll('[data-chat-status]').forEach(function (el) {
+            el.classList.toggle('online', !!on);
+            el.querySelector('.chat-status-text').textContent = on ? el.dataset.on : el.dataset.off;
+        });
+        document.querySelectorAll('.chat-fab-online').forEach(function (d) { d.hidden = !on; });
+    }
+
+    function setTicks(el, read) {
+        el.className = 'chat-ticks' + (read ? ' read' : '');
+        el.title = read ? 'Oxunub' : 'Göndərilib';
+        el.firstChild.className = 'fa ' + (read ? 'fa-check-double' : 'fa-check');
+    }
+
+    /** Qarşı tərəf bu id-yə qədər olan öz mesajlarımı oxuyub — ✓ → ✓✓ */
+    Chat.prototype.markRead = function (until) {
+        if (!until) return;
+        this.box.querySelectorAll('.chat-msg.mine').forEach(function (el) {
+            var t = el.querySelector('.chat-ticks');
+            if (t && !t.classList.contains('read') && parseInt(el.dataset.id, 10) <= until) setTicks(t, true);
+        });
     };
 
     Chat.prototype.showError = function (text) {
@@ -63,6 +94,8 @@
               if (!data || !data.messages) return;
               var nearBottom = self.box.scrollHeight - self.box.scrollTop - self.box.clientHeight < 120;
               var added = data.messages.filter(function (m) { return self.append(m); });
+              self.markRead(data.read_until);
+              if (typeof data.admin_online === 'boolean') setOnline(data.admin_online);
               if (added.length && nearBottom) self.scrollDown();
               if (self.onMessages) self.onMessages(added);
           })
@@ -139,6 +172,7 @@
 
     var instances = [];
     window.SupportChat = {
+        setOnline: setOnline,
         get: function (el) {
             for (var i = 0; i < instances.length; i++) if (instances[i].root === el) return instances[i];
             return null;

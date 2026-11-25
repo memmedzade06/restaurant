@@ -29,6 +29,7 @@ class SupportController extends Controller
 
         return view('frontend.support.index', [
             'messages' => $messages->map->toChat(false),
+            'adminOnline' => SupportMessage::adminOnline(),
         ]);
     }
 
@@ -61,7 +62,10 @@ class SupportController extends Controller
     /** Küncdəki pəncərə bağlı olanda: oxunmamış cavabların sayı (nişan üçün) */
     public function unread(Request $request): JsonResponse
     {
-        return response()->json(['unread' => SupportMessage::unreadForUser($request->user()->id)->count()]);
+        return response()->json([
+            'unread' => SupportMessage::unreadForUser($request->user()->id)->count(),
+            'admin_online' => SupportMessage::adminOnline(),
+        ]);
     }
 
     /** Açıq səhifə yeni cavabları soruşur (?after=son mesajın id-si) */
@@ -77,6 +81,10 @@ class SupportController extends Controller
             SupportMessage::unreadForUser($user->id)->where('id', '>', $after)->update(['read_at' => now()]);
         }
 
-        return response()->json(['messages' => $messages->map->toChat(false)->values()]);
+        return response()->json([
+            'messages' => $messages->map->toChat(false)->values(),
+            'read_until' => SupportMessage::readUntil($user->id, false), // admin oxuyubsa — ✓✓
+            'admin_online' => SupportMessage::adminOnline(),
+        ]);
     }
 }

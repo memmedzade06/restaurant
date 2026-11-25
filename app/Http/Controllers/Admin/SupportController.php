@@ -96,6 +96,9 @@ class SupportController extends Controller
             SupportMessage::unreadForAdmin()->where('user_id', $user->id)->where('id', '>', $after)->update(['read_at' => now()]);
         }
 
-        return response()->json(['messages' => $messages->map->toChat(true)->values()]);
+        return response()->json([
+            'messages' => $messages->map->toChat(true)->values(),
+            'read_until' => SupportMessage::readUntil($user->id, true), // istifadəçi oxuyubsa — ✓✓
+        ]);
     }
 }

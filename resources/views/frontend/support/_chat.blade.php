@@ -11,7 +11,7 @@
         @foreach ($messages as $m)
             <div class="chat-msg {{ $m['mine'] ? 'mine' : 'theirs' }}" data-id="{{ $m['id'] }}">
                 <div class="chat-bubble">{{ $m['body'] }}</div>
-                <div class="chat-meta">@if ($m['author']){{ $m['author'] }} · @endif{{ $m['time'] }}</div>
+                <div class="chat-meta">@if ($m['author']){{ $m['author'] }} · @endif{{ $m['time'] }}@if ($m['mine'])<span @class(['chat-ticks', 'read' => $m['read']]) title="{{ $m['read'] ? 'Oxunub' : 'Göndərilib' }}"><i class="fa {{ $m['read'] ? 'fa-check-double' : 'fa-check' }}"></i></span>@endif</div>
             </div>
         @endforeach
     </div>

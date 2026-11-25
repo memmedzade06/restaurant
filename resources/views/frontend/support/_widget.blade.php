@@ -24,13 +24,14 @@
     @endunless
 @elseif (! request()->routeIs('support'))
     @php($userUnread = $me ? \App\Models\SupportMessage::unreadForUser($me->id)->count() : 0)
+    @php($adminOnline = \App\Models\SupportMessage::adminOnline())
     <div class="chat-widget" id="chatWidget" @if ($me) data-unread-url="{{ route('support.unread') }}" @endif>
         <div class="chat-panel" id="chatPanel" role="dialog" aria-label="Adminə yaz" hidden>
             <div class="chat-panel-head">
                 <img src="{{ asset('img/logo.png') }}" alt="" class="chat-panel-logo">
                 <div class="chat-panel-title">
                     <b>50 Qəpik</b>
-                    <small>Sualınızı yazın — admin cavab verəcək</small>
+                    @include('frontend.support._status', ['online' => $adminOnline, 'off' => 'Sualınızı yazın — admin cavab verəcək'])
                 </div>
                 @if ($me)
                     <a href="{{ route('support') }}" class="chat-panel-btn" aria-label="Tam ekranda aç" title="Tam ekranda aç"><i class="fa fa-expand-alt"></i></a>
@@ -65,6 +66,7 @@
             <i class="fa fa-comments chat-fab-open"></i>
             <i class="fa fa-times chat-fab-close"></i>
             <span class="chat-fab-badge" @if (! $userUnread) hidden @endif>{{ $userUnread }}</span>
+            <span class="chat-fab-online" title="Admin onlayndır" @if (! $adminOnline) hidden @endif></span>
         </button>
     </div>
     <script>
@@ -111,7 +113,11 @@
                     if (!panel.hidden || document.hidden) return;
                     fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                         .then(function (r) { return r.ok ? r.json() : null; })
-                        .then(function (d) { if (d) setBadge(d.unread); })
+                        .then(function (d) {
+                            if (!d) return;
+                            setBadge(d.unread);
+                            if (window.SupportChat) window.SupportChat.setOnline(d.admin_online);
+                        })
                         .catch(function () {});
                 }, 30000);
             }

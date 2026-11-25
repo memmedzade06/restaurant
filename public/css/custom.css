@@ -1013,3 +1013,21 @@ a.chat-fab-label:hover { color: var(--text); }
 .prize-history-links a { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 999px; background: var(--cream); border: 1px solid #f0e4d4; color: var(--text); font-size: 13.5px; }
 .prize-history-links a:hover { border-color: var(--primary); color: var(--wine); }
 .prize-history-links b { color: var(--wine); margin-left: 2px; }
+
+/* Oxunma işarələri (WhatsApp kimi): ✓ göndərilib, ✓✓ oxunub (mavi) */
+.chat-ticks { margin-left: 5px; font-size: 11px; color: var(--muted); transition: color .2s ease; }
+.chat-ticks.read { color: #34b7f1; }
+
+/* Admin onlayndır: yaşıl nöqtə (başlıqda və küncdəki düymədə) */
+.chat-status { display: inline-flex; align-items: center; gap: 6px; }
+.chat-status-dot { display: none; width: 9px; height: 9px; border-radius: 50%; background: #2fd36b; box-shadow: 0 0 0 0 rgba(47, 211, 107, .6); animation: chatOnline 1.8s ease-out infinite; flex: none; }
+.chat-status.online .chat-status-dot { display: inline-block; }
+.chat-status.online .chat-status-text { font-weight: 700; }
+@keyframes chatOnline { 0% { box-shadow: 0 0 0 0 rgba(47, 211, 107, .6); } 70%, 100% { box-shadow: 0 0 0 7px rgba(47, 211, 107, 0); } }
+.chat-fab-online { position: absolute; bottom: 4px; right: 4px; width: 16px; height: 16px; border-radius: 50%; background: #2fd36b; border: 3px solid #fff; }
+.chat-fab-online[hidden] { display: none; }
+.chat-page-head { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; margin-bottom: 8px; border-bottom: 1px solid #f0e4d4; }
+.chat-page-head b { display: block; color: var(--dark); }
+.chat-page-head .chat-status { color: var(--muted); font-size: 13px; }
+.chat-page-head .chat-status.online { color: #1f9d55; }
+.chat-page-head .chat-panel-logo { background: var(--cream); }

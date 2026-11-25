@@ -15,6 +15,12 @@
         <div class="row justify-content-center">
             <div class="col-lg-8">
                 <div class="side-card">
+                    <div class="chat-page-head">
+                        <img src="{{ asset('img/logo.png') }}" alt="" class="chat-panel-logo">
+                        <div><b>50 Qəpik</b>
+                            @include('frontend.support._status', ['online' => $adminOnline, 'off' => 'Admin hazırda saytda deyil — cavab bir az gecikə bilər'])
+                        </div>
+                    </div>
                     @include('frontend.support._chat', [
                         'postUrl' => route('support.store'),
                         'pollUrl' => route('support.poll'),

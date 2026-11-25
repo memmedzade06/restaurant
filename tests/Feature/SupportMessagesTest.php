@@ -73,6 +73,37 @@ class SupportMessagesTest extends TestCase
         $this->actingAs($user)->getJson(route('support.unread'))->assertJson(['unread' => 0]);
     }
 
+    public function test_read_ticks_and_admin_online_status(): void
+    {
+        $user = $this->user();
+        $admin = $this->user(true);
+
+        // göndərilən mesaj: ✓ (oxunmayıb)
+        $sent = $this->actingAs($user)->postJson(route('support.store'), ['body' => 'Salam'])
+            ->assertCreated()->assertJsonPath('message.read', false)->json('message.id');
+        $this->actingAs($user)->getJson(route('support.poll', ['after' => $sent]))->assertJson(['read_until' => 0]);
+        $this->actingAs($user)->get(route('support'))->assertOk()->assertSee('fa-check"', false)->assertDontSee('fa-check-double');
+
+        // admin söhbəti açdı — istifadəçidə ✓✓
+        $this->actingAs($admin)->get(route('admin.support.show', $user))->assertOk();
+        $this->actingAs($user)->getJson(route('support.poll', ['after' => $sent]))->assertJson(['read_until' => $sent]);
+        $this->actingAs($user)->get(route('support'))->assertSee('fa-check-double', false);
+
+        // admin cavab yazır: istifadəçi oxuyana qədər adminə ✓, oxuyandan sonra ✓✓
+        $reply = $this->actingAs($admin)->postJson(route('admin.support.reply', $user), ['body' => 'Buyurun'])->json('message.id');
+        $this->actingAs($admin)->getJson(route('admin.support.poll', [$user, 'after' => $reply]))->assertJson(['read_until' => 0]);
+        $this->actingAs($user)->getJson(route('support.poll', ['after' => $sent]))->assertOk();
+        $this->actingAs($admin)->getJson(route('admin.support.poll', [$user, 'after' => $reply]))->assertJson(['read_until' => $reply]);
+
+        // admin saytdadırsa — "Admin onlayndır"
+        \App\Models\User::where('is_admin', true)->update(['last_seen_at' => now()->subMinutes(10)]);
+        $this->actingAs($user)->getJson(route('support.unread'))->assertJson(['admin_online' => false]);
+        \App\Models\User::whereKey($admin->id)->update(['last_seen_at' => now()]); // "indi saytda" siqnalı
+        $this->actingAs($user)->getJson(route('support.unread'))->assertJson(['admin_online' => true]);
+        $this->actingAs($user)->getJson(route('support.poll', ['after' => 0]))->assertJson(['admin_online' => true]);
+        $this->actingAs($user)->get(route('home'))->assertSee('chat-status online', false);
+    }
+
     public function test_users_only_see_their_own_conversation(): void
     {
         $a = $this->user();

@@ -51,6 +51,25 @@ class SupportMessage extends Model
             'mine' => $this->from_admin === $viewerIsAdmin,
             'author' => $this->from_admin ? ($viewerIsAdmin ? ($this->sender?->short_name ?? 'Admin') : '50 Qəpik') : null,
             'time' => $local->isToday() ? $local->format('H:i') : $local->format('d.m.Y H:i'),
+            'read' => $this->read_at !== null, // öz mesajında: ✓ göndərilib, ✓✓ qarşı tərəf oxuyub
         ];
+    }
+
+    /** Hazırda saytda olan admin varmı ("indi saytda" siqnalı son User::ONLINE_SECONDS saniyədə gəlib) */
+    public static function adminOnline(): bool
+    {
+        return User::where('is_admin', true)
+            ->where('last_seen_at', '>=', now()->subSeconds(User::ONLINE_SECONDS))
+            ->exists();
+    }
+
+    /**
+     * Baxanın öz mesajlarından qarşı tərəfin oxuduğu ən son mesajın id-si (yoxdursa 0).
+     * Oxunma ardıcıl olur (açılanda hamısı oxunur), ona görə bu id-yə qədər olanların hamısı oxunub.
+     */
+    public static function readUntil(int $userId, bool $viewerIsAdmin): int
+    {
+        return (int) static::where('user_id', $userId)->where('from_admin', $viewerIsAdmin)
+            ->whereNotNull('read_at')->max('id');
     }
 }
