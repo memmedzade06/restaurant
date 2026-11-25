@@ -61,6 +61,14 @@ class WheelSpin extends Model
         return $code;
     }
 
+    /** Hədiyyədən istifadə üçün minimal masa hesabı (AZN); yoxdursa null */
+    public static function minBill(string $game): ?int
+    {
+        $min = $game === 'market' ? config('market.min_bill') : config("games.min_bill.{$game}");
+
+        return $min ? (int) $min : null;
+    }
+
     public function gameLabel(): string
     {
         return self::GAME_LABELS[$this->game] ?? $this->game;

@@ -102,7 +102,7 @@
 
                     <div class="side-card" data-game-rules="Stəkan qülləsi">
                         <h5><i class="fa fa-book me-2 text-primary"></i>Necə oynanır?</h5>
-                        <div class="rules-note"><i class="fa fa-info-circle me-2"></i>Minimal masa hesabı <b>10 AZN</b> olmalıdır.</div>
+                        <div class="rules-note"><i class="fa fa-info-circle me-2"></i>Minimal masa hesabı <b>{{ \App\Models\WheelSpin::minBill('stack') }} AZN</b> olmalıdır.</div>
                         <ul class="rules">
                             <li>Yuxarıda stəkan sağa-sola yellənir.</li>
                             <li>Toxunun — stəkan düşüb qüllənin üstünə düşür.</li>

@@ -83,7 +83,7 @@
 
                     <div class="side-card" data-game-rules="Hədiyyə Kranı">
                         <h5><i class="fa fa-book me-2 text-primary"></i>Necə oynanır?</h5>
-                        <div class="rules-note"><i class="fa fa-info-circle me-2"></i>Hədiyyədən istifadə üçün minimal masa hesabı <b>30 AZN</b> olmalıdır.</div>
+                        <div class="rules-note"><i class="fa fa-info-circle me-2"></i>Hədiyyədən istifadə üçün minimal masa hesabı <b>{{ \App\Models\WheelSpin::minBill('claw') }} AZN</b> olmalıdır.</div>
                         <ul class="rules">
                             <li>Gündə <b>{{ $attempts }} cəhdiniz</b> var, hər cəhdə <b>15 saniyə</b>. Vaxt bitsə, cəhd sayılmır — <b>Yenidən başla</b> ilə davam edirsiniz.</li>
                             <li>Kran <b>sağa-sola</b> (◀ ▶) və <b>irəli-geri</b> (▲ ▼) gedir. Klaviaturada <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> və ya şüşəyə toxunaraq da sürə bilərsiniz.</li>

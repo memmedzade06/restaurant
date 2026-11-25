@@ -160,4 +160,13 @@ return [
         'prize_valid_days' => 1,  // qalib kodu neçə gün etibarlıdır — verildikdən 24 saat sonra avtomatik qüvvədən düşür
     ],
 
+    // Hədiyyədən istifadə üçün minimal masa hesabı (AZN) — oyunun qaydalarında və hədiyyə barədə chat mesajında
+    // (Hədiyyə marketi üçün — config/market.php: min_bill; ad günü kuponu üçün yoxdur)
+    'min_bill' => [
+        'wheel' => (int) env('MIN_BILL_WHEEL', 30),
+        'claw' => (int) env('MIN_BILL_CLAW', 30),
+        'nard' => (int) env('MIN_BILL_NARD', 20),
+        'stack' => (int) env('MIN_BILL_STACK', 10),
+    ],
+
 ];

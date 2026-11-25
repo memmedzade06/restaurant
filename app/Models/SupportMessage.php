@@ -50,7 +50,9 @@ class SupportMessage extends Model
             'body' => $this->body,
             'mine' => $this->from_admin === $viewerIsAdmin,
             'author' => $this->from_admin
-                ? ($viewerIsAdmin ? ($this->broadcast_id ? 'Hamıya · ' : '') . ($this->sender?->short_name ?? 'Admin') : '50 Qəpik')
+                ? ($viewerIsAdmin
+                    ? ($this->broadcast_id ? 'Hamıya · ' . ($this->sender?->short_name ?? 'Admin') : ($this->sender_id ? $this->sender?->short_name ?? 'Admin' : 'Avtomatik'))
+                    : '50 Qəpik')
                 : null,
             'time' => $local->isToday() ? $local->format('H:i') : $local->format('d.m.Y H:i'),
             'read' => $this->read_at !== null, // öz mesajında: ✓ göndərilib, ✓✓ qarşı tərəf oxuyub

@@ -26,8 +26,9 @@ class SupportController extends Controller
             ->selectRaw('MAX(id) AS last_id')
             ->selectRaw('SUM(CASE WHEN from_admin = 0 AND read_at IS NULL THEN 1 ELSE 0 END) AS unread')
             ->groupBy('user_id')
-            // "hamıya mesaj" hər istifadəçiyə yazılır — siyahı onlarla dolmasın: yalnız fərdi yazışması olanlar
-            ->havingRaw('SUM(CASE WHEN broadcast_id IS NULL THEN 1 ELSE 0 END) > 0')
+            // "hamıya mesaj" və hədiyyə barədə avtomatik mesajlar hər istifadəçiyə yazılır — siyahı onlarla dolmasın:
+            // yalnız istifadəçinin özü yazıbsa və ya admin ona fərdi yazıbsa
+            ->havingRaw('SUM(CASE WHEN from_admin = 0 OR (broadcast_id IS NULL AND sender_id IS NOT NULL) THEN 1 ELSE 0 END) > 0')
             ->when($filter === 'unread', fn ($q) => $q->havingRaw('SUM(CASE WHEN from_admin = 0 AND read_at IS NULL THEN 1 ELSE 0 END) > 0'))
             ->orderByDesc('last_id')
             ->paginate(30)->withQueryString();

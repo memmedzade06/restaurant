@@ -6,7 +6,8 @@ use App\Models\WheelSpin;
 use App\Services\PrizeNotifier;
 
 /**
- * Yeni hədiyyə kodu yarananda (istənilən oyunda və ya marketdə) qalibə Telegram bildirişi göndərilir.
+ * Yeni hədiyyə kodu yarananda (istənilən oyunda, marketdə və ya ad günü) qalibin chat-inə mesaj yazılır
+ * və Telegram bildirişi göndərilir.
  * Bildiriş istifadəçiyə cavab göndəriləndən SONRA gedir — oyun Telegram-ı gözləmir.
  */
 class WheelSpinObserver
@@ -19,6 +20,9 @@ class WheelSpinObserver
         if (! $spin->code) {
             return;
         }
+
+        // istifadəçinin chat-inə: nə qazandı, kod, müddət, minimal masa hesabı (profildə "Mesajlar"da da görünür)
+        \App\Services\PrizeChatMessage::send($spin);
 
         $id = $spin->id;
         dispatch(function () use ($id) {

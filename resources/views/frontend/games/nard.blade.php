@@ -120,7 +120,7 @@
                     {{-- qaydalar pəncərəsi: nərd səhifəsinə girəndə; dostla canlı oyunda (rəqib gözləyir) göstərilmir --}}
                     <div class="side-card" @unless (isset($match)) data-game-rules="Uzun nərd" @endunless>
                         <h5><i class="fa fa-book me-2 text-primary"></i>Qısa qaydalar</h5>
-                        <div class="rules-note"><i class="fa fa-info-circle me-2"></i>Minimal masa hesabı <b>20 AZN</b> olmalıdır.</div>
+                        <div class="rules-note"><i class="fa fa-info-circle me-2"></i>Minimal masa hesabı <b>{{ \App\Models\WheelSpin::minBill('nard') }} AZN</b> olmalıdır.</div>
                         <ul class="rules">
                             <li>Xal <b>yalnız dostla oyunda</b> verilir: oyun sona qədər oynanmalıdır, təslim olmaq və ya çıxmaq xal vermir. Eyni oyunçu ilə gündə {{ config('games.nard.pair_daily_limit') }} oyun xal gətirir.</li>
                             <li>Günün qalibləri:

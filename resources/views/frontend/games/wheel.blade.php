@@ -107,7 +107,7 @@
 
                     <div id="wheelIntro" data-game-rules="Çarx oyunu">
                         <h4>Necə işləyir?</h4>
-                        <div class="rules-note"><i class="fa fa-info-circle me-2"></i>Hədiyyədən istifadə üçün minimal masa hesabı <b>30 AZN</b> olmalıdır.</div>
+                        <div class="rules-note"><i class="fa fa-info-circle me-2"></i>Hədiyyədən istifadə üçün minimal masa hesabı <b>{{ \App\Models\WheelSpin::minBill('wheel') }} AZN</b> olmalıdır.</div>
                         <ul class="rules">
                             <li><b>Fırlat</b> basın — çarx dayanmadan fırlanır. <b>Dayan</b> basın (və ya çarxa toxunun) — göstəricinin altındakı sektor sizindir. Burada şans yox, <b>dəqiqlik</b> qərar verir.</li>
                             <li>Dayandırmaq üçün <b>{{ config('games.wheel.max_seconds') }} saniyəniz</b> var. Vaxt bitsə, çarx özü dayanır, amma hədiyyə verilmir — cəhd <b>uğursuz</b> sayılır.</li>
