@@ -25,7 +25,10 @@
     $nardToday = \App\Services\NardLeaderboard::myToday($me->id);
     $nardWins = \App\Models\NardDailyWinner::where('user_id', $me->id)->count();
     $stackBest = (int) \App\Models\GameResult::where('user_id', $me->id)->where('game', 'stack')->max('points');
-    $prizes = \App\Models\WheelSpin::where('user_id', $me->id)->whereNotNull('code')->latest('id')->take(5)->get();
+    // aktiv və istifadə olunmuş kuponlar; vaxtı keçmiş (istifadə olunmamış) göstərilmir
+    $prizes = \App\Models\WheelSpin::where('user_id', $me->id)->whereNotNull('code')
+        ->where(fn ($q) => $q->whereNotNull('redeemed_at')->orWhereNull('expires_at')->orWhere('expires_at', '>', now()))
+        ->latest('id')->take(5)->get();
 @endphp
 
 @section('content')
@@ -58,6 +61,7 @@
                             <a href="{{ route('admin.users') }}"><span><i class="fa fa-users me-2"></i>İstifadəçilər <small class="acc-badge">{{ $usersTotal }}</small></span><i class="fa fa-arrow-right"></i></a>
                             <a href="{{ route('admin.reservations') }}"><span><i class="fa fa-chair me-2"></i>Rezervasiyalar <small class="acc-badge">{{ $reservationsToday }} bu gün</small></span><i class="fa fa-arrow-right"></i></a>
                             <a href="{{ route('admin.instagram') }}"><span><i class="fab fa-instagram me-2"></i>Instagram izləmə <small class="acc-badge">{{ \App\Models\InstagramFollow::where('status', 'pending')->count() }} gözləyir</small></span><i class="fa fa-arrow-right"></i></a>
+                            <a href="{{ route('admin.support') }}"><span><i class="fa fa-comments me-2"></i>Mesajlar <small class="acc-badge">{{ \App\Models\SupportMessage::unreadForAdmin()->distinct()->count('user_id') }} oxunmamış</small></span><i class="fa fa-arrow-right"></i></a>
                         </div>
                         <div class="acc-stats four mt-3 mb-0">
                             <div><b>{{ $usersTotal }}</b><span>Cəmi qeydiyyat</span></div>
@@ -250,6 +254,12 @@
                                 @include('frontend.prizes._card', ['p' => $p])
                             @endforeach
                         </ul>
+                    @endif
+                    @php($usedCount = \App\Models\WheelSpin::prizes(\App\Models\WheelSpin::USED)->where('user_id', $me->id)->count())
+                    @if ($usedCount)
+                        <div class="prize-history-links">
+                            <a href="{{ route('prizes') }}#istifade-olunub"><i class="fa fa-check-circle me-1"></i>İstifadə olunmuş kuponlar <b>{{ $usedCount }}</b></a>
+                        </div>
                     @endif
                 </div>
             </div>

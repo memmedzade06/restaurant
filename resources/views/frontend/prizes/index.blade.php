@@ -25,16 +25,19 @@
             @endif
         </div>
 
-        @if ($inactive->isNotEmpty())
-            <div class="side-card">
-                <h5><i class="fa fa-history me-2 text-primary"></i>Keçmiş hədiyyələr</h5>
+        {{-- İstifadə olunmuş kuponlar (vaxtı keçmişlər göstərilmir) --}}
+        <div class="side-card" id="istifade-olunub">
+            <h5><i class="fa fa-check-circle me-2 text-primary"></i>İstifadə olunmuş kuponlar <span class="online-count ms-1">{{ $used->count() }}</span></h5>
+            @if ($used->isEmpty())
+                <p class="text-muted mb-0">Hələ istifadə etdiyiniz kupon yoxdur.</p>
+            @else
                 <ul class="prize-cards">
-                    @foreach ($inactive as $p)
+                    @foreach ($used as $p)
                         @include('frontend.prizes._card', ['p' => $p])
                     @endforeach
                 </ul>
-            </div>
-        @endif
+            @endif
+        </div>
 
         <a href="{{ route('account') }}" class="btn btn-ghost-dark"><i class="fa fa-arrow-left me-2"></i>Hesabıma qayıt</a>
     </div>

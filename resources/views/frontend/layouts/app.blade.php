@@ -46,7 +46,7 @@
     <link href="{{ asset('lib/owlcarousel/assets/owl.carousel.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/custom.css') }}?v=47" rel="stylesheet">
+    <link href="{{ asset('css/custom.css') }}?v=53" rel="stylesheet">
     <link href="{{ asset('css/games.css') }}?v=62" rel="stylesheet">
     @yield('css')
 </head>
@@ -170,6 +170,9 @@
 @include('frontend.partials.registered-modal')
 @include('frontend.partials.points-market-modal')
 @include('frontend.partials.earn-more')
+{{-- Adminə yaz: sağ aşağı küncdə söhbət pəncərəsi (və Mesajlar səhifələrindəki söhbət) --}}
+@include('frontend.support._widget')
+<script src="{{ asset('js/support-chat.js') }}?v=1"></script>
 @auth
 <script>
     // "İndi saytda": səhifə açıq olduqca serverə siqnal göndəririk

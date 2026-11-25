@@ -7,7 +7,7 @@ use App\Models\WheelSpin;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
-/** Oyunçunun öz hədiyyələri: aktiv, istifadə olunmuş və vaxtı keçmiş kodlar */
+/** Oyunçunun öz hədiyyələri: aktiv və istifadə olunmuş kodlar */
 class PrizeController extends Controller
 {
     public function index(Request $request): View
@@ -17,7 +17,8 @@ class PrizeController extends Controller
 
         return view('frontend.prizes.index', [
             'active' => $grouped->get(WheelSpin::ACTIVE, collect()),
-            'inactive' => $prizes->reject(fn (WheelSpin $p) => $p->isActive()),
+            // vaxtı keçmiş kuponlar göstərilmir (onsuz da avtomatik silinir) — yalnız istifadə olunmuşlar
+            'used' => $grouped->get(WheelSpin::USED, collect())->sortByDesc('redeemed_at')->values(),
         ]);
     }
 }

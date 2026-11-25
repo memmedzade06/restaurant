@@ -289,11 +289,31 @@ class PrizeAdminTest extends TestCase
             ->assertSee($active->code)
             ->assertDontSee($other->code);
 
-        // istifadə olunmuş kod silinmir, oyunçu onu "Keçmiş hədiyyələr"də görür
+        // istifadə olunmuş kod silinmir, oyunçu onu "İstifadə olunmuş kuponlar"da görür
         \App\Models\WheelSpin::pruneExpired();
         $this->assertNotNull($used->fresh());
         $this->assertNotNull($active->fresh());
-        $this->actingAs($u)->get('/hediyyelerim')->assertSee($used->code)->assertSee('Keçmiş hədiyyələr');
+        $this->actingAs($u)->get('/hediyyelerim')->assertSee($used->code)->assertSee('İstifadə olunmuş kuponlar');
+    }
+
+    public function test_player_sees_used_coupons_but_not_expired_ones(): void
+    {
+        $u = $this->user();
+        $active = $this->prize($u, ['prize_label' => 'Aktiv çay']);
+        $used = $this->prize($u, ['prize_label' => 'İşlənmiş mürəbbə', 'redeemed_at' => now()->subHour(), 'expires_at' => now()->subMinute()]);
+        // vaxtı keçib, hələ silinməyib (silinmə dəqiqədə bir dəfə olur) — yenə də göstərilməməlidir
+        $expired = $this->prize($u, ['prize_label' => 'Köhnə qəlyan', 'expires_at' => now()->subMinute()]);
+
+        $this->actingAs($u)->get('/hediyyelerim')->assertOk()
+            ->assertSeeInOrder(['Aktiv hədiyyələr', $active->code, 'İstifadə olunmuş kuponlar', $used->code])
+            ->assertDontSee($expired->code)->assertDontSee('Köhnə qəlyan')
+            ->assertDontSee('Vaxtı keçmiş');
+
+        // profildə: istifadə olunmuş kupon görünür və bölməyə keçid var, vaxtı keçmiş yox
+        $this->actingAs($u)->get('/hesabim')->assertOk()
+            ->assertSee($used->code)->assertSee($active->code)
+            ->assertDontSee($expired->code)
+            ->assertSee(route('prizes') . '#istifade-olunub', false);
     }
 
     public function test_make_admin_command(): void

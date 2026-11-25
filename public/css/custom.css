@@ -884,3 +884,132 @@ div.coupon-row .prize-code { margin-bottom: 0; font-size: 16px; padding: 8px 10p
 .nb-result-box.has-prize .claimed-at { font-size: 13px; margin: 8px 0 2px; }
 .nb-result-box.has-prize .cl-note { font-size: 12.5px; margin: 4px 0; }
 .nb-result-box.has-prize .eyebrow { margin-bottom: 0; }
+
+/* =========================================================
+   Adminlə yazışma: söhbət (Mesajlar səhifəsi, admin) və sağ aşağı küncdəki pəncərə
+   ========================================================= */
+.chat-box { height: min(60vh, 520px); overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 6px 4px 12px; overscroll-behavior: contain; }
+.chat-empty { margin: auto; max-width: 320px; text-align: center; color: var(--muted); font-size: 15px; }
+.chat-msg { display: flex; flex-direction: column; max-width: 82%; }
+.chat-msg.mine { align-self: flex-end; align-items: flex-end; }
+.chat-msg.theirs { align-self: flex-start; align-items: flex-start; }
+.chat-bubble { padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+.chat-msg.mine .chat-bubble { background: var(--wine); color: #fff; border-bottom-right-radius: 6px; }
+.chat-msg.theirs .chat-bubble { background: var(--cream); color: var(--text); border: 1px solid #f0e4d4; border-bottom-left-radius: 6px; }
+.chat-meta { font-size: 12px; color: var(--muted); margin-top: 3px; padding: 0 4px; }
+.chat-form { display: flex; gap: 8px; align-items: flex-end; border-top: 1px solid #f0e4d4; padding-top: 12px; }
+.chat-form textarea { flex: 1; resize: none; min-height: 46px; max-height: 140px; border: 1.5px solid #ead9c3; border-radius: 14px; padding: 10px 12px; font-size: 15px; color: var(--text); background: #fff; }
+.chat-form textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(233, 162, 59, .2); }
+.chat-send { width: 46px; height: 46px; flex: none; border-radius: 50%; padding: 0; display: grid; place-items: center; }
+.chat-send:disabled { opacity: .6; }
+.chat-error { margin-top: 8px; font-size: 14px; color: #b3261e; }
+.chat-error[hidden] { display: none; }
+.chat-hint { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+
+/* Admin: söhbətlərin siyahısı */
+.support-threads { display: flex; flex-direction: column; }
+.support-thread { display: flex; align-items: center; gap: 14px; padding: 14px 8px; border-bottom: 1px solid #f3e9dc; color: var(--text); border-radius: 12px; }
+.support-thread:last-child { border-bottom: 0; }
+.support-thread:hover { background: var(--cream); color: var(--text); }
+.support-thread.unread { background: #fff7ea; }
+.support-thread.unread b { color: var(--wine); }
+.support-thread-ico { width: 42px; height: 42px; flex: none; border-radius: 50%; display: grid; place-items: center; background: rgba(126, 26, 26, .08); color: var(--wine); }
+.support-thread-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.support-thread-top { display: flex; justify-content: space-between; gap: 10px; }
+.support-thread-top small { color: var(--muted); white-space: nowrap; }
+.support-thread-text { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.support-thread.unread .support-thread-text { color: var(--text); font-weight: 600; }
+
+/* Sağ aşağı küncdəki düymə və pəncərə */
+.chat-fab { position: fixed; right: 22px; bottom: 22px; z-index: 1045; width: 76px; height: 76px; border-radius: 50%; border: 3px solid #fff; display: grid; place-items: center; background: linear-gradient(135deg, #a52525, var(--wine) 55%, var(--wine-dark)); color: #fff; font-size: 32px; box-shadow: 0 12px 30px rgba(58, 13, 13, .35); cursor: pointer; transition: transform .15s ease, background .15s ease; }
+.chat-fab:hover { background: var(--wine-dark); color: #fff; transform: scale(1.06); }
+.chat-fab:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+.chat-fab-close { display: none; }
+.chat-widget.is-open .chat-fab-open { display: none; }
+.chat-widget.is-open .chat-fab-close { display: inline; }
+.chat-fab-badge { position: absolute; top: -4px; right: -4px; min-width: 26px; height: 26px; padding: 0 7px; border-radius: 13px; background: var(--primary); color: var(--dark); font-size: 13px; font-weight: 800; line-height: 26px; text-align: center; box-shadow: 0 0 0 3px #fff; }
+.chat-fab-badge[hidden] { display: none; }
+.chat-panel { position: fixed; right: 22px; bottom: 112px; z-index: 1046; width: 370px; max-width: calc(100vw - 32px); height: min(560px, calc(100vh - 130px)); display: flex; flex-direction: column; background: #fff; border-radius: 22px; box-shadow: 0 24px 60px rgba(30, 11, 11, .3); overflow: hidden; animation: chatPanelIn .2s ease-out; }
+.chat-panel[hidden] { display: none; }
+@keyframes chatPanelIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.chat-panel-head { display: flex; align-items: center; gap: 10px; padding: 14px 14px 14px 16px; background: linear-gradient(110deg, var(--wine-dark), var(--wine)); color: #fff; }
+.chat-panel-logo { width: 40px; height: 40px; border-radius: 50%; background: #fff; flex: none; }
+.chat-panel-title { flex: 1; min-width: 0; line-height: 1.25; }
+.chat-panel-title b { display: block; font-size: 16px; }
+.chat-panel-title small { opacity: .85; font-size: 12.5px; }
+.chat-panel-btn { width: 34px; height: 34px; flex: none; border: 0; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, .12); color: #fff; font-size: 15px; }
+.chat-panel-btn:hover { background: rgba(255, 255, 255, .25); color: #fff; }
+.chat-panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 12px 14px 10px; }
+.chat-panel-body .chat { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.chat-panel-body .chat-box { height: auto; flex: 1; min-height: 0; }
+.chat-panel-body .chat-hint { display: none; }
+.chat-guest { margin: auto 0; text-align: center; padding: 10px 12px; }
+.chat-guest .fa { font-size: 40px; color: var(--wine); margin-bottom: 10px; }
+.chat-guest p { color: var(--text); margin-bottom: 16px; }
+/* "Yuxarı" düyməsi söhbət düyməsinin üstünə qalxır */
+body.has-chat-fab .back-to-top { bottom: 112px; right: 32px; }
+body.has-chat-fab.has-verify-bar .chat-fab { bottom: 110px; }
+body.has-chat-fab.has-verify-bar .chat-panel { bottom: 200px; height: min(520px, calc(100vh - 230px)); }
+body.has-chat-fab.has-verify-bar .back-to-top { bottom: 200px; }
+@media (max-width: 575.98px) {
+    .chat-fab { right: 14px; bottom: 14px; width: 64px; height: 64px; font-size: 27px; }
+    .chat-panel { right: 8px; left: 8px; bottom: 90px; width: auto; max-width: none; height: calc(100vh - 100px); height: calc(100dvh - 100px); }
+    body.has-chat-fab .back-to-top { bottom: 92px; right: 20px; }
+    body.has-chat-fab.has-verify-bar .chat-fab { bottom: 150px; }
+    body.has-chat-fab.has-verify-bar .chat-panel { bottom: 224px; height: calc(100dvh - 240px); }
+    body.has-chat-fab.has-verify-bar .back-to-top { bottom: 226px; }
+    .chat-msg { max-width: 90%; }
+    .chat-fab-label { right: 88px; bottom: 26px; font-size: 13px; padding: 8px 12px; }
+}
+/* Düymənin yanında "Sualınız var? Bizə yazın" yazısı və yumşaq pulsasiya — diqqət çəksin */
+.chat-fab-label { position: fixed; right: 110px; bottom: 40px; z-index: 1045; border: 0; padding: 10px 16px; border-radius: 16px 16px 4px 16px; background: #fff; color: var(--text); font-size: 14.5px; white-space: nowrap; box-shadow: 0 10px 28px rgba(58, 13, 13, .22); cursor: pointer; animation: chatLabelIn .4s ease-out .6s both; }
+.chat-fab-label b { color: var(--wine); }
+.chat-fab-label:hover { background: var(--cream); }
+.chat-widget.is-open .chat-fab-label { display: none; }
+body.has-verify-bar .chat-fab-label { bottom: 128px; }
+@keyframes chatLabelIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: none; } }
+.chat-fab-pulse::after { content: ''; position: absolute; inset: -3px; border-radius: 50%; border: 3px solid var(--wine); animation: chatPulse 2.2s ease-out infinite; pointer-events: none; }
+@keyframes chatPulse { 0% { transform: scale(1); opacity: .7; } 80%, 100% { transform: scale(1.55); opacity: 0; } }
+@media (max-width: 575.98px) { body.has-verify-bar .chat-fab-label { bottom: 166px; } }
+/* Söhbət düyməsi hərəkətli: arabir yellənir və hoppanır, yazı yüngülcə üzür (açılana qədər) */
+.chat-fab-pulse { animation: chatWiggle 3.6s ease-in-out 1.2s infinite; }
+.chat-fab-pulse .chat-fab-open { animation: chatIconPop 3.6s ease-in-out 1.2s infinite; }
+@keyframes chatWiggle {
+    0%, 52%, 100% { transform: translateY(0) rotate(0); }
+    6%  { transform: translateY(-10px) rotate(-14deg); }
+    12% { transform: translateY(-10px) rotate(12deg); }
+    18% { transform: translateY(-6px) rotate(-10deg); }
+    24% { transform: translateY(-3px) rotate(7deg); }
+    30% { transform: translateY(0) rotate(-3deg); }
+    36% { transform: translateY(0) rotate(0); }
+}
+@keyframes chatIconPop { 0%, 40%, 100% { transform: scale(1); } 10% { transform: scale(1.18); } 22% { transform: scale(.95); } }
+.chat-fab-label { animation: chatLabelIn .4s ease-out .6s both, chatFloat 3s ease-in-out 1.2s infinite; }
+@keyframes chatFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.chat-fab:hover { animation-play-state: paused; }
+/* Daha cəlbedici: iki rəngli yayılan halqalar, parlayan "nəfəs", tez-tez yellənmə, hərəkətli yazı (pəncərə açıq olanda dayanır) */
+.chat-fab-pulse { animation: chatWiggle 2.6s ease-in-out .8s infinite, chatGlow 1.6s ease-in-out infinite; }
+.chat-fab-pulse .chat-fab-open { animation: chatIconPop 2.6s ease-in-out .8s infinite; }
+@keyframes chatGlow {
+    0%, 100% { box-shadow: 0 12px 30px rgba(58, 13, 13, .35), 0 0 0 0 rgba(233, 162, 59, .0); }
+    50% { box-shadow: 0 12px 34px rgba(58, 13, 13, .45), 0 0 26px 6px rgba(233, 162, 59, .55); }
+}
+.chat-fab-pulse::after { border-color: var(--wine); animation: chatPulse 2s ease-out infinite; }
+.chat-fab-pulse::before { content: ''; position: absolute; inset: -3px; border-radius: 50%; border: 3px solid var(--primary); animation: chatPulse 2s ease-out 1s infinite; pointer-events: none; }
+.chat-widget.is-open .chat-fab, .chat-widget.is-open .chat-fab .chat-fab-open { animation: none; }
+.chat-widget.is-open .chat-fab::before, .chat-widget.is-open .chat-fab::after { display: none; }
+.chat-fab-label { border: 2px solid var(--primary); animation: chatLabelIn .5s cubic-bezier(.2, 1.6, .4, 1) .5s both, chatFloat 2.4s ease-in-out 1s infinite; }
+.chat-typing { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
+.chat-typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--wine); opacity: .35; animation: chatDot 1.2s ease-in-out infinite; }
+.chat-typing i:nth-child(2) { animation-delay: .2s; }
+.chat-typing i:nth-child(3) { animation-delay: .4s; }
+@keyframes chatDot { 0%, 60%, 100% { opacity: .35; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-4px); } }
+@keyframes chatLabelIn { from { opacity: 0; transform: translateX(24px) scale(.8); } to { opacity: 1; transform: none; } }
+a.chat-fab-label { display: block; text-decoration: none; }
+a.chat-fab-label:hover { color: var(--text); }
+
+/* Profil: istifadə olunmuş və vaxtı keçmiş kuponlara keçid */
+.prize-history-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.prize-history-links a { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 999px; background: var(--cream); border: 1px solid #f0e4d4; color: var(--text); font-size: 13.5px; }
+.prize-history-links a:hover { border-color: var(--primary); color: var(--wine); }
+.prize-history-links b { color: var(--wine); margin-left: 2px; }
