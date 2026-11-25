@@ -54,6 +54,8 @@
     const PERFECT = GW * 0.1;          // "Əla!" sayılan sapma — bu qədər yaxın qonan stəkan düz ortaya oturur
     const SUPPORT = GW * 0.58;         // üstündəki yükün dayaq sahəsi (ağız + bir az ehtiyat ki, oyun çox çətin olmasın)
     const WARN = 0.3;                  // dayaq ehtiyatı bundan az qalanda "qüllə əyilir" xəbərdarlığı
+    const IDLE_LIMIT = 10;             // stəkan yellənərkən bu qədər saniyə toxunulmasa — oyun bitir
+    const IDLE_WARN = 3;               // son neçə saniyədə "Toxunun! 3, 2, 1" xəbərdarlığı çıxsın
     let scale = 1, dpr = 1;
 
     let best = +root.dataset.best || 0;
@@ -81,6 +83,7 @@
             finish: false,
             offered: {},              // bu oyunda təklif olunmuş hədiyyələr
             claiming: false,
+            idle: 0,                  // son toxunuşdan bəri keçən saniyələr (yalnız stəkan yellənərkən sayılır)
             t0: 0,                    // oyunun başladığı an (performance.now)
             log: [],                  // hər qonan stəkan: [başlanğıcdan keçən ms, stəkanın sapması px] — server yoxlayır
             slosh: {a: 0, v: 0},   // yellənən/düşən stəkandakı çayın meyli
@@ -365,6 +368,7 @@
     /* ---------- Hərəkət ---------- */
 
     function tap() {
+        g.idle = 0;
         if (g.state === 'ready') {
             music.start(); // oyun başlayanda fon musiqisi başlayır (qüllə dağılandan sonra — əvvəldən)
             g.state = 'swing';
@@ -555,6 +559,7 @@
 
     function continueGame() {
         offer.hidden = true;
+        g.idle = 0; // hədiyyə pəncərəsindən sonra taymer yenidən başlayır
         if (g.state === 'offer') g.state = 'swing';
     }
 
@@ -613,7 +618,7 @@
         overlay.querySelector('.st-prize').hidden = true;
         overlay.querySelector('.nb-result-box').classList.remove('has-prize');
         overlay.classList.remove('is-prize');
-        if (g.state === 'over' && g.tower.length) { g.state = 'swing'; music.start(); }
+        if (g.state === 'over' && g.tower.length) { g.state = 'swing'; g.idle = 0; music.start(); }
     }
 
     /* ---------- Sınma: şüşə qırıqları, çay damcıları, masada çay ləkəsi ---------- */
@@ -878,7 +883,8 @@
         s.drift += (target - s.drift) * Math.min(1, dt * STEAM.follow);
     }
 
-    function update(dt) {
+    // idleDt — real keçən vaxt (yavaş cihazda kadr dt-si 0.05-lə kəsilir, toxunuş taymeri isə real saniyə saymalıdır)
+    function update(dt, idleDt = dt) {
         g.time += dt;
         updateSlosh(dt);
         updateCracks(dt);
@@ -901,6 +907,17 @@
             }
             if (g.swing.x > max) { g.swing.x = max; g.swing.dir = -1; wallHit(1); }
             if (g.swing.x < min) { g.swing.x = min; g.swing.dir = 1; wallHit(-1); }
+
+            // toxunuş olmadan IDLE_LIMIT saniyə keçsə — oyun bitir; son saniyələrdə xəbərdarlıq
+            const before = IDLE_LIMIT - g.idle;
+            g.idle += idleDt;
+            const left = IDLE_LIMIT - g.idle;
+            if (left <= 0) { timeUp(); return; }
+            // hər tam saniyə keçəndə bir dəfə: 3, 2, 1
+            if (left <= IDLE_WARN && Math.ceil(left) !== Math.ceil(before)) {
+                g.popups.push({text: `Toxunun! ${Math.ceil(left)}`, x: LW / 2, y: topBottomY() - GH - 60, life: 1, warn: true});
+                sound.clink(0.7, 0.25);
+            }
         }
 
         if (g.state === 'drop') {
@@ -2646,7 +2663,15 @@
         return `<br><span class="st-bonus">⭐ +${fmtPoints(points)} xal bonus balansınıza yazıldı!</span>`;
     }
 
-    async function gameOver(finished = false) {
+    /** Oyunçu IDLE_LIMIT saniyə toxunmadı — qüllə yerində qalır, oyun bitir, nəticə yazılır */
+    function timeUp() {
+        g.drop = null;
+        music.halt();
+        sound.clink(0.5, 0.4);
+        gameOver(false, true);
+    }
+
+    async function gameOver(finished = false, timedOut = false) {
         g.state = 'over';
         offer.hidden = true;
         const score = g.score;
@@ -2654,9 +2679,12 @@
         if (record) best = score;
 
         overlay.querySelector('.st-score').textContent = score;
-        overlay.querySelector('.st-title').textContent = finished ? 'Finiş! 🏁' : (record && score > 0 ? 'Yeni rekord! 🎉' : 'Qüllə aşdı!');
+        overlay.querySelector('.st-title').textContent = finished ? 'Finiş! 🏁'
+            : timedOut ? (record && score > 0 ? 'Vaxt bitdi — yeni rekord! 🎉' : 'Vaxt bitdi! ⏱')
+            : (record && score > 0 ? 'Yeni rekord! 🎉' : 'Qüllə aşdı!');
         const note = overlay.querySelector('.st-note');
-        note.innerHTML = `Ən yaxşı nəticəniz: <b>${best}</b>`;
+        const why = timedOut ? `${IDLE_LIMIT} saniyə toxunulmadığı üçün oyun bitdi.<br>` : '';
+        note.innerHTML = why + `Ən yaxşı nəticəniz: <b>${best}</b>`;
         overlay.hidden = false;
 
         if (!cfg.canSave) {
@@ -2673,7 +2701,7 @@
             const d = await r.json();
             if (r.ok && d.saved) {
                 best = d.best;
-                note.innerHTML = `Ən yaxşı nəticəniz: <b>${d.best}</b>` + (d.record ? '<br>Rekordunuz liderlər cədvəlinə yazıldı!' : '') + bonusNote(d.bonus);
+                note.innerHTML = why + `Ən yaxşı nəticəniz: <b>${d.best}</b>` + (d.record ? '<br>Rekordunuz liderlər cədvəlinə yazıldı!' : '') + bonusNote(d.bonus);
                 const el = document.getElementById('stBest');
                 if (el) el.textContent = d.best;
             }
@@ -2706,9 +2734,11 @@
     let last = performance.now();
     let manual = false; // testlər üçün: oyunu kadr-kadr idarə etmək
     function frame(now) {
-        const dt = Math.min(0.05, (now - last) / 1000);
+        const raw = (now - last) / 1000;
+        const dt = Math.min(0.05, raw);
         last = now;
-        if (!manual && (g.state !== 'over' || g.falling)) update(dt);
+        // taymerə real vaxt; amma gizli tabdan qayıdanda böyük fasilə sayılmasın (ən çox 0.5 s)
+        if (!manual && (g.state !== 'over' || g.falling)) update(dt, Math.min(0.5, raw));
         updateWeather(dt);
         ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
         drawScene();
@@ -2795,7 +2825,7 @@
     // yoxsa brauzer konsolundan oyunu avtomatik oynamaq olardı.
     if (root.dataset.debug !== '1') return;
     window.__stack = {
-        state: () => g, tap, consts: {GW, PERFECT, SUPPORT, BOOST_FROM}, boost, newSwing, stability, checkPrize, continueGame,
+        state: () => g, tap, consts: {GW, PERFECT, SUPPORT, BOOST_FROM, IDLE_LIMIT}, boost, newSwing, stability, checkPrize, continueGame,
         manual: on => { manual = on; },
         audio: () => ({musicPlaying: music.playing, muted: sound.muted, level: music.level, viaWebAudio: music.viaWebAudio}),
         weather: () => ({W, windX, drops: fx.drops.length, flakes: fx.flakes.length, leaves: fx.leaves.length}),

@@ -106,6 +106,7 @@
                         <ul class="rules">
                             <li>Yuxarıda stəkan sağa-sola yellənir.</li>
                             <li>Toxunun — stəkan düşüb qüllənin üstünə düşür.</li>
+                            <li><b>10 saniyə</b> toxunmasanız, oyun bitir (son 3 saniyədə xəbərdarlıq çıxır).</li>
                             @if ($bonus['points'] > 0)
                                 <li><b>{{ $bonus['score'] }} stəkan</b> — balansınıza <b>+{{ \App\Services\Referrals::format($bonus['points']) }} xal bonus</b> (gündə {{ $bonus['per_day'] }} dəfə)</li>
                             @endif
@@ -128,5 +129,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/stack.js') }}?v=128"></script>
+<script src="{{ asset('js/games/stack.js') }}?v=130"></script>
 @endsection
