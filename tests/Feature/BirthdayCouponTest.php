@@ -96,13 +96,18 @@ class BirthdayCouponTest extends TestCase
         $this->assertSame(1, WheelSpin::where('user_id', $u->id)->count());
         $this->actingAs($u)->get(route('home'))->assertDontSee('id="bdayBar"', false);
 
-        // 3 gün sonra da götürmək olardı, 4-cü gün — artıq yox (gələn ilə qədər gözləyir)
+        // yalnız ad günü: gecə 23:59-a qədər olar, ertəsi gün — artıq yox (gələn ilə qədər gözləyir)
         $other = $this->user(['birth_date' => '1990-03-14', 'birth_date_set_at' => now()->subDays(60)]);
-        $this->at('2026-03-17 23:00');
+        $this->at('2026-03-13 23:30');
+        $this->assertSame(Birthday::WAIT, Birthday::status($other)['state']);
+        $this->at('2026-03-14 23:50');
         $this->assertSame(Birthday::AVAILABLE, Birthday::status($other)['state']);
-        $this->at('2026-03-18 00:30');
+        $this->actingAs($other)->get(route('account'))->assertSee('Yalnız bu gün götürmək olar');
+        $this->at('2026-03-15 00:10');
         $this->assertSame(Birthday::WAIT, Birthday::status($other)['state']);
         $this->assertSame(2027, Birthday::status($other)['birthday']->year);
+        $this->actingAs($other)->post(route('account.birthday.claim'))->assertSessionHasErrors('birthday');
+        $this->assertSame(0, WheelSpin::where('user_id', $other->id)->count());
 
         // gələn il yenə olur
         $this->at('2027-03-14 12:00');
@@ -127,12 +132,15 @@ class BirthdayCouponTest extends TestCase
         $this->assertSame(Birthday::AVAILABLE, Birthday::status($leap)['state']);
         $this->assertSame('2027-02-28', Birthday::status($leap)['birthday']->toDateString());
 
-        // 30 dekabr ad günü, 1 yanvar — hələ pəncərədədir, kupon keçən ilin ad gününə yazılır
-        $this->at('2027-01-01 12:00');
-        $dec = $this->user(['birth_date' => '1992-12-30', 'birth_date_set_at' => now()->subDays(90)]);
+        // 31 dekabr ad günü: həmin gün olar (il — 2026), 1 yanvar — artıq gələn ilin ad gününü gözləyir
+        $this->at('2026-12-31 22:00');
+        $dec = $this->user(['birth_date' => '1992-12-31', 'birth_date_set_at' => now()->subDays(90)]);
         $this->assertSame(Birthday::AVAILABLE, Birthday::status($dec)['state']);
         $this->assertNotNull(Birthday::claim($dec));
         $this->assertSame(2026, (int) $dec->fresh()->birthday_coupon_year);
+        $this->at('2027-01-01 00:30');
+        $this->assertSame(Birthday::WAIT, Birthday::status($dec->fresh())['state']);
+        $this->assertSame(2027, Birthday::status($dec->fresh())['birthday']->year);
     }
 
     public function test_staff_get_no_birthday_gift(): void

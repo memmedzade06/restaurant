@@ -77,7 +77,7 @@ class Birthday
 
     public static function daysAfter(): int
     {
-        return max(0, (int) config('birthday.days_after', 3));
+        return max(0, (int) config('birthday.days_after', 0));
     }
 
     /** Kuponu götürməyə icazə verən ilk və son gün */

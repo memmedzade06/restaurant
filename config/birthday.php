@@ -16,7 +16,7 @@ return [
 
     // Kuponu ad günündən neçə gün əvvəl və sonra götürmək olar (0 və 0 — yalnız ad günü)
     'days_before' => (int) env('BIRTHDAY_DAYS_BEFORE', 0),
-    'days_after' => (int) env('BIRTHDAY_DAYS_AFTER', 3),
+    'days_after' => (int) env('BIRTHDAY_DAYS_AFTER', 0),
 
     // Götürüləndən sonra kupon neçə gün etibarlıdır
     'valid_days' => (int) env('BIRTHDAY_COUPON_VALID_DAYS', 7),

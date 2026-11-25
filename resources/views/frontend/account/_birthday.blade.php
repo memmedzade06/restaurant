@@ -33,7 +33,7 @@
                         @csrf
                         <button type="submit" class="btn btn-primary bday-claim"><i class="fa fa-gift me-2"></i>Kuponu götür</button>
                     </form>
-                    <small class="hint d-block mt-2">{{ \App\Support\Birthday::format($bd['until']) }}-dək götürmək olar · kupon {{ (int) config('birthday.valid_days', 7) }} gün etibarlıdır</small>
+                    <small class="hint d-block mt-2">{{ $bd['until']->isSameDay(\App\Support\Birthday::today()) ? 'Yalnız bu gün götürmək olar' : \App\Support\Birthday::format($bd['until']) . '-dək götürmək olar' }} · kupon {{ (int) config('birthday.valid_days', 7) }} gün etibarlıdır</small>
                 </div>
                 @break
 
@@ -54,7 +54,7 @@
                     <li><span><i class="fa fa-calendar-day me-2"></i>Ad günü</span><b>{{ \App\Support\Birthday::format($me->birth_date) }}</b></li>
                     <li><span><i class="fa fa-hourglass-half me-2"></i>Qalıb</span><b>{{ $bd['days_left'] }} gün</b></li>
                 </ul>
-                <p class="small text-muted mb-0">Ad gününüzdə burada <b>masaya 50% endirim</b> kuponu görünəcək.</p>
+                <p class="small text-muted mb-0">Ad gününüzdə burada <b>masaya 50% endirim</b> kuponu görünəcək — onu yalnız ad günü götürmək olar.</p>
         @endswitch
     </div>
 @endif
