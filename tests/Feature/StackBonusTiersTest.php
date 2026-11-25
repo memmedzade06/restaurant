@@ -9,16 +9,10 @@ use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
-/** Stəkan qülləsi: mərhələ bonusları (30 → 0,25, 50 → 0,5, 60 → 0,75), hər mərhələ gündə bir dəfə */
+/** Stəkan qülləsi: mərhələ bonusları (30 → 0,3, 50 → 0,5), hər mərhələ gündə bir dəfə — saytın öz ayarı ilə */
 class StackBonusTiersTest extends TestCase
 {
     use DatabaseTransactions;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        config(['games.stack.bonus' => ['tiers' => [30 => 0.25, 50 => 0.5, 60 => 0.75]]]);
-    }
 
     protected function tearDown(): void
     {
@@ -52,24 +46,26 @@ class StackBonusTiersTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-11-25 12:00', 'Asia/Baku'));
         $u = $this->user();
 
-        $this->assertSame(0.0, $this->award($u, 29));                 // mərhələyə çatmayıb
-        $this->assertSame(0.25, $this->award($u, 35));                // 30 mərhələsi
-        $this->assertSame(0.0, $this->award($u, 33));                 // 30 bu gün alınıb — yox
-        $this->assertSame(0.0, $this->award($u, 45));                 // 40–49: yeni mərhələ yoxdur
-        $this->assertSame(0.5, $this->award($u, 55));                 // yalnız yuxarı mərhələ: 50
-        $this->assertSame(0.75, $this->award($u, 70));                // 30 və 50 alınıb — yalnız 60
-        $this->assertSame(0.0, $this->award($u, 100));                // hamısı alınıb
-        $this->assertEqualsWithDelta(1.5, $u->fresh()->points, 0.0001);
-        $this->assertSame([30, 50, 60], PointLog::where('user_id', $u->id)->where('source', 'stack')->orderBy('id')->get()->map(fn ($l) => $l->meta['tier'])->all());
+        // saytın ayarı: yalnız iki mərhələ
+        $this->assertSame([30 => 0.3, 50 => 0.5], config('games.stack.bonus.tiers'));
 
-        // bir oyunda birdən 65 stəkan — keçilən bütün mərhələlər: 0,25 + 0,5 + 0,75
+        $this->assertSame(0.0, $this->award($u, 29));                 // mərhələyə çatmayıb
+        $this->assertSame(0.3, $this->award($u, 35));                 // 30 mərhələsi
+        $this->assertSame(0.0, $this->award($u, 33));                 // 30 bu gün alınıb — yox
+        $this->assertSame(0.0, $this->award($u, 45));                 // 31–49: yeni mərhələ yoxdur
+        $this->assertSame(0.5, $this->award($u, 55));                 // yalnız yuxarı mərhələ: 50
+        $this->assertSame(0.0, $this->award($u, 100));                // hamısı alınıb (60 mərhələsi yoxdur)
+        $this->assertEqualsWithDelta(0.8, $u->fresh()->points, 0.0001);
+        $this->assertSame([30, 50], PointLog::where('user_id', $u->id)->where('source', 'stack')->orderBy('id')->get()->map(fn ($l) => $l->meta['tier'])->all());
+
+        // bir oyunda birdən 70 stəkan — keçilən bütün mərhələlər: 0,3 + 0,5
         $fresh = $this->user();
-        $this->assertSame(1.5, $this->award($fresh, 65));
+        $this->assertSame(0.8, $this->award($fresh, 70));
 
         // ertəsi gün — mərhələlər yenidən açılır
         Carbon::setTestNow(Carbon::parse('2026-11-26 09:00', 'Asia/Baku'));
-        $this->assertSame(0.25, $this->award($u, 31));
-        $this->assertEqualsWithDelta(1.75, $u->fresh()->points, 0.0001);
+        $this->assertSame(0.3, $this->award($u, 31));
+        $this->assertEqualsWithDelta(1.1, $u->fresh()->points, 0.0001);
     }
 
     public function test_game_page_shows_tiers_and_what_is_done_today(): void
@@ -79,8 +75,8 @@ class StackBonusTiersTest extends TestCase
 
         $this->actingAs($u)->get('/oyunlar/stekan')->assertOk()
             ->assertSee('hər mərhələ gündə bir dəfə')
-            ->assertSee('30 stəkan — +0,25 xal')->assertSee('50 stəkan — +0,5 xal')->assertDontSee('40 stəkan — +0,5 xal')->assertSee('60 stəkan — +0,75 xal')
-            ->assertSee('"score":30,"points":0.25,"done":true', false)
+            ->assertSee('30 stəkan — +0,3 xal')->assertSee('50 stəkan — +0,5 xal')->assertDontSee('60 stəkan — +0,75 xal')
+            ->assertSee('"score":30,"points":0.3,"done":true', false)
             ->assertSee('"score":50,"points":0.5,"done":false', false);
 
         // xal tarixçəsində mərhələ görünür
@@ -92,7 +88,7 @@ class StackBonusTiersTest extends TestCase
         $waiter = $this->user();
         $waiter->forceFill(['type' => User::TYPE_WAITER])->save();
 
-        $this->assertSame(0.0, $this->award($waiter, 65));
+        $this->assertSame(0.0, $this->award($waiter, 55));
         $this->assertEqualsWithDelta(0.0, $waiter->fresh()->points, 0.0001);
     }
 }
