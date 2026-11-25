@@ -51,8 +51,8 @@
                     <div class="chat-guest">
                         <i class="fa fa-comments"></i>
                         <p>Adminə yazmaq üçün hesabınıza daxil olun.</p>
-                        <a href="{{ route('login') }}" class="btn btn-wine w-100 mb-2">Daxil ol</a>
-                        <a href="{{ route('register') }}" class="btn btn-outline-secondary w-100">Qeydiyyat</a>
+                        <a href="{{ route('login') }}" class="btn btn-wine w-100 mb-2" data-chat-leave>Daxil ol</a>
+                        <a href="{{ route('register') }}" class="btn btn-outline-secondary w-100" data-chat-leave>Qeydiyyat</a>
                     </div>
                 @endif
             </div>
@@ -99,6 +99,8 @@
             fab.addEventListener('click', function () { panel.hidden ? open(true) : close(); });
             document.getElementById('chatFabLabel').addEventListener('click', function () { open(true); });
             panel.querySelector('[data-chat-close]').addEventListener('click', close);
+            // "Daxil ol" / "Qeydiyyat": pəncərə bağlanır və növbəti səhifədə yenidən açılmır
+            panel.querySelectorAll('[data-chat-leave]').forEach(function (a) { a.addEventListener('click', close); });
             document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !panel.hidden) close(); });
             document.body.classList.add('has-chat-fab');
 
