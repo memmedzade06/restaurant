@@ -102,6 +102,8 @@ class User extends Authenticatable
         'is_admin' => 'boolean',
         'referral_rewarded_at' => 'datetime',
         'points' => 'float', // bazada decimal(10,2): 0.5 və 0.25 xallar
+        'birth_date' => 'date',
+        'birth_date_set_at' => 'datetime',
     ];
 
     /** Bu istifadəçini dəvət edən */

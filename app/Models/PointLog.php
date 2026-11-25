@@ -20,6 +20,7 @@ class PointLog extends Model
         'stack' => ['Stəkan qülləsi', 'fa-layer-group'],
         'market' => ['Hədiyyə marketi', 'fa-gift'],
         'instagram' => ['Instagram izləmə', 'fab fa-instagram'],
+        'birthday' => ['Ad günü', 'fa-birthday-cake'],
         'admin' => ['Admin düzəlişi', 'fa-user-shield'],
     ];
 
@@ -78,6 +79,7 @@ class PointLog extends Model
             'quiz' => isset($m['stage']) ? QuizController::ordinal((int) $m['stage']) . ' mərhələ keçildi' : 'Mərhələ keçildi',
             'stack' => isset($m['score']) ? $m['score'] . ' stəkan — bonus' : 'Bonus',
             'instagram' => isset($m['username']) ? '@' . $m['username'] . ' — izləmə təsdiqləndi' : 'İzləmə təsdiqləndi',
+            'birthday' => 'Doğum tarixi əlavə olundu',
             'market' => ($m['label'] ?? 'Hədiyyə') . ($forAdmin && ! empty($m['code']) ? ' · ' . $m['code'] : ''),
             'admin' => trim(($forAdmin && $this->admin ? $this->admin->name : '') . ($this->note ? ($forAdmin && $this->admin ? ' — ' : '') . $this->note : '')) ?: 'Balans düzəldildi',
             default => '',

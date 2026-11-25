@@ -106,6 +106,34 @@ class UserController extends Controller
     }
 
     /**
+     * Doğum tarixini düzəltmək (istifadəçi özü yalnız bir dəfə yaza bilir). Boş göndərilsə — silinir.
+     * Admin düzəldəndə "yazılma vaxtı" dəyişmir (təzə yazılmış sayılmasın); əvvəl yox idisə — indi.
+     */
+    public function updateBirthday(Request $request, User $user): RedirectResponse
+    {
+        $data = $request->validate([
+            'birth_date' => ['nullable', 'date_format:Y-m-d', 'after:1920-01-01', 'before:today'],
+        ], [
+            'birth_date.date_format' => 'Doğum tarixini düzgün seçin.',
+            'birth_date.after' => 'Doğum tarixini düzgün seçin.',
+            'birth_date.before' => 'Doğum tarixini düzgün seçin.',
+        ]);
+
+        $old = $user->birth_date?->toDateString();
+        $new = $data['birth_date'] ?? null;
+        $user->forceFill([
+            'birth_date' => $new,
+            'birth_date_set_at' => $new ? ($user->birth_date_set_at ?? now()) : null,
+        ])->save();
+        logger()->info('Admin doğum tarixini dəyişdi', [
+            'admin_id' => $request->user()->id, 'user_id' => $user->id, 'from' => $old, 'to' => $new,
+        ]);
+
+        return redirect(route('admin.users.edit', $user) . '#ad-gunu')
+            ->with('success', $new ? "{$user->name} — doğum tarixi: " . $user->birth_date->format('d.m.Y') . '.' : "{$user->name} — doğum tarixi silindi.");
+    }
+
+    /**
      * İstifadəçinin xal balansını dəyişir: yeni balans yazmaq ("set"), əlavə etmək ("add") və ya çıxmaq ("sub").
      * Balans mənfiyə düşə bilməz. Hər dəyişiklik loga yazılır (kim, kimə, nə qədər, səbəb).
      */

@@ -65,6 +65,27 @@
             </form>
         </div>
 
+        {{-- ad günü: istifadəçi tarixi bir dəfə yazır, səhv yazılıbsa admin düzəldir --}}
+        <div class="side-card mt-4" id="ad-gunu">
+            <h5 class="mb-1"><i class="fa fa-birthday-cake me-2 text-primary"></i>Ad günü</h5>
+            <p class="small text-muted mb-3">
+                @if ($user->birth_date)
+                    Doğum tarixi: <b>{{ $user->birth_date->format('d.m.Y') }}</b> (yazılıb: {{ $user->birth_date_set_at?->timezone('Asia/Baku')->format('d.m.Y') ?? '—' }})
+                    @if ($user->birthday_coupon_year) · {{ $user->birthday_coupon_year }}-ci ilin ad günü kuponu götürülüb @endif
+                @else
+                    Doğum tarixi yazılmayıb.
+                @endif
+            </p>
+            <form method="POST" action="{{ route('admin.users.birthday', $user) }}" class="d-flex flex-wrap gap-2 align-items-center">
+                @csrf
+                @method('PUT')
+                <input type="date" name="birth_date" class="form-control" style="max-width: 200px" value="{{ old('birth_date', $user->birth_date?->toDateString()) }}" max="{{ now('Asia/Baku')->subDay()->toDateString() }}">
+                <button type="submit" class="btn btn-primary px-4">Yadda saxla</button>
+            </form>
+            @error('birth_date') <div class="alert alert-danger admin-alert mt-2 mb-0">{{ $message }}</div> @enderror
+            <p class="small text-muted mt-2 mb-0">Boş saxlasanız, tarix silinir. Düzəliş kuponun "30 gün əvvəl yazılıb" qaydasını sıfırlamır.</p>
+        </div>
+
         {{-- xal balansı: yeni balans yaz, əlavə et və ya çıx --}}
         @php $mode = old('mode', 'add'); @endphp
         <div class="side-card mt-4" id="xal">

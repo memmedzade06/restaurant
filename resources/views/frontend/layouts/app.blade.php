@@ -46,7 +46,7 @@
     <link href="{{ asset('lib/owlcarousel/assets/owl.carousel.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/custom.css') }}?v=58" rel="stylesheet">
+    <link href="{{ asset('css/custom.css') }}?v=60" rel="stylesheet">
     <link href="{{ asset('css/games.css') }}?v=62" rel="stylesheet">
     @yield('css')
 </head>
@@ -104,6 +104,35 @@
                         bar.hidden = true;
                         document.body.classList.remove('has-verify-bar');
                         try { sessionStorage.setItem('verifyBarClosed', '1'); } catch (e) {}
+                    });
+                })();
+            </script>
+        @endif
+    @endauth
+
+    {{-- Ad günü: kupon götürmək olar — hər səhifədə aşağıda təbrik (profildə yox, orada kart var) --}}
+    @auth
+        @php($bdNow = auth()->user()->isVerified() && ! request()->routeIs('account') ? \App\Support\Birthday::status(auth()->user()) : null)
+        @if ($bdNow && $bdNow['state'] === \App\Support\Birthday::AVAILABLE)
+            <div class="verify-bar bday-bar" id="bdayBar" role="status" data-key="bdayBarClosed:{{ $bdNow['birthday']->year }}" hidden>
+                <span class="bday-bar-ico" aria-hidden="true">🎂</span>
+                <div class="verify-bar-text">
+                    <b>Ad gününüz mübarək!</b>
+                    <span>Masaya <b>50% endirim</b> kuponunuz hazırdır — götürməyi unutmayın.</span>
+                </div>
+                <a href="{{ route('account') }}#ad-gunu" class="btn btn-primary verify-bar-btn">Kuponu götür</a>
+                <button type="button" class="verify-bar-close" aria-label="Bağla">&times;</button>
+            </div>
+            <script>
+                (function () {
+                    var bar = document.getElementById('bdayBar');
+                    try { if (sessionStorage.getItem(bar.dataset.key)) return; } catch (e) {}
+                    bar.hidden = false;
+                    document.body.classList.add('has-verify-bar');
+                    bar.querySelector('.verify-bar-close').addEventListener('click', function () {
+                        bar.hidden = true;
+                        document.body.classList.remove('has-verify-bar');
+                        try { sessionStorage.setItem(bar.dataset.key, '1'); } catch (e) {}
                     });
                 })();
             </script>

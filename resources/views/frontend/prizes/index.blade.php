@@ -12,6 +12,12 @@
 
 <section class="section pt-4">
     <div class="container" style="max-width: 760px">
+        @if (session('birthday_coupon'))
+            <div class="side-card bday-done">
+                <span class="bday-ready-emoji" aria-hidden="true">🎉</span>
+                <div><b>Ad gününüz mübarək!</b> Masaya 50% endirim kuponunuz hazırdır: <code>{{ session('birthday_coupon') }}</code>. Restoranda ofisianta göstərin.</div>
+            </div>
+        @endif
         <div class="side-card">
             <h5><i class="fa fa-gift me-2 text-primary"></i>Aktiv hədiyyələr <span class="online-count ms-1">{{ $active->count() }}</span></h5>
             @if ($active->isEmpty())

@@ -120,6 +120,8 @@
                         <button type="submit" class="btn btn-wine w-100 py-2"><i class="fa fa-sign-out-alt me-2"></i>Çıxış</button>
                     </form>
                 </div>
+
+                @include('frontend.account._birthday')
             </div>
 
             {{-- Sağ: xallar və dəvət --}}

@@ -119,6 +119,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/hediyyelerim', [\App\Http\Controllers\Frontend\PrizeController::class, 'index'])->name('prizes');
         // Instagram səhifəmizi izləyən adını göndərir — admin təsdiqləyəndə xal
         Route::post('/hesabim/instagram', [\App\Http\Controllers\Frontend\InstagramFollowController::class, 'store'])->middleware('throttle:6,1')->name('account.instagram');
+        // Ad günü hədiyyəsi: doğum tarixi (bir dəfə) və ad günü gələndə masaya endirim kuponu
+        Route::post('/hesabim/ad-gunu', [\App\Http\Controllers\Frontend\BirthdayController::class, 'store'])->middleware('throttle:6,1')->name('account.birthday');
+        Route::post('/hesabim/ad-gunu/kupon', [\App\Http\Controllers\Frontend\BirthdayController::class, 'claim'])->middleware('throttle:6,1')->name('account.birthday.claim');
     });
 
     // Adminlə yazışma: sual yazmaq və cavabları görmək (təsdiq problemi olan da yaza bilsin deyə — yalnız giriş tələb olunur)
@@ -221,6 +224,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/istifadeciler/{user}/duzelis', [\App\Http\Controllers\Admin\UserController::class, 'edit'])->name('users.edit');
     Route::put('/istifadeciler/{user}', [\App\Http\Controllers\Admin\UserController::class, 'update'])->name('users.update');
     Route::put('/istifadeciler/{user}/xal', [\App\Http\Controllers\Admin\UserController::class, 'updatePoints'])->name('users.points');
+    Route::put('/istifadeciler/{user}/ad-gunu', [\App\Http\Controllers\Admin\UserController::class, 'updateBirthday'])->name('users.birthday');
     Route::delete('/istifadeciler/{user}', [\App\Http\Controllers\Admin\UserController::class, 'destroy'])->name('users.destroy');
     Route::get('/instagram', [\App\Http\Controllers\Admin\InstagramFollowController::class, 'index'])->name('instagram');
     Route::post('/instagram/{follow}/tesdiq', [\App\Http\Controllers\Admin\InstagramFollowController::class, 'approve'])->name('instagram.approve');

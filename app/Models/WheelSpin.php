@@ -34,6 +34,7 @@ class WheelSpin extends Model
         'nard' => 'Nərd — günün qalibi',
         'claw' => 'Hədiyyə Kranı',
         'market' => 'Hədiyyə marketi', // xallarla alınıb
+        'birthday' => 'Ad günü hədiyyəsi',
     ];
 
     /**
