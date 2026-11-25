@@ -1037,3 +1037,11 @@ body.has-verify-bar .chat-widget.is-open .chat-panel { bottom: 110px; height: mi
     .chat-widget.is-open .chat-panel { bottom: 8px; height: calc(100vh - 16px); height: calc(100dvh - 16px); }
     body.has-verify-bar .chat-widget.is-open .chat-panel { bottom: 8px; height: calc(100dvh - 16px); }
 }
+
+/* "Yuxarı qalx" düyməsi söhbət düyməsinin düz üstündə, eyni xəttdə; parlayan halqalar onu örtməsin */
+body.has-chat-fab .back-to-top { right: 36px; bottom: 130px; z-index: 1046; }
+body.has-chat-fab.has-verify-bar .back-to-top { bottom: 218px; }
+@media (max-width: 575.98px) {
+    body.has-chat-fab .back-to-top { right: 22px; bottom: 104px; }
+    body.has-chat-fab.has-verify-bar .back-to-top { bottom: 240px; }
+}
