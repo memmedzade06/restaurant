@@ -1077,3 +1077,13 @@ body.has-chat-fab.has-verify-bar .back-to-top { bottom: 218px; }
 .acc-msg-from small { font-weight: 600; color: var(--muted); }
 .acc-msg-text { display: block; white-space: pre-wrap; word-break: break-word; }
 .acc-messages.has-unread .acc-msg-text { font-weight: 700; }
+
+/* Tarix seçimi: Gün → Ay → İl (ad günü kartı və admin) */
+.date-select { display: flex; gap: 6px; min-width: 0; }
+.date-select select { min-width: 0; border: 1.5px solid #ead9c3; border-radius: 12px; padding: 8px 10px; color: var(--text); background-color: #fff; font-size: 15px; cursor: pointer; }
+.date-select select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(233, 162, 59, .2); }
+.date-select select:nth-child(1) { flex: 0 0 74px; }   /* gün */
+.date-select select:nth-child(2) { flex: 1 1 auto; }   /* ay — adı uzundur */
+.date-select select:nth-child(3) { flex: 0 0 88px; }   /* il */
+.bday-form { flex-direction: column; }
+.bday-form .btn { width: 100%; }

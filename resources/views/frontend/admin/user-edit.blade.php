@@ -82,11 +82,11 @@
             <form method="POST" action="{{ route('admin.users.birthday', $user) }}" class="d-flex flex-wrap gap-2 align-items-center">
                 @csrf
                 @method('PUT')
-                <input type="date" name="birth_date" class="form-control" style="max-width: 200px" value="{{ old('birth_date', $user->birth_date?->toDateString()) }}" max="{{ now('Asia/Baku')->subDay()->toDateString() }}">
+                @include('frontend.partials.date-select', ['prefix' => 'birth', 'value' => $user->birth_date, 'minYear' => 1920, 'maxYear' => now('Asia/Baku')->year])
                 <button type="submit" class="btn btn-primary px-4">Yadda saxla</button>
             </form>
             @error('birth_date') <div class="alert alert-danger admin-alert mt-2 mb-0">{{ $message }}</div> @enderror
-            <p class="small text-muted mt-2 mb-0">Boş saxlasanız, tarix silinir. Düzəliş kuponun "30 gün əvvəl yazılıb" qaydasını sıfırlamır.</p>
+            <p class="small text-muted mt-2 mb-0">Gün, ay və ili boş seçsəniz, tarix silinir. Düzəliş kuponun "30 gün əvvəl yazılıb" qaydasını sıfırlamır.</p>
         </div>
 
         {{-- xal balansı: yeni balans yaz, əlavə et və ya çıx --}}

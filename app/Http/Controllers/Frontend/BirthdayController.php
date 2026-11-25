@@ -23,14 +23,16 @@ class BirthdayController extends Controller
             return $back->withErrors(['birthday' => 'Doğum tarixi artıq yazılıb. Səhv yazılıbsa, adminə yazın.']);
         }
 
-        $data = $request->validate([
-            'birth_date' => ['required', 'date_format:Y-m-d', 'after:1920-01-01', 'before:' . now('Asia/Baku')->subYears(5)->toDateString()],
-        ], [
-            'birth_date.required' => 'Doğum tarixini seçin.',
-            'birth_date.date_format' => 'Doğum tarixini düzgün seçin.',
-            'birth_date.after' => 'Doğum tarixini düzgün seçin.',
-            'birth_date.before' => 'Doğum tarixini düzgün seçin.',
-        ]);
+        // forma: gün → ay → il (üç seçim)
+        [$date, $error] = Birthday::fromParts(
+            $request->input('birth_day'), $request->input('birth_month'), $request->input('birth_year'),
+            \Carbon\CarbonImmutable::create(1920, 1, 2, 0, 0, 0, 'Asia/Baku'),
+            \Carbon\CarbonImmutable::now('Asia/Baku')->subYears(5),
+        );
+        if (! $date) {
+            return $back->withInput()->withErrors(['birthday' => $error ?? 'Doğum tarixini seçin.']);
+        }
+        $data = ['birth_date' => $date->toDateString()];
 
         // tarix yazılır və bir dəfəlik bonus xal verilir (iki dəfə basılsa belə bir dəfə)
         $bonus = DB::transaction(function () use ($user, $data) {

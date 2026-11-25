@@ -111,16 +111,18 @@ class UserController extends Controller
      */
     public function updateBirthday(Request $request, User $user): RedirectResponse
     {
-        $data = $request->validate([
-            'birth_date' => ['nullable', 'date_format:Y-m-d', 'after:1920-01-01', 'before:today'],
-        ], [
-            'birth_date.date_format' => 'Doğum tarixini düzgün seçin.',
-            'birth_date.after' => 'Doğum tarixini düzgün seçin.',
-            'birth_date.before' => 'Doğum tarixini düzgün seçin.',
-        ]);
+        // forma: gün → ay → il; üçü də boşdursa — tarix silinir
+        [$date, $error] = \App\Support\Birthday::fromParts(
+            $request->input('birth_day'), $request->input('birth_month'), $request->input('birth_year'),
+            \Carbon\CarbonImmutable::create(1920, 1, 2, 0, 0, 0, 'Asia/Baku'),
+            \Carbon\CarbonImmutable::now('Asia/Baku')->subDay(),
+        );
+        if ($error) {
+            return redirect(route('admin.users.edit', $user) . '#ad-gunu')->withInput()->withErrors(['birth_date' => $error]);
+        }
 
         $old = $user->birth_date?->toDateString();
-        $new = $data['birth_date'] ?? null;
+        $new = $date?->toDateString();
         $user->forceFill([
             'birth_date' => $new,
             'birth_date_set_at' => $new ? ($user->birth_date_set_at ?? now()) : null,

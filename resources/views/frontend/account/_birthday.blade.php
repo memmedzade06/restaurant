@@ -25,7 +25,7 @@
                 </p>
                 <form method="POST" action="{{ route('account.birthday') }}" class="bday-form">
                     @csrf
-                    <input type="date" name="birth_date" value="{{ old('birth_date') }}" max="{{ now('Asia/Baku')->subYears(5)->toDateString() }}" min="1920-01-02" required aria-label="Doğum tarixi">
+                    @include('frontend.partials.date-select', ['prefix' => 'birth', 'value' => null, 'minYear' => 1920, 'maxYear' => now('Asia/Baku')->subYears(5)->year, 'required' => true])
                     <button type="submit" class="btn btn-wine">Yadda saxla</button>
                 </form>
                 <small class="hint d-block mt-2"><i class="fa fa-info-circle me-1"></i>Tarix bir dəfə yazılır, sonra dəyişmək olmur — diqqətlə seçin.</small>

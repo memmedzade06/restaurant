@@ -55,6 +55,31 @@ class Birthday
         return null;
     }
 
+    /**
+     * Formadakı üç seçimdən (gün, ay, il) tarix: [?CarbonImmutable, ?string xəta].
+     * Üçü də boşdursa — [null, null] (tarix yoxdur). $min/$max — icazə verilən aralıq (daxil).
+     */
+    public static function fromParts(?string $day, ?string $month, ?string $year, CarbonImmutable $min, CarbonImmutable $max): array
+    {
+        $parts = [trim((string) $day), trim((string) $month), trim((string) $year)];
+        if ($parts === ['', '', '']) {
+            return [null, null];
+        }
+        if (in_array('', $parts, true) || ! ctype_digit(implode('', $parts))) {
+            return [null, 'Doğum tarixini tam seçin: gün, ay və il.'];
+        }
+        [$d, $m, $y] = array_map('intval', $parts);
+        if (! checkdate($m, $d, $y)) {
+            return [null, 'Belə tarix yoxdur — günü yoxlayın (məs. 31 iyun olmur).'];
+        }
+        $date = CarbonImmutable::create($y, $m, $d, 0, 0, 0, 'Asia/Baku');
+        if ($date->lt($min->startOfDay()) || $date->gt($max->startOfDay())) {
+            return [null, 'Doğum tarixini düzgün seçin.'];
+        }
+
+        return [$date, null];
+    }
+
     /** "14 mart" */
     public static function format(\DateTimeInterface $date, bool $withYear = false): string
     {

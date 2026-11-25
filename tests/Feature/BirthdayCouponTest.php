@@ -52,7 +52,7 @@ class BirthdayCouponTest extends TestCase
             ->assertSee('Ad günü hədiyyəsi')->assertSee('+1 xal')->assertSee(route('account.birthday'))
             ->assertDontSee('@if')->assertDontSee('@endif'); // Blade direktivləri mətnə düşməsin
 
-        $this->actingAs($u)->post(route('account.birthday'), ['birth_date' => '1995-08-14'])
+        $this->actingAs($u)->post(route('account.birthday'), ['birth_day' => '14', 'birth_month' => '8', 'birth_year' => '1995'])
             ->assertRedirect(route('account') . '#ad-gunu')->assertSessionHas('birthday_saved', 1.0);
         $u->refresh();
         $this->assertSame('1995-08-14', $u->birth_date->toDateString());
@@ -60,12 +60,38 @@ class BirthdayCouponTest extends TestCase
         $this->assertSame(1, PointLog::where('user_id', $u->id)->where('source', 'birthday')->count());
 
         // ikinci dəfə dəyişmək olmur, xal da yenidən verilmir
-        $this->actingAs($u)->post(route('account.birthday'), ['birth_date' => '1995-06-01'])->assertSessionHasErrors('birthday');
+        $this->actingAs($u)->post(route('account.birthday'), ['birth_day' => '1', 'birth_month' => '6', 'birth_year' => '1995'])->assertSessionHasErrors('birthday');
         $this->assertSame('1995-08-14', $u->fresh()->birth_date->toDateString());
         $this->assertEquals(3, $u->fresh()->points);
 
         // profildə: ad günü tarixi və qalan günlər
         $this->actingAs($u)->get(route('account'))->assertSee('14 avqust')->assertSee('74 gün')->assertDontSee(route('account.birthday') . '"', false);
+    }
+
+    public function test_birth_date_form_is_day_month_year_and_rejects_bad_dates(): void
+    {
+        $this->at('2026-06-01 12:00');
+        $u = $this->user();
+
+        // forma: Gün → Ay → İl (brauzerin dilindən asılı olmayaraq)
+        $this->actingAs($u)->get(route('account'))->assertOk()
+            ->assertSeeInOrder(['name="birth_day"', 'name="birth_month"', 'name="birth_year"'], false)
+            ->assertSee('<option value="8" >Avqust</option>', false)
+            ->assertDontSee('type="date"', false);
+
+        // 31 iyun yoxdur, natamam seçim, 5 yaşdan kiçik — rədd; heç nə yazılmır
+        $this->actingAs($u)->post(route('account.birthday'), ['birth_day' => '31', 'birth_month' => '6', 'birth_year' => '1995'])
+            ->assertSessionHasErrors(['birthday' => 'Belə tarix yoxdur — günü yoxlayın (məs. 31 iyun olmur).']);
+        $this->actingAs($u)->post(route('account.birthday'), ['birth_day' => '14', 'birth_month' => '', 'birth_year' => '1995'])
+            ->assertSessionHasErrors(['birthday' => 'Doğum tarixini tam seçin: gün, ay və il.']);
+        $this->actingAs($u)->post(route('account.birthday'), ['birth_day' => '1', 'birth_month' => '1', 'birth_year' => '2024'])
+            ->assertSessionHasErrors('birthday');
+        $this->assertNull($u->fresh()->birth_date);
+
+        // 29 fevral uzun ildə — olur
+        $this->actingAs($u)->post(route('account.birthday'), ['birth_day' => '29', 'birth_month' => '2', 'birth_year' => '2000'])
+            ->assertSessionHas('birthday_saved');
+        $this->assertSame('2000-02-29', $u->fresh()->birth_date->toDateString());
     }
 
     public function test_coupon_only_on_birthday_and_only_once_a_year(): void
@@ -161,24 +187,24 @@ class BirthdayCouponTest extends TestCase
         $u = $this->user();
         $admin = $this->user(['is_admin' => true]);
 
-        $this->actingAs($u)->post(route('account.birthday'), ['birth_date' => '1995-08-14']);
+        $this->actingAs($u)->post(route('account.birthday'), ['birth_day' => '14', 'birth_month' => '8', 'birth_year' => '1995']);
         $setAt = $u->fresh()->birth_date_set_at;
 
         // istifadəçi admin səhifəsinə daxil ola bilməz
-        $this->actingAs($u)->put(route('admin.users.birthday', $u), ['birth_date' => '1995-06-01'])->assertForbidden();
+        $this->actingAs($u)->put(route('admin.users.birthday', $u), ['birth_day' => '1', 'birth_month' => '6', 'birth_year' => '1995'])->assertForbidden();
 
         // admin düzəldir — "yazılma vaxtı" dəyişmir
         $this->at('2026-06-10 12:00');
         $this->actingAs($admin)->get(route('admin.users.edit', $u))->assertOk()->assertSee('14.08.1995');
-        $this->actingAs($admin)->put(route('admin.users.birthday', $u), ['birth_date' => '1995-08-15'])->assertSessionHas('success');
+        $this->actingAs($admin)->put(route('admin.users.birthday', $u), ['birth_day' => '15', 'birth_month' => '8', 'birth_year' => '1995'])->assertSessionHas('success');
         $this->assertSame('1995-08-15', $u->fresh()->birth_date->toDateString());
         $this->assertTrue($u->fresh()->birth_date_set_at->eq($setAt));
 
         // admin silir, istifadəçi yenidən yazır — tarix yazılır, amma xal ikinci dəfə verilmir
-        $this->actingAs($admin)->put(route('admin.users.birthday', $u), ['birth_date' => '']);
+        $this->actingAs($admin)->put(route('admin.users.birthday', $u), ['birth_day' => '', 'birth_month' => '', 'birth_year' => '']);
         $this->assertNull($u->fresh()->birth_date);
         $points = $u->fresh()->points;
-        $this->actingAs($u->fresh())->post(route('account.birthday'), ['birth_date' => '1995-08-15'])->assertSessionHas('birthday_saved', 0.0);
+        $this->actingAs($u->fresh())->post(route('account.birthday'), ['birth_day' => '15', 'birth_month' => '8', 'birth_year' => '1995'])->assertSessionHas('birthday_saved', 0.0);
         $this->assertEquals($points, $u->fresh()->points);
     }
 }
