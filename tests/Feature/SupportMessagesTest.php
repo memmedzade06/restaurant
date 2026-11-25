@@ -149,6 +149,24 @@ class SupportMessagesTest extends TestCase
         $this->actingAs($admin)->postJson(route('admin.support.reply', $admin), ['body' => 'x'])->assertNotFound();
     }
 
+    public function test_chat_button_is_hidden_inside_games(): void
+    {
+        $user = $this->user();
+        $admin = $this->user(true);
+
+        foreach ([null, $user, $admin] as $who) {
+            if ($who) {
+                $this->actingAs($who);
+            }
+            // "Oyunlar" siyahısında var
+            $this->get('/oyunlar')->assertOk()->assertSee('class="chat-fab', false);
+            // oyunun içində yoxdur
+            foreach (['/oyunlar/stekan', '/oyunlar/carx-oyunu', '/oyunlar/bilik-yarisi'] as $game) {
+                $this->get($game)->assertOk()->assertDontSee('class="chat-fab', false)->assertDontSee('id="chatWidget"', false);
+            }
+        }
+    }
+
     public function test_users_only_see_their_own_conversation(): void
     {
         $a = $this->user();

@@ -1,10 +1,12 @@
 {{--
     Sağ aşağı küncdə "Adminə yaz" pəncərəsi (chatbot kimi) — bütün səhifələrdə.
     Qonaq: daxil olmağa dəvət. İstifadəçi: söhbət (açılanda yüklənir). Admin: gələn mesajlara keçid.
-    Mesajlar səhifəsinin özündə görünmür (orada söhbət onsuz da açıqdır).
+    Mesajlar səhifəsinin özündə və oyunların içində (/oyunlar/...) görünmür — oyuna mane olmasın.
 --}}
 @php($me = auth()->user())
-@if ($me?->is_admin)
+@if (request()->is('oyunlar/*'))
+    {{-- oyun səhifəsi: söhbət düyməsi yoxdur ("Oyunlar" siyahısında var) --}}
+@elseif ($me?->is_admin)
     @unless (request()->routeIs('admin.support*'))
         @php($adminUnread = \App\Models\SupportMessage::unreadForAdmin()->count())
         @php($adminLink = route('admin.support', $adminUnread ? ['filter' => 'unread'] : []))
