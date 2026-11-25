@@ -125,12 +125,24 @@ class SupportMessagesTest extends TestCase
         $this->actingAs($user)->get(route('account'))->assertOk()
             ->assertSee('id="mesajlar"', false)->assertSee('1 yeni')->assertSee('Bu gün sizə 20% endirim var.')
             ->assertSeeInOrder(['id="xallar"', 'id="mesajlar"'], false);
-        $this->actingAs($user)->get(route('home'))->assertSee('Yeni mesajınız var!');
+        // küncdəki yazı: hər iki variant səhifədədir (JS dəyişir), görünəni "hidden" olmayandır
+        $label = function (): string {
+            $html = $this->get(route('home'))->getContent();
+            $this->assertStringContainsString('Yeni mesajınız var!', $html);
+            $newHidden = (bool) preg_match('/class="chat-label-new"\s+hidden/', $html);
+            $defaultHidden = (bool) preg_match('/class="chat-label-default"\s+hidden/', $html);
+            $this->assertNotSame($newHidden, $defaultHidden, 'yazılardan biri görünməlidir');
 
-        // söhbəti açanda oxunur — kart qalır, amma "yeni" yox
+            return $newHidden ? 'default' : 'new';
+        };
+        $this->actingAs($user);
+        $this->assertSame('new', $label());
+
+        // söhbəti açanda oxunur — kart qalır, amma "yeni" yox; küncdə adi yazı
         $this->actingAs($user)->get(route('support'))->assertOk()->assertSee('Bu gün sizə 20% endirim var.');
         $this->actingAs($user)->get(route('account'))->assertSee('id="mesajlar"', false)->assertDontSee('1 yeni');
-        $this->actingAs($user)->get(route('home'))->assertDontSee('Yeni mesajınız var!');
+        $this->actingAs($user);
+        $this->assertSame('default', $label());
 
         // admin hesabına söhbət açılmır
         $this->actingAs($admin)->get(route('admin.support.show', $admin))->assertNotFound();
