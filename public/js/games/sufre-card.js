@@ -108,16 +108,23 @@
 
     let raf = 0, visible = true, start = performance.now();
     const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function draw(t) {
+        try {
+            frame(t);
+        } catch (e) { // bir rəsm xəta versə də animasiya dayanmasın
+            if (window.console) console.warn('Süfrəni doldur kartı:', e);
+        }
+    }
     function loop(ms) {
         raf = 0;
         if (!visible) return;
-        frame((ms - start) / 1000);
+        draw((ms - start) / 1000);
         if (!still) raf = requestAnimationFrame(loop);
     }
     function kick() { if (!raf) raf = requestAnimationFrame(loop); }
 
     resize();
-    frame(1.2);
+    draw(1.2);
     window.addEventListener('resize', () => { resize(); kick(); });
     cloth.addEventListener('load', kick);
     if ('IntersectionObserver' in window) {

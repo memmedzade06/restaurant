@@ -407,8 +407,8 @@
 
 @section('js')
 @if (config('games.sufre.enabled'))
-<script src="{{ asset('js/games/sufre-art.js') }}?v=1"></script>
-<script src="{{ asset('js/games/sufre-card.js') }}?v=2"></script>
+<script src="{{ asset('js/games/sufre-art.js') }}?v=2"></script>
+<script src="{{ asset('js/games/sufre-card.js') }}?v=3"></script>
 @endif
 <script>
     // "İndi saytda" siyahısını səhifəni yeniləmədən hər 15 saniyədən bir yeniləyirik

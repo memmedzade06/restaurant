@@ -4,6 +4,25 @@
  * Həm oyun (sufre.js), həm Oyunlar səhifəsindəki kart (sufre-card.js) istifadə edir — kartdakı nemətlər oyundakı ilə eynidir.
  */
 (function () {
+    // Köhnə brauzerlərdə (iOS 16-dan əvvəlki Safari, Chrome 99-dan əvvəl) kətanın roundRect funksiyası yoxdur —
+    // olmasa, rəsm xəta verib yarımçıq dayanırdı (kart boş görünürdü, oyunda saat paneli çəkilmirdi).
+    if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.roundRect) {
+        CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+            let rad = Array.isArray(r) ? (r[0] || 0) : (r || 0);
+            rad = Math.max(0, Math.min(rad, Math.abs(w) / 2, Math.abs(h) / 2));
+            this.moveTo(x + rad, y);
+            this.lineTo(x + w - rad, y);
+            this.arcTo(x + w, y, x + w, y + rad, rad);
+            this.lineTo(x + w, y + h - rad);
+            this.arcTo(x + w, y + h, x + w - rad, y + h, rad);
+            this.lineTo(x + rad, y + h);
+            this.arcTo(x, y + h, x, y + h - rad, rad);
+            this.lineTo(x, y + rad);
+            this.arcTo(x, y, x + rad, y, rad);
+            this.closePath();
+        };
+    }
+
     /** Toxumlu təsadüfi ədədlər: teksturalar hər dəfə eyni çıxsın */
     function seeded(seed) {
         let v = seed % 2147483647;
