@@ -725,7 +725,7 @@ a.user-points-link:hover { color: var(--wine); }
 
 /* ---- Süfrəni doldur: kartda düşən nemətlər və sağa-sola gedən sini ---- */
 .sufre-game .st-stage { touch-action: none; }
-.sufre-game .st-stage canvas { cursor: grab; touch-action: none; }
+.sufre-game .st-stage canvas { cursor: grab; touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
 .sufre-game .st-note a { color: var(--wine); font-weight: 600; }
 .sf-art { background: #241009; }
 .sf-card-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }

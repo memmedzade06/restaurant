@@ -90,14 +90,38 @@
 
     // ---- idarəetmə ----
     const clampX = x => { const h = halfAt(t); return Math.max(h, Math.min(W - h, x)); };
-    function pointerX(e) {
-        const r = canvas.getBoundingClientRect();
-        target = clampX((e.clientX - r.left) / r.width * W);
+    const toGameX = clientX => { const r = canvas.getBoundingClientRect(); return (clientX - r.left) / r.width * W; };
+    // Sürüşdürmə: barmaq sininin üstünə qoyulubsa, sini tutulduğu yerdən barmaqla birlikdə gedir (barmağın altına
+    // sıçramır); sinidən kənara toxunulubsa, sini ora gəlir. Siçanla isə sini sadəcə göstəricinin ardınca gedir.
+    let grab = 0;
+    function press(clientX) {
+        const x = toGameX(clientX);
+        grab = Math.abs(x - bx) <= halfAt(t) + 24 ? bx - x : 0;
+        target = clampX(x + grab);
     }
-    canvas.addEventListener('pointermove', e => { if (state === 'play') pointerX(e); });
+    const drag = clientX => { target = clampX(toGameX(clientX) + grab); };
+
+    // Telefonda toxunuş birbaşa tutulur: basıb saxlayanda iPhone/Android brauzerləri (və Instagram, Facebook içindəki
+    // brauzer) kontekst menyusu, mətn seçmə və ya səhifənin sürüşməsi ilə pointer hadisələrini kəsir — sini dayanırdı.
+    const onTouch = e => {
+        if (!e.touches.length) return;
+        if (state === 'play') {
+            e.preventDefault();
+            (e.type === 'touchstart' ? press : drag)(e.touches[0].clientX);
+        }
+    };
+    canvas.addEventListener('touchstart', onTouch, {passive: false});
+    canvas.addEventListener('touchmove', onTouch, {passive: false});
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+    canvas.addEventListener('pointermove', e => {
+        if (e.pointerType === 'touch' || state !== 'play') return; // toxunuş yuxarıda tutulur
+        grab = 0;
+        drag(e.clientX);
+    });
     canvas.addEventListener('pointerdown', e => {
-        if (state === 'play') { pointerX(e); return; }
-        if (state === 'idle') start();
+        if (state === 'idle') { start(); return; }
+        if (e.pointerType !== 'touch' && state === 'play') { grab = 0; drag(e.clientX); }
     });
     startBox.style.pointerEvents = 'none';
     stage.addEventListener('click', e => {
@@ -699,6 +723,6 @@
     requestAnimationFrame(frame);
 
     if (root.dataset.debug !== '1') return;
-    window.__sufre = {state: () => ({state, t, score, lives, caught, combo: combo(), basket, items, tray: tray.length, half: halfAt(t)}), auto: on => { auto = on; }, start,
+    window.__sufre = {state: () => ({state, t, score, lives, caught, combo: combo(), basket, items, tray: tray.length, half: halfAt(t), bx, target}), auto: on => { auto = on; }, start,
         paints: {paxlava: paintPaxlava, shekerbura: paintShekerbura, qend: paintQend, limon: paintLimon, qoz: paintQoz, shokolad: paintShokolad, glass: paintGlass, teapot: paintTeapot, hookah: paintHookah, coal: paintCoal, coalGlow: paintCoalGlow}};
 })();

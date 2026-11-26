@@ -133,5 +133,5 @@
 
 @section('js')
 <script src="{{ asset('js/games/sufre-art.js') }}?v=1"></script>
-<script src="{{ asset('js/games/sufre.js') }}?v=13"></script>
+<script src="{{ asset('js/games/sufre.js') }}?v=14"></script>
 @endsection

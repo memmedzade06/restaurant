@@ -47,7 +47,7 @@
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
     <link href="{{ asset('css/custom.css') }}?v=64" rel="stylesheet">
-    <link href="{{ asset('css/games.css') }}?v=62" rel="stylesheet">
+    <link href="{{ asset('css/games.css') }}?v=63" rel="stylesheet">
     @yield('css')
 </head>
 
