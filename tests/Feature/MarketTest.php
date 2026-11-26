@@ -121,6 +121,7 @@ class MarketTest extends TestCase
 
     public function test_buying_deducts_points_and_gives_coupon(): void
     {
+        config(['market.per_day' => 2]); // bu test iki alış edir
         $u = $this->user(7.5);
 
         $this->actingAs($u)->post('/hediyye-marketi/market_tea')->assertRedirect(route('market', ['kat' => 'secilmis']));
@@ -146,6 +147,26 @@ class MarketTest extends TestCase
         $this->actingAs($u)->get('/hediyye-marketi')->assertSee('1 gün (24 saat)');
         $this->travel(25)->hours();
         $this->assertFalse($coupon->fresh()->isActive());
+    }
+
+    public function test_site_allows_one_gift_per_day(): void
+    {
+        $this->assertSame(1, config('market.per_day'));
+        $u = $this->user(100);
+
+        $this->actingAs($u)->get('/hediyye-marketi?kat=secilmis')->assertSee('Bu gün: <b>1</b> / 1', false)
+            ->assertSee('Gündə ən çox <b>1 hədiyyə</b>', false);
+        $this->actingAs($u)->post('/hediyye-marketi/market_tea')->assertSessionHas('market_bought');
+
+        // ikinci hədiyyə bu gün olmur — xal çıxılmır, kupon yaranmır
+        $points = (float) $u->fresh()->points;
+        $this->actingAs($u)->post('/hediyye-marketi/market_hookah')->assertSessionHas('market_error');
+        $this->assertEquals($points, $u->fresh()->points);
+        $this->assertSame(1, WheelSpin::where('user_id', $u->id)->where('game', 'market')->count());
+
+        // ertəsi gün yenə olar
+        $this->travel(1)->days();
+        $this->actingAs($u)->post('/hediyye-marketi/market_hookah')->assertSessionHas('market_bought');
     }
 
     public function test_only_two_gifts_per_day(): void

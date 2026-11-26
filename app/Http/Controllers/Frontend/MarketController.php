@@ -79,7 +79,7 @@ class MarketController extends Controller
 
     public static function perDay(): int
     {
-        return max(1, (int) config('market.per_day', 2));
+        return max(1, (int) config('market.per_day', 1));
     }
 
     public function index(Request $request): View
