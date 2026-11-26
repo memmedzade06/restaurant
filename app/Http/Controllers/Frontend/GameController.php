@@ -31,6 +31,7 @@ class GameController extends Controller
             'leaders' => NardLeaderboard::today(),
             'lastWinners' => NardLeaderboard::yesterdayWinners(),
             'stackLeaders' => $this->stackLeaders(10),
+            'sufreLeaders' => config('games.sufre.enabled') ? SufreController::leaders(10) : collect(),
             'pointsLeaders' => self::pointsLeaders(10),
             'onlineUsers' => User::online()->orderByDesc('last_seen_at')->limit(30)->get(['id', 'name', 'last_seen_at']),
             'onlineCount' => User::online()->count(),
@@ -246,13 +247,10 @@ class GameController extends Controller
         return array_map('floatval', $tiers);
     }
 
-    /** Bu gün bonusu artıq alınmış mərhələlər (xal tarixçəsindən — keş silinsə də limit qalır) */
+    /** Bonusu son 48 saatda alınmış mərhələlər (xal tarixçəsindən) — onlara görə xal hələ verilmir */
     private function stackBonusDone(int $userId): array
     {
-        $since = now('Asia/Baku')->startOfDay()->setTimezone(config('app.timezone'));
-
-        return \App\Models\PointLog::where('user_id', $userId)->where('source', 'stack')->where('created_at', '>=', $since)
-            ->get(['meta'])->map(fn ($l) => (int) ($l->meta['tier'] ?? 0))->filter()->unique()->values()->all();
+        return \App\Services\Points::recentStages($userId, 'stack', 'tier');
     }
 
     /** Səhifə üçün: mərhələlər və bu gün alınıb-alınmadığı ($userId null — xal almır, hamısı "alınıb" sayılır) */

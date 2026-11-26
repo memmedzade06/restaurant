@@ -15,6 +15,7 @@ class PrizeNotifier
     private const WHERE = [
         'wheel' => 'Çarx oyununda',
         'stack' => 'Stəkan qülləsində',
+        'sufre' => 'Süfrəni doldur oyununda',
         'nard' => 'Nərddə günün qalibi oldunuz və',
         'claw' => 'Hədiyyə Kranında',
     ];

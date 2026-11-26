@@ -28,6 +28,18 @@ class Points
     }
 
     /**
+     * Son config('games.stage_points_cooldown_hours') saatda (defolt 48) bu mənbədən xal verilmiş mərhələlər —
+     * həmin mərhələlərə görə xal hələ təkrar verilmir. $metaKey — tarixçədə mərhələnin saxlandığı açar (tier, stage).
+     */
+    public static function recentStages(int $userId, string $source, string $metaKey): array
+    {
+        $since = now()->subHours((int) config('games.stage_points_cooldown_hours', 48));
+
+        return PointLog::where('user_id', $userId)->where('source', $source)->where('created_at', '>=', $since)
+            ->get(['meta'])->map(fn ($l) => (int) ($l->meta[$metaKey] ?? 0))->filter()->unique()->values()->all();
+    }
+
+    /**
      * İstifadəçinin tarixçəsi: son qeydlər, mənbələr üzrə yekun və tarixçədən əvvəlki xallar
      * (balans − bütün qeydlərin cəmi: oyunlardan gələn köhnə xallar heç yerdə saxlanmayıb).
      */

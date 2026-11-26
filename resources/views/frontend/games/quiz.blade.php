@@ -108,7 +108,6 @@
                                     @if ($quiz['bonusFrom']) <b>{{ $quiz['bonusFromLabel'] }} mərhələdən</b> başlayaraq isə <b>+{{ \App\Services\Referrals::format($quiz['bonusPoints']) }} xal</b>@endif
                                 @endif
                                 (gündə ən çox <b>{{ \App\Services\Referrals::format($quiz['maxPerDay']) }} xal</b>). Xalları Hədiyyə marketində hədiyyəyə çevirə bilərsiniz.</li>
-                            <li>Hər mərhələyə görə xal <b>gündə bir dəfə</b> verilir: yeni oyunda eyni mərhələni təkrar keçmək xal vermir — xal yalnız bu gün çatdığınız ən yüksək mərhələdən <b>sonrakılar</b> üçün yazılır.</li>
                         @endif
                     </ul>
                 </div>

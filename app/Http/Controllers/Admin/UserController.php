@@ -49,6 +49,7 @@ class UserController extends Controller
                     ->where(fn ($e) => $e->whereNull('expires_at')->orWhere('expires_at', '>', now())),
             ])
             ->withMax(['gameResults as stack_best' => fn ($g) => $g->where('game', 'stack')], 'points')
+            ->withMax(['gameResults as sufre_best' => fn ($g) => $g->where('game', 'sufre')], 'points')
             ->withSum(['gameResults as nard_today' => fn ($g) => $g->where('game', NardLeaderboard::GAME)->where('created_at', '>=', $nardDay)], 'points')
             ->when($sort === 'points', fn ($query) => $query->orderByDesc('points'))
             ->latest('id')

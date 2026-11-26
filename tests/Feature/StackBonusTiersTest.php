@@ -41,7 +41,7 @@ class StackBonusTiersTest extends TestCase
         return (float) $m->invoke(app(GameController::class), $u->fresh(), $score);
     }
 
-    public function test_each_tier_once_per_day_and_all_reached_tiers_in_one_game(): void
+    public function test_each_tier_once_per_48_hours_and_all_reached_tiers_in_one_game(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-11-25 12:00', 'Asia/Baku'));
         $u = $this->user();
@@ -62,8 +62,11 @@ class StackBonusTiersTest extends TestCase
         $fresh = $this->user();
         $this->assertSame(0.8, $this->award($fresh, 70));
 
-        // ertəsi gün — mərhələlər yenidən açılır
+        // ertəsi gün — hələ 48 saat keçməyib, eyni mərhələyə görə xal verilmir
         Carbon::setTestNow(Carbon::parse('2026-11-26 09:00', 'Asia/Baku'));
+        $this->assertSame(0.0, $this->award($u, 31));
+        // 48 saatdan sonra — mərhələ yenidən açılır
+        Carbon::setTestNow(Carbon::parse('2026-11-27 12:01', 'Asia/Baku'));
         $this->assertSame(0.3, $this->award($u, 31));
         $this->assertEqualsWithDelta(1.1, $u->fresh()->points, 0.0001);
     }
@@ -74,7 +77,7 @@ class StackBonusTiersTest extends TestCase
         $this->award($u, 35);
 
         $this->actingAs($u)->get('/oyunlar/stekan')->assertOk()
-            ->assertSee('hər mərhələ gündə bir dəfə')
+            ->assertDontSee('gündə bir dəfə') // gözləmə qaydası oyunçuya göstərilmir
             ->assertSee('30 stəkan — +0,3 xal')->assertSee('50 stəkan — +0,5 xal')->assertDontSee('60 stəkan — +0,75 xal')
             ->assertSee('"score":30,"points":0.3,"done":true', false)
             ->assertSee('"score":50,"points":0.5,"done":false', false);

@@ -112,10 +112,6 @@
                 : '';
         }
         if (bonus > 0) return `<br><span class="qz-bonus">⭐ +${fmt(bonus)} xal balansınıza yazıldı!</span>`;
-        // bu mərhələyə görə bu gün artıq xal alınıb — xal yalnız daha yüksək mərhələlər üçün
-        if (d && d.repeat && !(left !== null && left <= 0)) {
-            return `<br><small class="text-muted">Bu mərhələyə görə bu gün artıq xal almısınız. Növbəti xal <b>${ordinal(d.bestStage + 1)} mərhələni</b> keçəndə yazılır.</small>`;
-        }
         if (left !== null && left <= 0) return '<br><small class="text-muted">Bu günün xal limiti bitib — sabah yenə qazanın.</small>';
         return '';
     }

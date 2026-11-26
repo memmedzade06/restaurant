@@ -107,6 +107,9 @@
                                     <td>
                                         <small>
                                             Stəkan rekordu: <b>{{ (int) $u->stack_best }}</b>
+                                            @if (config('games.sufre.enabled'))
+                                                <br>Süfrəni doldur rekordu: <b>{{ (int) $u->sufre_best }} xal</b>
+                                            @endif
                                             @if (config('games.nard.enabled'))
                                                 <br>Nərd bu gün: <b>{{ (int) $u->nard_today }} xal</b>
                                             @endif

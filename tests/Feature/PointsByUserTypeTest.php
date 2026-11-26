@@ -139,8 +139,10 @@ class PointsByUserTypeTest extends TestCase
         $this->assertSame([0, true], $this->invokePrivate($controller, 'awardStage', $u, 4));
         $this->assertEqualsWithDelta(0.75, (float) $u->fresh()->points, 0.0001);
 
-        // sabah yenidən 3-cü mərhələdən xal qazanmaq olur
+        // ertəsi gün hələ yox — eyni mərhələyə görə xal yalnız 48 saatdan sonra
         $this->travel(1)->days();
+        $this->assertSame([0, true], $this->invokePrivate($controller, 'awardStage', $u, 3));
+        $this->travel(25)->hours();
         $this->assertSame(0.25, (float) $this->invokePrivate($controller, 'awardStage', $u, 3)[0]);
         $this->assertEqualsWithDelta(1.0, (float) $u->fresh()->points, 0.0001);
 

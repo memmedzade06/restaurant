@@ -31,6 +31,7 @@ class WheelSpin extends Model
     public const GAME_LABELS = [
         'wheel' => 'Çarx oyunu',
         'stack' => 'Stəkan qülləsi',
+        'sufre' => 'Süfrəni doldur',
         'nard' => 'Nərd — günün qalibi',
         'claw' => 'Hədiyyə Kranı',
         'market' => 'Hədiyyə marketi', // xallarla alınıb

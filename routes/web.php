@@ -176,6 +176,13 @@ Route::prefix('oyunlar')->name('games.')->controller(\App\Http\Controllers\Front
     Route::post('/carx-oyunu/dayan', 'stop')->middleware('throttle:30,1')->name('wheel.stop');
     Route::post('/carx-oyunu/gotur', 'claim')->middleware(['auth', 'phone.verified', 'throttle:15,1'])->name('wheel.claim');
 });
+// Süfrəni doldur: süfrə nemətlərini tut, közərmiş kömürdən qaç. Hesabı server özü hesablayır; nəticə və xal — təsdiqlənmiş istifadəçilərə
+Route::prefix('oyunlar/sufreni-doldur')->name('games.sufre')->middleware('game.enabled:sufre')->controller(\App\Http\Controllers\Frontend\SufreController::class)->group(function () {
+    Route::get('/', 'show');
+    Route::post('/basla', 'start')->middleware('throttle:60,1')->name('.start');
+    Route::post('/netice', 'result')->middleware(['auth', 'phone.verified', 'throttle:30,1'])->name('.result');
+    Route::post('/hediyye', 'prize')->middleware(['auth', 'phone.verified', 'throttle:10,1'])->name('.prize');
+});
 // Bilik Yarışı (sual oyunu): oyun serverdə gedir (düz cavab brauzerə getmir), mərhələ keçəndə xal yazılır
 Route::prefix('oyunlar/bilik-yarisi')->name('games.quiz')->controller(\App\Http\Controllers\Frontend\QuizController::class)->group(function () {
     Route::get('/', 'show');

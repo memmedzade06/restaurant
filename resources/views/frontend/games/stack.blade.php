@@ -108,7 +108,7 @@
                             <li>Toxunun — stəkan düşüb qüllənin üstünə düşür.</li>
                             <li><b>10 saniyə</b> toxunmasanız, oyun bitir (son 3 saniyədə xəbərdarlıq çıxır).</li>
                             @if ($bonus['tiers'])
-                                <li>Xal bonusu (hər mərhələ gündə bir dəfə):
+                                <li>Xal bonusu:
                                     @foreach ($bonus['tiers'] as $t)
                                         <b>{{ $t['score'] }} stəkan — +{{ \App\Services\Referrals::format($t['points']) }} xal</b>@if (! $loop->last), @endif
                                     @endforeach

@@ -13,6 +13,10 @@
 
 return [
 
+    // Mərhələyə görə xal (Bilik Yarışı, Stəkan qülləsi, Süfrəni doldur): eyni mərhələyə görə eyni adama xal
+    // yenidən yalnız bu qədər saat keçəndən sonra verilir. Oyunçuya göstərilmir.
+    'stage_points_cooldown_hours' => (int) env('STAGE_POINTS_COOLDOWN_HOURS', 48),
+
     'wheel' => [
         // Çarx restoranda, masada oynanılır və endirim həmin masanın cari hesabına tətbiq olunur,
         // ona görə kod yalnız bu ziyarət üçündür: bu qədər dəqiqədən sonra avtomatik qüvvədən düşür
@@ -132,6 +136,43 @@ return [
         'max_exact_share' => 0.5,        //   stəkanların bu hissəsindən çoxu 0.3 px-dən dəqiqdirsə — bot
     ],
 
+    // Süfrəni doldur: ofisiant sinisini sağa-sola aparıb düşən süfrə nemətlərini tutursan; közərmiş qəlyan kömürü
+    // siniyə düşsə, oyun bitir. Oyunun gedişatını server təyin edir: başlanğıcda əşyaların siyahısını yaradır, sonda sininin
+    // yerlərinə görə hesabı ÖZÜ hesablayır (brauzerin dediyi xala güvənilmir) — App\Services\SufreGame.
+    'sufre' => [
+        // Müvəqqəti gizlətmək üçün .env-də SUFRE_ENABLED=false (kartı görünmür, ünvanları 404)
+        'enabled' => (bool) env('SUFRE_ENABLED', true),
+        // Bonus mərhələləri: [xal => balansa yazılan xal]. Təsdiqlənmiş qonaq bir oyunda mərhələyə çatanda verilir,
+        // hər mərhələ gündə BİR dəfə (Stəkan qülləsindəki kimi). .env: SUFRE_BONUS_TIERS="300:0.3,500:0.5"
+        'bonus' => [
+            'tiers' => (function () {
+                $tiers = [];
+                foreach (explode(',', (string) env('SUFRE_BONUS_TIERS', '300:0.3,500:0.5')) as $pair) {
+                    [$score, $points] = array_map('trim', explode(':', $pair) + [1 => 0]);
+                    if ((int) $score > 0 && (float) $points > 0) {
+                        $tiers[(int) $score] = (float) $points;
+                    }
+                }
+                ksort($tiers);
+
+                return $tiers;
+            })(),
+        ],
+        // Hədiyyələr: oyunçu bu xala çatanda oyun dayanır — "Hədiyyəni götür" (kod verilir, oyun bitir) və ya
+        // "Davam et" (növbəti hədiyyəyə şans; kömür siniyə düşsə, hədiyyə yanır). Hesabı server yoxlayır.
+        'prizes' => [
+            450 => ['key' => 'sufre_tea', 'label' => 'Çaynik Çay Hədiyyə'],
+            500 => ['key' => 'sufre_hookah', 'label' => 'Qəlyan Hədiyyə'],
+            550 => ['key' => 'sufre_discount_30', 'label' => '30% endirim kuponu Hədiyyə'],
+        ],
+        'prizes_per_day' => (int) env('SUFRE_PRIZES_PER_DAY', 1), // istifadəçiyə gündə neçə hədiyyə
+        'code_valid_days' => 1,    // hədiyyə kodu 24 saat etibarlıdır
+        'max_seconds' => (int) env('SUFRE_SECONDS', 90), // oyunun müddəti: vaxt bitəndə oyun bitir (ekranda geri sayım)
+        'max_speed' => 2200,       // sininin ən böyük sürəti (px/saniyə) — bundan sürətli "sıçrayış" botdur
+        'bot_check_from' => 30,    // bu qədər şardan sonra "insan kimi oynayırmı" yoxlanır:
+        'max_exact_share' => 0.6,  //   nemətlərin bu hissəsindən çoxu sininin düz ortasına düşürsə — bot
+    ],
+
     // Stəkan qülləsində Bakının indiki havasına uyğun effektlər (yağış, külək, günəş...).
     // Hava Open-Meteo-dan götürülür; STACK_WEATHER=false ilə söndürmək olar.
     'weather' => [
@@ -167,6 +208,7 @@ return [
         'claw' => (int) env('MIN_BILL_CLAW', 30),
         'nard' => (int) env('MIN_BILL_NARD', 20),
         'stack' => (int) env('MIN_BILL_STACK', 10),
+        'sufre' => (int) env('MIN_BILL_SUFRE', 20),
     ],
 
 ];

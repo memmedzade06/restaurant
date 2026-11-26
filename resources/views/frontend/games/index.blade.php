@@ -118,6 +118,21 @@
                     </div>
                 </a>
             </div>
+            @if (config('games.sufre.enabled'))
+            <div class="col-md-6 col-lg-4">
+                <a href="{{ route('games.sufre') }}" class="game-card">
+                    <div class="game-art sf-art">
+                        {{-- oyundakı nemətlər (sufre-art.js) düşür, aşağıda mis sini sağa-sola gedir — public/js/games/sufre-card.js --}}
+                        <canvas class="sf-card-canvas" data-cloth="{{ asset('img/games/stack-cloth.webp') }}?v=1" aria-hidden="true"></canvas>
+                    </div>
+                    <div class="game-body">
+                        <h4>Süfrəni doldur</h4>
+                        <p>90 saniyədə süfrəni doldurun, hədiyyələr qazanın!</p>
+                        <span class="game-go">Oyna <i class="fa fa-arrow-right ms-1"></i></span>
+                    </div>
+                </a>
+            </div>
+            @endif
             <div class="col-md-6 col-lg-4">
                 <a href="{{ route('games.wheel') }}" class="game-card">
                     <div class="game-art wheel-art">
@@ -345,12 +360,20 @@
                 </div>
             </div>
             @endif
-            <div class="{{ config('games.nard.enabled') ? 'col-md-6' : 'col-12' }}">
+            <div class="{{ config('games.nard.enabled') || config('games.sufre.enabled') ? 'col-md-6' : 'col-12' }}">
                 <div class="side-card h-100">
                     <h5><i class="fa fa-trophy me-2 text-primary"></i>Stəkan qülləsi liderləri</h5>
                     @include('frontend.games._leaders', ['leaders' => $stackLeaders, 'unit' => 'stəkan', 'initial' => 5])
                 </div>
             </div>
+            @if (config('games.sufre.enabled'))
+            <div class="col-md-6">
+                <div class="side-card h-100">
+                    <h5><i class="fa fa-trophy me-2 text-primary"></i>Süfrəni doldur liderləri</h5>
+                    @include('frontend.games._leaders', ['leaders' => $sufreLeaders, 'unit' => 'xal', 'initial' => 5])
+                </div>
+            </div>
+            @endif
         </div>
 
         {{-- xal liderləri: balansında ən çox xal olanlar --}}
@@ -383,6 +406,10 @@
 @endsection
 
 @section('js')
+@if (config('games.sufre.enabled'))
+<script src="{{ asset('js/games/sufre-art.js') }}?v=1"></script>
+<script src="{{ asset('js/games/sufre-card.js') }}?v=2"></script>
+@endif
 <script>
     // "İndi saytda" siyahısını səhifəni yeniləmədən hər 15 saniyədən bir yeniləyirik
     (function () {

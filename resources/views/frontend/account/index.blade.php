@@ -25,6 +25,8 @@
     $nardToday = \App\Services\NardLeaderboard::myToday($me->id);
     $nardWins = \App\Models\NardDailyWinner::where('user_id', $me->id)->count();
     $stackBest = (int) \App\Models\GameResult::where('user_id', $me->id)->where('game', 'stack')->max('points');
+    $sufreBest = (int) \App\Models\GameResult::where('user_id', $me->id)->where('game', 'sufre')->max('points');
+    $sufreRank = $sufreBest > 0 ? \App\Http\Controllers\Frontend\SufreController::rank($me->id) : null;
     // aktiv və istifadə olunmuş kuponlar; vaxtı keçmiş (istifadə olunmamış) göstərilmir
     $prizes = \App\Models\WheelSpin::where('user_id', $me->id)->whereNotNull('code')
         ->where(fn ($q) => $q->whereNotNull('redeemed_at')->orWhereNull('expires_at')->orWhere('expires_at', '>', now()))
@@ -243,6 +245,13 @@
                     <div class="acc-stats">
                         <div class="wide"><b>{{ $stackBest }}</b><span>stəkan — rekordunuz</span></div>
                     </div>
+                    @if (config('games.sufre.enabled'))
+                        <h6 class="acc-sub"><i class="fa fa-mug-hot me-2"></i>Süfrəni doldur</h6>
+                        <div class="acc-stats">
+                            <div><b>{{ $sufreBest }}</b><span>xal — rekordunuz</span></div>
+                            <div><b>{{ $sufreRank ?? '—' }}</b><span>reytinqdə yeriniz</span></div>
+                        </div>
+                    @endif
                 </div>
             </div>
 
