@@ -98,8 +98,9 @@
                                     </td>
                                     <td>
                                         @if ($u->prizes_count)
-                                            <a href="{{ route('admin.prizes', ['q' => preg_replace('/\D+/', '', (string) $u->phone)]) }}">{{ $u->prizes_count }} kod</a>
-                                            @if ($u->active_prizes_count)<br><small class="text-success">{{ $u->active_prizes_count }} aktiv</small>@endif
+                                            {{-- "N kod" — istifadəçinin bütün kuponları, "N aktiv" — yalnız aktiv olanlar --}}
+                                            <a href="{{ route('admin.prizes', ['user' => $u->id, 'status' => 'all']) }}">{{ $u->prizes_count }} kod</a>
+                                            @if ($u->active_prizes_count)<br><a href="{{ route('admin.prizes', ['user' => $u->id, 'status' => \App\Models\WheelSpin::ACTIVE]) }}" class="small text-success">{{ $u->active_prizes_count }} aktiv</a>@endif
                                         @else
                                             <span class="text-muted">—</span>
                                         @endif

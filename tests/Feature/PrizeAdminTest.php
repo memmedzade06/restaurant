@@ -416,4 +416,27 @@ class PrizeAdminTest extends TestCase
             ->assertSee('Minimal masa hesabı')->assertSee('<b>' . config('games.min_bill.wheel') . ' AZN</b>', false);
         $this->assertSame(1, substr_count($this->actingAs($player)->get('/hediyyelerim')->getContent(), 'class="coupon-min-bill"'));
     }
+
+    public function test_users_list_links_to_that_users_coupons(): void
+    {
+        $admin = $this->user(true);
+        $alice = $this->user();
+        $bob = $this->user();
+        $aActive = $this->prize($alice);
+        $aUsed = $this->prize($alice, ['redeemed_at' => now(), 'redeemed_by' => $admin->id]);
+        $bActive = $this->prize($bob);
+
+        // İstifadəçilər siyahısında "N kod" və "N aktiv" — istifadəçinin kuponlarına link
+        $this->actingAs($admin)->get('/admin/istifadeciler')
+            ->assertSee(route('admin.prizes', ['user' => $alice->id, 'status' => 'all']))
+            ->assertSee(route('admin.prizes', ['user' => $alice->id, 'status' => 'active']));
+
+        // "aktiv" — yalnız bu istifadəçinin aktiv kuponları
+        $this->actingAs($admin)->get(route('admin.prizes', ['user' => $alice->id, 'status' => 'active']))->assertOk()
+            ->assertSee('İstifadəçi: <b>' . $alice->name . '</b>', false)
+            ->assertSee($aActive->code)->assertDontSee($aUsed->code)->assertDontSee($bActive->code);
+        // "kod" — bu istifadəçinin bütün kuponları
+        $this->actingAs($admin)->get(route('admin.prizes', ['user' => $alice->id, 'status' => 'all']))->assertOk()
+            ->assertSee($aActive->code)->assertSee($aUsed->code)->assertDontSee($bActive->code);
+    }
 }

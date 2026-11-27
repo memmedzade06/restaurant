@@ -24,8 +24,11 @@ class PrizeController extends Controller
         // Axtarışda susmaya görə hamısı — istifadə olunmuş kod da tapılsın.
         $requested = (string) $request->query('status', $q !== '' ? 'all' : WheelSpin::ACTIVE);
         $status = in_array($requested, array_keys(WheelSpin::STATUS_LABELS), true) ? $requested : null;
+        // ?user=ID — yalnız bir istifadəçinin kuponları (İstifadəçilər siyahısından "N kod" / "N aktiv" linki)
+        $filterUser = $request->filled('user') ? \App\Models\User::find((int) $request->query('user')) : null;
+        $byUser = fn ($query) => $query->when($filterUser, fn ($w) => $w->where('user_id', $filterUser->id));
 
-        $prizes = WheelSpin::prizes($status)
+        $prizes = $byUser(WheelSpin::prizes($status))
             ->with(['user:id,name,phone', 'redeemer:id,name'])
             // istifadə olunmuşlar — ən son istifadə olunan yuxarıda
             ->when($status === WheelSpin::USED, fn ($query) => $query->orderByDesc('redeemed_at'))
@@ -52,7 +55,8 @@ class PrizeController extends Controller
             'exact' => $exact,
             'q' => $q,
             'status' => $status,
-            'counts' => collect(WheelSpin::STATUS_LABELS)->map(fn ($label, $key) => WheelSpin::prizes($key)->count()),
+            'counts' => collect(WheelSpin::STATUS_LABELS)->map(fn ($label, $key) => $byUser(WheelSpin::prizes($key))->count()),
+            'filterUser' => $filterUser,
         ]);
     }
 

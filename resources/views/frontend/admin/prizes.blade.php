@@ -67,14 +67,22 @@
         </div>
 
         <div class="side-card" id="prizeResults">
+            @if ($filterUser)
+                {{-- yalnız bir istifadəçinin kuponları (İstifadəçilər siyahısından) --}}
+                <div class="alert alert-info d-flex flex-wrap align-items-center gap-2 mb-3">
+                    <span><i class="fa fa-user me-1"></i>İstifadəçi: <b>{{ $filterUser->name }}</b>
+                        {{ $filterUser->phone ? '· ' . \App\Support\Phone::format($filterUser->phone) : ($filterUser->email ? '· ' . $filterUser->email : '') }}</span>
+                    <a href="{{ route('admin.prizes', array_filter(['status' => $status ?? 'all'])) }}" class="ms-auto small"><i class="fa fa-times me-1"></i>Bütün istifadəçilər</a>
+                </div>
+            @endif
             {{-- Bölmələr: Aktiv (susmaya görə) və İstifadə olunub ayrıca; vaxtı keçmiş (istifadəsiz) kuponlar
                  avtomatik silinir — o bölmə yalnız hələ silinməmiş kupon olanda görünür --}}
             <div class="admin-tabs">
                 @foreach (\App\Models\WheelSpin::STATUS_LABELS as $key => $label)
                     @continue($key === \App\Models\WheelSpin::EXPIRED && ! $counts[$key] && $status !== $key)
-                    <a href="{{ route('admin.prizes', array_filter(['q' => $q, 'status' => $key])) }}" class="{{ $status === $key ? 'active' : '' }}">{{ $label }} <span>{{ $counts[$key] }}</span></a>
+                    <a href="{{ route('admin.prizes', array_filter(['q' => $q, 'status' => $key, 'user' => $filterUser?->id])) }}" class="{{ $status === $key ? 'active' : '' }}">{{ $label }} <span>{{ $counts[$key] }}</span></a>
                 @endforeach
-                <a href="{{ route('admin.prizes', array_filter(['q' => $q, 'status' => 'all'])) }}" class="{{ $status ? '' : 'active' }}">Hamısı</a>
+                <a href="{{ route('admin.prizes', array_filter(['q' => $q, 'status' => 'all', 'user' => $filterUser?->id])) }}" class="{{ $status ? '' : 'active' }}">Hamısı</a>
             </div>
 
             @if ($prizes->isEmpty())
