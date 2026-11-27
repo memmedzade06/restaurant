@@ -40,6 +40,22 @@ class SupportController extends Controller
             : Storage::disk('local')->download($message->attachment_path, $message->attachment_name, $headers);
     }
 
+    /** Hamıya mesajın faylı — e-poçtdakı imzalı linklə (BroadcastMail): video oynadılır, şəkil açılır, qalanı yüklənir */
+    public function broadcastFile(\App\Models\SupportBroadcast $broadcast): StreamedResponse|BinaryFileResponse
+    {
+        abort_unless($broadcast->attachment_path && Storage::disk('local')->exists($broadcast->attachment_path), 404);
+        $mime = $broadcast->attachment_mime ?: 'application/octet-stream';
+        $headers = ['Content-Type' => $mime, 'X-Content-Type-Options' => 'nosniff'];
+
+        if (in_array($mime, SupportMessage::VIDEO_MIMES, true)) {
+            return response()->file(Storage::disk('local')->path($broadcast->attachment_path), $headers + ['Accept-Ranges' => 'bytes']);
+        }
+
+        return str_starts_with($mime, 'image/') && $mime !== 'image/svg+xml'
+            ? Storage::disk('local')->response($broadcast->attachment_path, $broadcast->attachment_name, $headers)
+            : Storage::disk('local')->download($broadcast->attachment_path, $broadcast->attachment_name, $headers);
+    }
+
     public function index(Request $request): View|RedirectResponse
     {
         $user = $request->user();

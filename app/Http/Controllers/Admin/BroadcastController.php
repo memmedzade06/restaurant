@@ -58,13 +58,6 @@ class BroadcastController extends Controller
         ] + SupportMessage::fileMessages());
 
         $channels = array_values(array_intersect(array_keys(SupportBroadcast::CHANNELS), $data['channels']));
-        // böyük fayl məktuba əlavə olunmur — e-poçtda "saytda baxın" deyilir, ona görə sayt söhbəti də seçilməlidir
-        if (in_array('email', $channels, true) && ! in_array('chat', $channels, true)
-            && $request->hasFile('file') && $request->file('file')->getSize() > \App\Mail\BroadcastMail::ATTACH_MAX_BYTES) {
-            return back()->withInput()->withErrors(['channels' => 'Fayl ' . (\App\Mail\BroadcastMail::ATTACH_MAX_BYTES / 1048576)
-                . ' MB-dan böyükdür — məktuba əlavə olunmur. E-poçtla göndərmək üçün "Sayt söhbəti"ni də seçin (məktubda saytdakı mesaja link olacaq).']);
-        }
-
         $admin = $request->user();
         $body = trim((string) ($data['body'] ?? ''));
         // fayl bir dəfə saxlanılır — bütün istifadəçilərin mesajı eyni fayla istinad edir

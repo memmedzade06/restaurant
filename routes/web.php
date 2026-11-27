@@ -100,6 +100,10 @@ Route::get('/auth/google/callback', [\App\Http\Controllers\Auth\GoogleAuthContro
 Route::get('/tesdiq/e-poct/{user}/{hash}', [EmailVerifyController::class, 'confirm'])
     ->middleware(['signed', 'throttle:10,1'])->where('user', '\d+')->name('verify.email.confirm');
 
+// Hamıya mesajın faylı e-poçtda: məktuba sığmayan (15 MB-dan böyük) fayl imzalı linklə açılır (30 gün, giriş tələb olunmur)
+Route::get('/mesajlar/yayim/{broadcast}/fayl', [\App\Http\Controllers\Frontend\SupportController::class, 'broadcastFile'])
+    ->middleware('signed')->name('support.broadcast.file');
+
 Route::middleware('auth')->group(function () {
     Route::post('/cixis', [LoginController::class, 'destroy'])->name('logout');
     Route::get('/tesdiq', [TelegramVerifyController::class, 'show'])->name('verify.telegram');

@@ -71,7 +71,7 @@
                                 <label class="broadcast-channel">
                                     <input type="checkbox" name="channels[]" value="{{ $ch }}" @checked(in_array($ch, $oldChannels, true))
                                            @if ($ch === 'telegram' && ! $telegramReady) disabled @endif>
-                                    <span><i class="fa {{ $chIcon }} me-1"></i><b>{{ $chLabel }}</b>
+                                    <span><i class="{{ $chIcon }} me-1"></i><b>{{ $chLabel }}</b>
                                         <span class="badge bg-secondary ms-1" data-channel-count="{{ $ch }}">{{ $audiences[old('audience', 'all')]['channels'][$ch] ?? 0 }} nəfər</span>
                                         <small class="d-block text-muted">{{ $ch === 'telegram' && ! $telegramReady ? 'Telegram botu qoşulmayıb (TELEGRAM_BOT_TOKEN)' : $chHint }}</small></span>
                                 </label>
@@ -80,7 +80,7 @@
                         @error('channels') <div class="text-danger small mb-2">{{ $message }}</div> @enderror
                         @error('channels.*') <div class="text-danger small mb-2">{{ $message }}</div> @enderror
 
-                        <p class="small text-muted mt-3 mb-3"><i class="fa fa-info-circle me-1"></i>Ofisiant və adminlərə getmir. İstifadəçi saytda cavab yazsa, söhbət <a href="{{ route('admin.support') }}">Mesajlar</a> siyahısında görünəcək. Telegram və e-poçt arxa planda göndərilir — nəticə aşağıdakı tarixçədə görünür. E-poçtda {{ \App\Mail\BroadcastMail::ATTACH_MAX_BYTES / 1048576 }} MB-dan böyük fayl məktuba əlavə olunmur.</p>
+                        <p class="small text-muted mt-3 mb-3"><i class="fa fa-info-circle me-1"></i>Ofisiant və adminlərə getmir. İstifadəçi saytda cavab yazsa, söhbət <a href="{{ route('admin.support') }}">Mesajlar</a> siyahısında görünəcək. Telegram və e-poçt arxa planda göndərilir — nəticə aşağıdakı tarixçədə görünür. E-poçtda {{ \App\Mail\BroadcastMail::ATTACH_MAX_BYTES / 1048576 }} MB-dan böyük fayl (məs. video) məktuba əlavə olunmur — məktubda {{ \App\Mail\BroadcastMail::LINK_DAYS }} gün açılan "Videoya bax" linki olur.</p>
                         <button type="submit" class="btn btn-wine px-4"><i class="fa fa-paper-plane me-2"></i>Göndər</button>
                     </form>
                 </div>

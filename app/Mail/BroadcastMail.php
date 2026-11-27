@@ -16,6 +16,9 @@ class BroadcastMail extends Mailable
     /** Bundan böyük fayl məktuba əlavə olunmur — məktubda saytdakı "Mesajlar"a link verilir */
     public const ATTACH_MAX_BYTES = 15 * 1024 * 1024;
 
+    /** Böyük faylın linki neçə gün açılır */
+    public const LINK_DAYS = 30;
+
     public function __construct(public SupportBroadcast $broadcast, public User $user)
     {
     }
@@ -42,6 +45,11 @@ class BroadcastMail extends Mailable
             'fileAttached' => $this->attachesFile(),
             'messagesUrl' => route('support'),
             'inChat' => $b->hasChannel('chat'), // mesaj saytdakı söhbətə də gedibmi
+            // məktuba sığmayan fayl üçün imzalı link (30 gün): giriş tələb olunmur
+            'fileUrl' => $b->attachment_path && ! $this->attachesFile()
+                ? \Illuminate\Support\Facades\URL::temporarySignedRoute('support.broadcast.file', now()->addDays(self::LINK_DAYS), ['broadcast' => $b->id])
+                : null,
+            'fileIsVideo' => in_array($b->attachment_mime, \App\Models\SupportMessage::VIDEO_MIMES, true),
         ]);
     }
 

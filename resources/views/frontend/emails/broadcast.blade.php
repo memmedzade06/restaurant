@@ -16,10 +16,14 @@
                             📎 {{ $broadcast->attachment_name }}
                             @if ($fileAttached)
                                 — məktuba əlavə olunub.
-                            @else
-                                — fayl böyükdür, saytda <a href="{{ $messagesUrl }}" style="color:#7a1420;">Mesajlar</a> bölməsində baxa bilərsiniz.
                             @endif
                         </p>
+                        @if ($fileUrl)
+                            {{-- böyük fayl (məs. video) məktuba sığmır — imzalı linklə açılır --}}
+                            <p style="margin:0 0 24px;text-align:center;">
+                                <a href="{{ $fileUrl }}" style="display:inline-block;padding:12px 30px;background:#7a1420;color:#fff;font-size:15px;font-weight:bold;text-decoration:none;border-radius:999px;">{{ $fileIsVideo ? '▶ Videoya bax' : '📎 Faylı aç' }}</a>
+                            </p>
+                        @endif
                     @endif
                     @if ($linkUrl)
                         <p style="margin:0 0 24px;text-align:center;">

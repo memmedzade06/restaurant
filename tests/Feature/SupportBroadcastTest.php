@@ -290,14 +290,30 @@ class SupportBroadcastTest extends TestCase
             ->assertSessionHasErrors('channels');
         $this->actingAs($admin)->post(route('admin.support.broadcast.store'), ['body' => 'x', 'audience' => 'all', 'channels' => ['sms']])
             ->assertSessionHasErrors('channels.0');
-        // böyük fayl yalnız e-poçtla — olmaz (məktuba əlavə olunmur), sayt söhbəti ilə birlikdə olar
-        Storage::fake('local');
-        $big = fn () => UploadedFile::fake()->create('video.mp4', 20 * 1024, 'video/mp4');
-        $this->actingAs($admin)->post(route('admin.support.broadcast.store'), ['body' => 'x', 'audience' => 'all', 'channels' => ['email'], 'file' => $big()])
-            ->assertSessionHasErrors('channels');
         $this->assertSame(0, SupportBroadcast::where('admin_id', $admin->id)->count());
+
+        // böyük fayl (video) yalnız e-poçtla da olar: məktuba əlavə olunmur, "Videoya bax" imzalı linki olur
+        Storage::fake('local');
         \Illuminate\Support\Facades\Mail::fake();
-        $this->actingAs($admin)->post(route('admin.support.broadcast.store'), ['body' => 'x', 'audience' => 'all', 'channels' => ['chat', 'email'], 'file' => $big()])
-            ->assertSessionHas('success');
+        $this->user(['email_verified_at' => now()]);
+        $this->actingAs($admin)->post(route('admin.support.broadcast.store'), [
+            'body' => 'x', 'audience' => 'all', 'channels' => ['email'], 'file' => UploadedFile::fake()->create('video.mp4', 20 * 1024, 'video/mp4'),
+        ])->assertSessionHas('success');
+        $b = SupportBroadcast::latest('id')->first();
+        $link = null;
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\BroadcastMail::class, function ($m) use (&$link) {
+            $this->assertSame([], $m->attachments());
+            $html = $m->render();
+            $this->assertStringContainsString('Videoya bax', $html);
+            preg_match('~href="([^"]*/mesajlar/yayim/[^"]+)"~', $html, $mm);
+            $link = html_entity_decode($mm[1] ?? '');
+
+            return true;
+        });
+        // link girişsiz açılır; imzası pozulmuş link — 403
+        auth()->logout();
+        Storage::disk('local')->put($b->attachment_path, str_repeat('v', 100));
+        $this->get($link)->assertOk()->assertHeader('Content-Type', 'video/mp4');
+        $this->get(route('support.broadcast.file', $b))->assertForbidden();
     }
 }

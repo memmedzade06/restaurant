@@ -20,9 +20,9 @@ class SupportBroadcast extends Model
 
     /** Hara göndərmək olar: açar => [ad, izah, ikon] */
     public const CHANNELS = [
-        'chat' => ['Sayt söhbəti', 'Profildəki "Mesajlar" və küncdəki söhbət', 'fa-comments'],
+        'chat' => ['Sayt söhbəti', 'Profildəki "Mesajlar" və küncdəki söhbət', 'fa fa-comments'],
         'telegram' => ['Telegram', 'Telegram ilə təsdiqlənənlərə bot yazır', 'fab fa-telegram-plane'],
-        'email' => ['E-poçt', 'E-poçtu təsdiqlənmiş olanlara məktub', 'fa-envelope'],
+        'email' => ['E-poçt', 'E-poçtu təsdiqlənmiş olanlara məktub', 'fa fa-envelope'],
     ];
 
     protected $fillable = ['admin_id', 'body', 'link_url', 'link_label', 'attachment_path', 'attachment_name', 'attachment_mime',
