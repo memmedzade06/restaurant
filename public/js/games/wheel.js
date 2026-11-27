@@ -173,7 +173,10 @@
             html = `<span class="eyebrow">Hədiyyəniz 🎉</span><h3>${esc(state.claimed.label)}</h3>` +
                 `<div class="coupon-row"><div class="prize-code">${esc(state.claimed.code)}</div></div>` +
                 (state.claimed.claimed_at ? `<p class="claimed-at"><i class="fa fa-clock me-1"></i>Götürülüb: <b>${esc(state.claimed.claimed_at)}</b></p>` : '') +
-                `<p class="small text-muted mb-0">Kodu ofisianta göstərin. ${esc(state.claimed.expires)} tarixinədək etibarlıdır. Kod <a href="/hediyyelerim">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>` +
+                // etibarlılıq və minimal masa hesabı — kuponun üstündə ayrıca, diqqətçəkən
+                `<p class="claimed-at coupon-valid"><i class="fa fa-hourglass-half me-1"></i>Etibarlıdır: <b>${esc(state.claimed.expires)}-dək</b></p>` +
+                (state.claimed.min_bill ? `<div class="coupon-min-bill"><i class="fa fa-receipt"></i><span>Minimal masa hesabı</span><b>${esc(String(state.claimed.min_bill))} AZN</b></div>` : '') +
+                `<p class="small text-muted mb-0">Kodu ofisianta göstərin. Kod <a href="/hediyyelerim">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>` +
                 (window.earnMoreHtml ? window.earnMoreHtml() : '')
                 + fun;
         } else if (state.last) {

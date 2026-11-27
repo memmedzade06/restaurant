@@ -604,8 +604,11 @@
         overlay.classList.add('is-prize'); // kupon kartı bütün ekranın ortasında (oyun sahəsi telefonda kiçikdir)
         const box = overlay.querySelector('.st-prize');
         box.innerHTML = `<div class="coupon-row"><div class="prize-code">${esc(d.prize.code)}</div></div>` +
-            `<p class="coupon-note">Kodu ofisianta göstərin. ${esc(d.prize.expires)}-dək etibarlıdır. ` +
-            `<a href="${cfg.prizesUrl}">Hədiyyələrim</a>-də də saxlanılır.</p>` +
+            (d.prize.claimed_at ? `<p class="claimed-at"><i class="fa fa-clock me-1"></i>Götürülüb: <b>${esc(d.prize.claimed_at)}</b></p>` : '') +
+            // etibarlılıq və minimal masa hesabı — kuponun üstündə ayrıca, diqqətçəkən
+            `<p class="claimed-at coupon-valid"><i class="fa fa-hourglass-half me-1"></i>Etibarlıdır: <b>${esc(d.prize.expires)}-dək</b></p>` +
+            (d.prize.min_bill ? `<div class="coupon-min-bill"><i class="fa fa-receipt"></i><span>Minimal masa hesabı</span><b>${esc(String(d.prize.min_bill))} AZN</b></div>` : '') +
+            `<p class="coupon-note">Kodu ofisianta göstərin. <a href="${cfg.prizesUrl}">Hədiyyələrim</a>-də də saxlanılır.</p>` +
             (window.earnMoreHtml ? window.earnMoreHtml() : ''); // daha çox xal: Instagram və dəvət
         box.hidden = false;
         overlay.querySelector('.st-again').textContent = 'Yeni oyun';

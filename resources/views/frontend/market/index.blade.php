@@ -38,7 +38,13 @@
                             <h3 @unless ($loop->first) class="mt-3" @endunless>{{ $b->prize_label }}</h3>
                             <div class="prize-code">{{ $b->code }}</div>
                         @endforeach
-                        <p class="small text-muted mb-0">{{ $bought->count() > 1 ? 'Kodları' : 'Kodu' }} restoranda ofisianta göstərin. {{ $bought->first()->expires_at->timezone('Asia/Baku')->format('d.m.Y H:i') }} tarixinədək etibarlıdır.
+                        @php $b0 = $bought->first(); @endphp
+                        <p class="claimed-at"><i class="fa fa-clock me-1"></i>Götürülüb: <b>{{ $b0->created_at->timezone('Asia/Baku')->format('d.m.Y H:i') }}</b></p>
+                        <p class="claimed-at coupon-valid"><i class="fa fa-hourglass-half me-1"></i>Etibarlıdır: <b>{{ $b0->expires_at->timezone('Asia/Baku')->format('d.m.Y H:i') }}-dək</b></p>
+                        @if ($minBill = \App\Models\WheelSpin::minBill('market'))
+                            <div class="coupon-min-bill"><i class="fa fa-receipt"></i><span>Minimal masa hesabı</span><b>{{ $minBill }} AZN</b></div>
+                        @endif
+                        <p class="small text-muted mb-0">{{ $bought->count() > 1 ? 'Kodları' : 'Kodu' }} restoranda ofisianta göstərin.
                             {{ $bought->count() > 1 ? 'Kodlar' : 'Kod' }} <a href="{{ route('prizes') }}">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>
                     </div>
                 @endif

@@ -499,7 +499,10 @@
         } else {
             body += '<div class="coupon-row"><div class="prize-code">' + esc(c.code) + '</div></div>'
                 + '<p class="claimed-at"><i class="fa fa-clock me-1"></i>Götürülüb: <b>' + esc(c.claimed_at) + '</b></p>'
-                + '<p class="cl-note">Kodu ofisianta göstərin. <b>' + esc(c.expires) + '</b>-dək etibarlıdır. <a href="' + URL.prizes + '">Hədiyyələrim</a>-də də saxlanılır.</p>'
+                // etibarlılıq və minimal masa hesabı — kuponun üstündə ayrıca, diqqətçəkən
+                + '<p class="claimed-at coupon-valid"><i class="fa fa-hourglass-half me-1"></i>Etibarlıdır: <b>' + esc(c.expires) + '-dək</b></p>'
+                + (c.min_bill ? '<div class="coupon-min-bill"><i class="fa fa-receipt"></i><span>Minimal masa hesabı</span><b>' + esc(String(c.min_bill)) + ' AZN</b></div>' : '')
+                + '<p class="cl-note">Kodu ofisianta göstərin. <a href="' + URL.prizes + '">Hədiyyələrim</a>-də də saxlanılır.</p>'
                 + (window.earnMoreHtml ? window.earnMoreHtml() : ''); // daha çox xal: Instagram və dəvət
         }
         // hədiyyə götürülüb — kran əyləncə üçün oynanmağa davam edə bilər (hədiyyəsiz)

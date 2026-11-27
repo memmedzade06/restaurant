@@ -146,6 +146,7 @@ class SufreController extends Controller
                     'label' => $spin->prize_label,
                     'code' => $spin->code,
                     'expires' => $spin->expires_at?->timezone('Asia/Baku')->format('d.m.Y H:i'),
+                    'min_bill' => WheelSpin::minBill('sufre'), // kuponda: minimal masa hesabı (AZN)
                 ],
                 'score' => $score,
                 'best' => max($before, $score),

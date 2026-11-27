@@ -199,6 +199,7 @@ class ClawController extends Controller
             'code' => $spin->code,
             'expires' => $spin->expires_at?->timezone('Asia/Baku')->format('d.m.Y H:i'),
             'claimed_at' => $spin->created_at?->timezone('Asia/Baku')->format('d.m.Y H:i'),
+            'min_bill' => WheelSpin::minBill('claw'), // kuponda: minimal masa hesabı (AZN)
             // istifadə olunmuş kod da artıq keçərli deyil (silinmir, admin paneldə saxlanılır)
             'expired' => $spin->status() !== WheelSpin::ACTIVE,
             'used' => $spin->status() === WheelSpin::USED,

@@ -893,6 +893,18 @@ div.coupon-row .prize-code { margin-bottom: 0; font-size: 16px; padding: 8px 10p
 /* Kran: kupon kartı yığcam */
 .nb-result-box.has-prize .cl-prize { font-size: 21px; margin: 2px 0 8px; }
 .nb-result-box.has-prize .claimed-at { font-size: 13px; margin: 8px 0 2px; }
+.claimed-at.coupon-valid b { color: var(--wine); }
+/* kuponda minimal masa hesabı — diqqətçəkən lent */
+.coupon-min-bill { display: inline-flex; align-items: center; gap: 8px; margin: 8px auto 10px; padding: 8px 16px; border-radius: 999px;
+    background: linear-gradient(135deg, #fff3cd, #ffe08a); border: 2px solid #e9a23b; color: #6b2b05; font-size: 15px;
+    box-shadow: 0 4px 14px rgba(233, 162, 59, .35); animation: minBillPulse 2.4s ease-in-out infinite; }
+.coupon-min-bill i { color: #c8262c; font-size: 17px; }
+.coupon-min-bill span { font-weight: 600; }
+.coupon-min-bill b { font-size: 18px; font-weight: 900; color: #c8262c; white-space: nowrap; }
+@keyframes minBillPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+@media (prefers-reduced-motion: reduce) { .coupon-min-bill { animation: none; } }
+.prize-info .coupon-min-bill { margin: 8px 0 0; font-size: 13px; padding: 6px 12px; }
+.prize-info .coupon-min-bill b { font-size: 15px; }
 .nb-result-box.has-prize .cl-note { font-size: 12.5px; margin: 4px 0; }
 .nb-result-box.has-prize .eyebrow { margin-bottom: 0; }
 

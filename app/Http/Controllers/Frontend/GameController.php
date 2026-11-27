@@ -772,6 +772,7 @@ class GameController extends Controller
             'expires' => $spin->expires_at?->timezone('Asia/Baku')->format('d.m.Y H:i'), // kod 1 gün etibarlıdır — saat da lazımdır
             // "Hədiyyəni götür" basılan an (Bakı vaxtı)
             'claimed_at' => $spin->created_at?->timezone('Asia/Baku')->format('d.m.Y H:i'),
+            'min_bill' => WheelSpin::minBill($spin->game), // kuponda: minimal masa hesabı (AZN)
             // istifadə olunmuş kod da artıq keçərli deyil (silinmir, admin paneldə saxlanılır)
             'expired' => $spin->status() !== WheelSpin::ACTIVE,
             'used' => $spin->status() === WheelSpin::USED,

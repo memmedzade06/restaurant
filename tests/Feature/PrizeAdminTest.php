@@ -405,4 +405,15 @@ class PrizeAdminTest extends TestCase
         $this->assertEquals(0, (float) $admin->fresh()->points);
         $this->assertSame(0, \App\Models\PointLog::where('user_id', $admin->id)->count());
     }
+
+    public function test_coupon_shows_min_bill(): void
+    {
+        $player = $this->user();
+        $this->prize($player, ['game' => 'wheel']);
+        $this->prize($player, ['game' => 'birthday', 'prize_key' => 'birthday_50']); // ad günü kuponunda minimal hesab yoxdur
+
+        $this->actingAs($player)->get('/hediyyelerim')->assertOk()
+            ->assertSee('Minimal masa hesabı')->assertSee('<b>' . config('games.min_bill.wheel') . ' AZN</b>', false);
+        $this->assertSame(1, substr_count($this->actingAs($player)->get('/hediyyelerim')->getContent(), 'class="coupon-min-bill"'));
+    }
 }

@@ -25,6 +25,9 @@
                 </div>
             </div>
         @endif
+        @if ($st === 'active' && ($minBill = \App\Models\WheelSpin::minBill($p->game)))
+            <div class="coupon-min-bill"><i class="fa fa-receipt"></i><span>Minimal masa hesabı</span><b>{{ $minBill }} AZN</b></div>
+        @endif
     </div>
     <div class="prize-side">
         <code @if ($st === 'active') data-prize-qr="{{ $p->code }}" @endif>{{ $p->code }}</code>

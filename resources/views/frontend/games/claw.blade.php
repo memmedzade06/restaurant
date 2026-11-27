@@ -112,5 +112,5 @@
 @endsection
 
 @section('js')
-<script src="{{ asset('js/games/claw.js') }}?v=26"></script>
+<script src="{{ asset('js/games/claw.js') }}?v=27"></script>
 @endsection
