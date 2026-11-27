@@ -67,6 +67,9 @@
     let bx = W / 2, target = W / 2;
     let score = 0, lives = C.lives, streak = 0, caught = 0;
     let parts = [], pops = [], shake = 0, flash = 0;
+    // sinidəki stəkanlarda çayın çalxalanması (Stəkan qülləsindəki kimi yay modeli): sini qaçanda çay əks tərəfə
+    // meyl edir, sini dayananda və ya istiqamət dəyişəndə o yan-bu yana yırğalanıb sakitləşir
+    let slosh = {a: 0, v: 0}, trayVx = 0, trayRipple = 0;
     let keys = {left: false, right: false};
     let auto = false;          // yalnız lokal testlər üçün (aşağıda __sufre)
 
@@ -173,6 +176,7 @@
         t = 0; last = 0;
         bx = target = W / 2;
         score = 0; lives = C.lives; streak = 0; caught = 0; tray = []; trayDoneAt = 0;
+        slosh = {a: 0, v: 0}; trayVx = 0; trayRipple = 0;
         parts = []; pops = []; shake = 0; flash = 0;
         offered = {}; claiming = false;
         offer.hidden = true;
@@ -183,7 +187,7 @@
         state = 'play';
     }
 
-    // ---- hədiyyə: 500, 700, 1000 xal (config/games.php → sufre.prizes) ----
+    // ---- hədiyyə: 450, 550, 650 xal (config/games.php → sufre.prizes) ----
     const esc = s => String(s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 
     /** Xal hədiyyə həddini keçibsə — oyunu dayandırıb "götür / davam et" təklif edirik */
@@ -278,6 +282,7 @@
         if (auto) target = autoTarget();
         const maxMove = C.maxSpeed * 0.98 * dt;
         bx += Math.max(-maxMove, Math.min(maxMove, target - bx));
+        updateSlosh(dt, dt > 0 ? (bx - prevBx) / dt : 0);
 
         while (next < items.length && items[next][0] <= t) live.push({i: next++, done: false, gone: false});
 
@@ -309,6 +314,7 @@
                 caught++;
                 if (!trayDoneAt) {
                     tray.push(it);
+                    slosh.v += (Math.random() < 0.5 ? -1 : 1) * LAND_KICK; // nemət siniyə düşdü — çay çalxalanır
                     if (tray.length >= TRAY_FULL) { // sini doldu — ofisiant aparır
                         trayDoneAt = t;
                         pops.push({x: bx, y: C.catchY - 40, txt: 'Süfrə hazır!', l: 1.2, col: '#ffd86b'});
@@ -416,13 +422,13 @@
         // tünd şərab rəngli fon, üstündə zəif xalça naxışı — nemətlər aydın seçilsin
         // (rəsmli fon istifadə olunmur: orada da çaydan və stəkanlar var, düşən əşyalarla qarışır)
         const bg = ctx.createRadialGradient(W / 2, bot * 0.35, 40, W / 2, bot * 0.4, bot);
-        bg.addColorStop(0, '#4a1d18');
-        bg.addColorStop(1, '#1e0b08');
+        bg.addColorStop(0, '#2e110d');
+        bg.addColorStop(1, '#0f0503');
         ctx.fillStyle = bg;
         ctx.fillRect(0, 0, W, bot);
         if (cloth.complete && cloth.naturalWidth) {
             const k = Math.max(W / cloth.naturalWidth, bot / cloth.naturalHeight);
-            ctx.globalAlpha = 0.12;
+            ctx.globalAlpha = 0.07;
             ctx.drawImage(cloth, (W - cloth.naturalWidth * k) / 2, (bot - cloth.naturalHeight * k) / 2, cloth.naturalWidth * k, cloth.naturalHeight * k);
             ctx.globalAlpha = 1;
         }
@@ -460,7 +466,34 @@
 
     // nemətlərin rəsmləri ayrıca faylda (sufre-art.js) — Oyunlar səhifəsindəki kart da onları istifadə edir
     const {GW, GH, paintPaxlava, paintShekerbura, paintQend, paintLimon, paintShokolad, paintQoz,
-        paintGlass, paintTeapot, paintHookah, paintCoal, paintCoalGlow} = window.SufreArt;
+        paintGlass, paintTeapot, paintHookah, paintCoal, paintCoalGlow,
+        paintGlassBackSprite, paintGlassFrontSprite, paintTea} = window.SufreArt;
+
+    // ---- çayın çalxalanması (public/js/games/stack.js-dəki kimi) ----
+    const SLOSH_K = 140, SLOSH_D = 4.5, SLOSH_MAX = 0.55;
+    const LAND_KICK = 3;                          // nemət siniyə düşəndə çaya verilən təkan
+    const MOVE_TILT = 0.0006, MOVE_TILT_MAX = 0.35; // sininin sürətinə görə meyl (radian / px·s⁻¹)
+    const clampA = (v, m) => Math.max(-m, Math.min(m, v));
+    function updateSlosh(dt, vx) {
+        if (!(dt > 0)) return;
+        trayVx += (vx - trayVx) * Math.min(1, dt * 12);
+        slosh.v += (-SLOSH_K * (slosh.a - clampA(-trayVx * MOVE_TILT, MOVE_TILT_MAX)) - SLOSH_D * slosh.v) * dt;
+        slosh.a = clampA(slosh.a + slosh.v * dt, SLOSH_MAX);
+        const want = Math.min(1, Math.abs(trayVx) / 600 + Math.abs(slosh.v) * 0.3);
+        trayRipple += (want - trayRipple) * Math.min(1, dt * (want > trayRipple ? 8 : 2));
+    }
+
+    /** Stəkan: çay tərpənmirsə hazır sprayt, tərpənirsə arxa şüşə + canlı çəkilən çay + ön tərəf */
+    function drawGlass(s, tilt, ripple, tt, seed) {
+        if (Math.abs(tilt) < 0.004 && ripple < 0.03) { blit(sprite('glass', GW * 1.4, GH + 12, paintGlass), s); return; }
+        blit(sprite('glassBack', GW * 1.4, GH + 12, paintGlassBackSprite), s);
+        ctx.save();
+        ctx.scale(s, s);
+        ctx.translate(0, GH / 2);
+        paintTea(ctx, tilt, ripple, tt, seed);
+        ctx.restore();
+        blit(sprite('glassFront', GW * 1.4, GH + 12, paintGlassFrontSprite), s);
+    }
 
     /** Buğ: Stəkan qülləsindəki kimi ağzın üstündə yumşaq duman ləkələri (stəkanın lokal koordinatlarında) */
     function mistBlob(cx, cy, rx, ry, alpha) {
@@ -511,7 +544,7 @@
     // paxlava ~6 sm, şəkərbura ~8 sm, armudu stəkan ~10 sm, çaynik ~15 sm). Xırda nemətlər oyunda görünsün deyə
     // nisbət bir az yumşaldılıb. Ölçü yalnız görünüşdür — tutulub-tutulmamağı nemətin mərkəzi və sininin eni təyin edir.
     // Qəlyan əslində çaynikdən dəfələrlə hündürdür (~70 sm); oyunda ən böyük əşyadır, amma ekrana sığsın deyə kiçildilib.
-    const SIZE = {qend: 0.6, b: 0.72, qoz: 0.62, limon: 0.68, shokolad: 0.75, paxlava: 0.78, shekerbura: 0.9, f: 0.62, g: 1.3, h: 0.95};
+    const SIZE = {qend: 0.6, b: 0.72, qoz: 0.62, limon: 0.68, shokolad: 0.75, paxlava: 0.95, shekerbura: 0.9, f: 0.62, g: 1.3, h: 0.95};
     function drawItem(it, x, y, tt, s = 1, still = false) {
         ctx.save();
         ctx.translate(x, y);
@@ -521,8 +554,14 @@
         if (it[1] === 'b') {
             drawCoal(it, tt, s);
         } else if (it[1] === 'f') {
-            blit(sprite('glass', GW * 1.4, GH + 12, paintGlass), s);
-            if (!still) drawSteam(s, tt, it[4]);
+            if (still) {
+                drawGlass(s, slosh.a, trayRipple, tt, it[4]); // sinidə: sini ilə birlikdə çalxalanır
+            } else {
+                // düşəndə stəkan yellənir (yuxarıdakı rotate), çay isə ətalətlə gecikib o biri tərəfə çırpılır
+                const ph = tt * 2.2 + it[4] - 0.7;
+                drawGlass(s, -0.2 * Math.sin(ph), 0.25 + 0.25 * Math.abs(Math.cos(ph)), tt, it[4]);
+                drawSteam(s, tt, it[4]);
+            }
         } else if (it[1] === 'g') {
             blit(sprite('teapot', 64, 56, paintTeapot), s);
             if (!still) {
@@ -663,7 +702,8 @@
         const dt = last ? Math.min(now - last, 0.05) : 0;
         last = now;
         if (state === 'play') step(dt);
-        else if (state === 'over') {
+        else if (state === 'over' || state === 'offer') updateSlosh(dt, 0); // dayanmış sinidə çay sakitləşir
+        if (state === 'over') {
             for (const p of parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 320 * dt; p.l -= dt; }
             parts = parts.filter(p => p.l > 0);
             shake = Math.max(0, shake - dt);

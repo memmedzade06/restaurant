@@ -348,8 +348,8 @@ class SufreGameTest extends TestCase
     {
         $this->get('/oyunlar/sufreni-doldur')->assertOk()
             ->assertSee('450 xal')->assertSee('Çaynik Çay Hədiyyə')
-            ->assertSee('500 xal')->assertSee('Qəlyan Hədiyyə')
-            ->assertSee('550 xal')->assertSee('30% endirim kuponu Hədiyyə');
+            ->assertSee('550 xal')->assertSee('Qəlyan Hədiyyə')
+            ->assertSee('650 xal')->assertSee('30% endirim kuponu Hədiyyə');
     }
 
     public function test_full_game_over_http_saves_server_score_and_bonus_once_a_day(): void

@@ -43,12 +43,13 @@
 
     // ---- paxlava: romb, yanlarda nazik xəmir qatları, üstü zəfəranlı və şərbətli, ortasında badam ----
     function paintPaxlava(c) {
-        const T = 6, B = [0, -16], L = [-18, -1], F = [0, 14], R = [18, -1];
+        // uzunsov romb: paxlava belə kəsilir — uzun ucları yuxarı-aşağı, enli küncləri yanlarda
+        const T = 5, B = [0, -22], L = [-13, -3], F = [0, 15], R = [13, -3];
         const dn = p => [p[0], p[1] + T];
-        softShadow(c, 0, 21, 19, 4);
+        softShadow(c, 0, 20, 14, 3.5);
         for (const [face, shade] of [[[L, F, dn(F), dn(L)], 'rgba(0, 0, 0, .2)'], [[F, R, dn(R), dn(F)], 'rgba(255, 255, 255, .05)']]) {
             poly(c, face);
-            const g = c.createLinearGradient(0, -1, 0, 20);
+            const g = c.createLinearGradient(0, -3, 0, 20);
             g.addColorStop(0, '#d9a052'); g.addColorStop(1, '#8e5420');
             c.fillStyle = g; c.fill();
             c.save(); c.clip();
@@ -62,27 +63,34 @@
             c.restore();
         }
         poly(c, [B, L, F, R]);
-        const top = c.createLinearGradient(0, -16, 0, 14);
+        const top = c.createLinearGradient(0, -22, 0, 15);
         top.addColorStop(0, '#7e2a0b'); top.addColorStop(0.45, '#a9481a'); top.addColorStop(1, '#d6873c');
         c.fillStyle = top; c.fill();
         c.save(); c.clip();
-        const sheen = c.createRadialGradient(-5, -4, 1, -5, -4, 16);
+        const sheen = c.createRadialGradient(-4, -6, 1, -4, -6, 15);
         sheen.addColorStop(0, 'rgba(255, 190, 110, .45)'); sheen.addColorStop(1, 'rgba(255, 190, 110, 0)');
-        c.fillStyle = sheen; c.fillRect(-20, -18, 40, 34);
+        c.fillStyle = sheen; c.fillRect(-15, -23, 30, 40);
         const r = seeded(31);
-        for (let i = 0; i < 70; i++) { // şərbətdə xırda parıltılar və zəfəran ləkələri
+        for (let i = 0; i < 60; i++) { // şərbətdə xırda parıltılar və zəfəran ləkələri
             c.fillStyle = i % 3 ? `rgba(255, 225, 170, ${0.15 + r() * 0.3})` : `rgba(110, 25, 5, ${0.2 + r() * 0.3})`;
-            c.beginPath(); c.arc(-16 + r() * 32, -15 + r() * 28, 0.35 + r() * 0.6, 0, Math.PI * 2); c.fill();
+            c.beginPath(); c.arc(-12 + r() * 24, -21 + r() * 35, 0.35 + r() * 0.6, 0, Math.PI * 2); c.fill();
         }
+        // zəfəranla çəkilmiş içəridəki romb haşiyəsi — paxlavanın tanınan naxışı
+        const k = 0.62, cy = -3;
+        c.strokeStyle = 'rgba(95, 22, 4, .55)'; c.lineWidth = 0.9;
+        c.beginPath();
+        c.moveTo(B[0] * k, cy + (B[1] - cy) * k); c.lineTo(L[0] * k, cy + (L[1] - cy) * k);
+        c.lineTo(F[0] * k, cy + (F[1] - cy) * k); c.lineTo(R[0] * k, cy + (R[1] - cy) * k);
+        c.closePath(); c.stroke();
         c.fillStyle = 'rgba(255, 245, 220, .4)';
-        c.beginPath(); c.ellipse(-8, -4, 5.5, 1.4, -0.7, 0, Math.PI * 2); c.fill();
-        c.beginPath(); c.ellipse(7, 3, 3.5, 1, -0.7, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.ellipse(-5, -9, 4.5, 1.2, -1.1, 0, Math.PI * 2); c.fill();
+        c.beginPath(); c.ellipse(5, 4, 3, 0.9, -1.1, 0, Math.PI * 2); c.fill();
         c.restore();
         c.strokeStyle = 'rgba(255, 210, 140, .75)'; c.lineWidth = 1;
         c.beginPath(); c.moveTo(L[0], L[1]); c.lineTo(F[0], F[1]); c.lineTo(R[0], R[1]); c.stroke();
         // badam
         c.save();
-        c.translate(0, -1); c.rotate(0.95);
+        c.translate(0, -3); c.rotate(Math.PI / 2); // badam rombun uzununa qoyulur
         softShadow(c, 0.8, 1, 4.6, 3.2, 0.4);
         const al = c.createRadialGradient(-1, -1.5, 0.5, 0, 0, 6);
         al.addColorStop(0, '#fbecca'); al.addColorStop(0.6, '#e2bd86'); al.addColorStop(1, '#a8743c');
@@ -435,10 +443,20 @@
         c.fillStyle = 'rgba(255, 255, 255, .8)';
         c.beginPath(); c.ellipse(-rx * 0.55, -T * 0.55, 1.4, 0.8, 0, 0, Math.PI * 2); c.fill();
     }
-    function paintGlass(c) {
-        c.translate(0, GH / 2); // spraytın mərkəzi stəkanın ortasıdır, stəkanın dibi isə (0, 0)-da çəkilir
+    /*
+     * Stəkan üç qatdır: arxa şüşə, çay və ön tərəf (naxış, kənar, ağız, dib). Oyunda stəkan yellənəndə və ya sini
+     * hərəkət edəndə çay ayrıca çəkilir — Stəkan qülləsindəki kimi səthi əyilir və dalğalanır (paintTea).
+     * Koordinatlar: stəkanın dibi (0, 0), ağzı (0, -GH).
+     */
+    function paintGlassBack(c) {
         c.fillStyle = 'rgba(255, 255, 255, .22)';
         c.fill(GLASS);
+    }
+    /**
+     * Çay. tilt — səthin stəkana nisbətən meyli (radian, + olanda sağ tərəf aşağı düşür), ripple — dalğaların gücü (0..1),
+     * tt — vaxt (dalğalar üçün), seed — hər stəkanın öz fazası.
+     */
+    function paintTea(c, tilt = 0, ripple = 0, tt = 0, seed = 0) {
         c.save();
         c.clip(GLASS);
         const teaTop = -GH * 0.74;
@@ -448,15 +466,25 @@
         tea.addColorStop(0.55, 'rgba(156, 40, 7, .95)');
         tea.addColorStop(0.82, 'rgba(208, 94, 22, .93)');
         tea.addColorStop(1, 'rgba(236, 146, 52, .92)');
+        // səthin altındakı yarımmüstəvi: səth (0, teaTop) nöqtəsindən keçir və tilt bucağı ilə əyilir
+        const L = GH * 2, cx = Math.cos(tilt), cy = Math.sin(tilt), nx = -cy, ny = cx;
+        const body = new Path2D();
+        body.moveTo(-L * cx, teaTop - L * cy);
+        body.lineTo(L * cx, teaTop + L * cy);
+        body.lineTo(L * cx + L * nx, teaTop + L * cy + L * ny);
+        body.lineTo(-L * cx + L * nx, teaTop - L * cy + L * ny);
+        body.closePath();
         c.fillStyle = tea;
-        c.fillRect(-GW, teaTop, GW * 2, -teaTop + 2);
+        c.fill(body);
         const glow = c.createRadialGradient(-GW * 0.08, -GH * 0.2, 2, -GW * 0.08, -GH * 0.2, GW * 0.36);
         glow.addColorStop(0, 'rgba(255, 160, 60, .16)');
         glow.addColorStop(1, 'rgba(255, 170, 70, 0)');
         c.fillStyle = glow;
-        c.fillRect(-GW, teaTop, GW * 2, -teaTop + 2);
+        c.fill(body);
+        // səth: azca yuxarıdan baxırıq, ona görə ellipsdir; çay meyl edəndə ellips də əyilir
         c.save();
         c.translate(0, teaTop);
+        c.rotate(tilt);
         const srx = GW * TEA_SURFACE_W, sry = RIM_RY * 0.85;
         const surf = c.createLinearGradient(0, -sry, 0, sry);
         surf.addColorStop(0, 'rgba(58, 12, 3, .96)');
@@ -468,7 +496,28 @@
         c.stroke();
         c.fillStyle = 'rgba(255, 230, 200, .22)';
         c.beginPath(); c.ellipse(-srx * 0.3, -sry * 0.1, srx * 0.38, sry * 0.32, 0, 0, Math.PI * 2); c.fill();
+        if (ripple > 0.03) { // Stəkan qülləsindəki kimi: yayılan halqalar və səthdə qaçan parıltı
+            c.save();
+            c.beginPath(); c.ellipse(0, 0, srx, sry, 0, 0, Math.PI * 2); c.clip();
+            c.lineWidth = 0.8;
+            for (let k = 0; k < 3; k++) {
+                const ph = ((tt * 1.6 + k / 3 + seed) % 1 + 1) % 1;
+                const a = ripple * 0.75 * Math.sin(ph * Math.PI);
+                if (a < 0.02) continue;
+                c.strokeStyle = `rgba(255, 200, 140, ${a.toFixed(3)})`;
+                c.beginPath(); c.ellipse(0, 0, srx * (0.15 + ph * 0.95), sry * (0.15 + ph * 0.95), 0, 0, Math.PI * 2); c.stroke();
+            }
+            const sh = Math.sin(tt * 7 + seed * 5) * srx * 0.35;
+            c.fillStyle = `rgba(255, 225, 185, ${(ripple * 0.4).toFixed(3)})`;
+            c.beginPath(); c.ellipse(sh, -sry * 0.15, srx * 0.22, sry * 0.22, 0, 0, Math.PI * 2); c.fill();
+            c.restore();
+        }
         c.restore();
+        c.restore();
+    }
+    function paintGlassFront(c) {
+        c.save();
+        c.clip(GLASS);
         drawOrnament(c, 0, 1, 1);
         drawOrnament(c, -GW * 0.4, 0.62, 0.45);
         drawOrnament(c, GW * 0.4, 0.62, 0.45);
@@ -494,6 +543,11 @@
         c.quadraticCurveTo(-GW * 0.4, -GH * 0.38, -GW * 0.28, -GH * 0.56);
         c.stroke();
     }
+    // spraytlar üçün: mərkəz stəkanın ortasıdır, stəkanın dibi isə (0, GH / 2)-də
+    const centered = paint => c => { c.save(); c.translate(0, GH / 2); paint(c); c.restore(); };
+    const paintGlassBackSprite = centered(paintGlassBack);
+    const paintGlassFrontSprite = centered(paintGlassFront);
+    const paintGlass = centered(c => { paintGlassBack(c); paintTea(c); paintGlassFront(c); });
 
     // ---- qızıl çaynik: cilalı qızıl metal, əkslər, oyma naxışlı qurşaq ----
     const metal = (c, x0, x1) => {
@@ -704,5 +758,6 @@
     window.SufreArt = {
         GW, GH, paintPaxlava, paintShekerbura, paintQend, paintLimon, paintShokolad, paintQoz,
         paintGlass, paintTeapot, paintHookah, paintCoal, paintCoalGlow,
+        paintGlassBackSprite, paintGlassFrontSprite, paintTea,
     };
 })();

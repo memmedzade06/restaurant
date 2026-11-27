@@ -162,8 +162,8 @@ return [
         // "Davam et" (növbəti hədiyyəyə şans; kömür siniyə düşsə, hədiyyə yanır). Hesabı server yoxlayır.
         'prizes' => [
             450 => ['key' => 'sufre_tea', 'label' => 'Çaynik Çay Hədiyyə'],
-            500 => ['key' => 'sufre_hookah', 'label' => 'Qəlyan Hədiyyə'],
-            550 => ['key' => 'sufre_discount_30', 'label' => '30% endirim kuponu Hədiyyə'],
+            550 => ['key' => 'sufre_hookah', 'label' => 'Qəlyan Hədiyyə'],
+            650 => ['key' => 'sufre_discount_30', 'label' => '30% endirim kuponu Hədiyyə'],
         ],
         'prizes_per_day' => (int) env('SUFRE_PRIZES_PER_DAY', 1), // istifadəçiyə gündə neçə hədiyyə
         'code_valid_days' => 1,    // hədiyyə kodu 24 saat etibarlıdır

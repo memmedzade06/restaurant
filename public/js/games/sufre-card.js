@@ -16,7 +16,7 @@
 
     // nemətlərin kartdakı ölçüsü — oyundakı kimi real nisbətdə
     const KINDS = {
-        paxlava: [A.paintPaxlava, 48, 48, 0.7], shekerbura: [A.paintShekerbura, 48, 48, 0.8], qend: [A.paintQend, 48, 48, 0.55],
+        paxlava: [A.paintPaxlava, 48, 48, 0.85], shekerbura: [A.paintShekerbura, 48, 48, 0.8], qend: [A.paintQend, 48, 48, 0.55],
         limon: [A.paintLimon, 48, 48, 0.6], shokolad: [A.paintShokolad, 48, 48, 0.68], qoz: [A.paintQoz, 48, 48, 0.56],
         glass: [A.paintGlass, A.GW * 1.4, A.GH + 12, 0.56], teapot: [A.paintTeapot, 64, 56, 1.1], hookah: [A.paintHookah, 70, 100, 0.8],
         coal: [A.paintCoal, 36, 40, 0.65],
