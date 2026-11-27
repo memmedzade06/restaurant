@@ -1155,6 +1155,11 @@ body.has-chat-fab.has-verify-bar .back-to-top { bottom: 218px; }
 .broadcast-channel:has(input:checked) { border-color: var(--primary); background: #fff8ea; }
 .broadcast-channel:has(input:disabled) { opacity: .55; cursor: not-allowed; }
 .broadcast-channel input { margin-top: 4px; accent-color: var(--wine); }
+.broadcast-read { color: #1e7b4f; text-decoration: none; }
+.readers-row { padding: 8px 0; border-bottom: 1px solid #f0e4d4; }
+.readers-row:last-child { border-bottom: 0; }
+.readers-row a { font-weight: 700; color: var(--wine); text-decoration: none; }
+.broadcast-read:hover { text-decoration: underline; color: #155c3a; }
 .broadcast-results { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; margin-bottom: 6px; color: var(--wine); }
 .broadcast-history { display: flex; flex-direction: column; gap: 10px; }
 .broadcast-item { padding: 12px 14px; border-radius: 12px; background: var(--cream); border: 1px solid #f0e4d4; }

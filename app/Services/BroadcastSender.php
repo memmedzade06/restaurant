@@ -47,12 +47,18 @@ class BroadcastSender
             $text = e((string) $b->body);
             [$text, $buttons] = $this->telegramLink($b, $text);
             $fileId = null; // fayl bir dəfə yüklənir, sonra Telegram-ın verdiyi file_id ilə göndərilir
+            $kind = $b->attachment_path ? $this->telegramKind($b) : null;
+            $uploadFails = 0;
 
             SupportBroadcast::channelQuery($b->audience, 'telegram')->select(['id', 'telegram_chat_id'])
-                ->chunkById(200, function ($users) use ($b, $text, $buttons, &$fileId, &$sent) {
+                ->chunkById(200, function ($users) use ($b, $text, $buttons, &$fileId, &$kind, &$uploadFails, &$sent) {
                     foreach ($users as $u) {
+                        // fayl ardıcıl 3 dəfə yüklənmədisə — dayandırırıq (hər istifadəçiyə 17 MB-ı boş yerə yükləməyək)
+                        if ($b->attachment_path && ! $fileId && $uploadFails >= 3) {
+                            return false;
+                        }
                         try {
-                            if ($this->telegramOne($b, $u->telegram_chat_id, $text, $buttons, $fileId)) {
+                            if ($this->telegramOne($b, $u->telegram_chat_id, $text, $buttons, $fileId, $kind, $uploadFails)) {
                                 $sent++;
                                 if ($sent % self::PROGRESS_EVERY === 0) {
                                     $b->forceFill(['telegram_sent' => $sent])->save(); // gedişat admin səhifəsində görünsün
@@ -82,15 +88,18 @@ class BroadcastSender
         return $button ? [$text, $button] : [trim($text . "\n\n" . e($label) . ': ' . e($url)), []];
     }
 
-    private function telegramOne(SupportBroadcast $b, string $chatId, string $text, array $buttons, ?string &$fileId): bool
+    /**
+     * Bir istifadəçiyə göndərir. Fayl ilk uğurlu yükləmədən sonra file_id ilə gedir.
+     * Video sendVideo ilə alınmasa, sənəd (sendDocument) kimi yenidən cəhd olunur.
+     */
+    private function telegramOne(SupportBroadcast $b, string $chatId, string $text, array $buttons, ?string &$fileId, ?array &$kind, int &$uploadFails): bool
     {
         if (! $b->attachment_path) {
             $r = $this->bot->call('sendMessage', ['chat_id' => $chatId, 'text' => $text, 'parse_mode' => 'HTML'] + $buttons);
 
-            return $r->ok() && $r->json('ok');
+            return $this->ok($b, $r);
         }
 
-        $kind = $this->telegramKind($b);
         $long = mb_strlen($text) > self::CAPTION_MAX;
         if ($long) { // yazı uzundursa — əvvəl mətn, sonra fayl (düymə faylın altında)
             $this->bot->call('sendMessage', ['chat_id' => $chatId, 'text' => $text, 'parse_mode' => 'HTML']);
@@ -101,16 +110,53 @@ class BroadcastSender
         }
 
         if ($fileId) {
-            $r = $this->bot->call($kind[0], $params + [$kind[1] => $fileId], 60);
-        } else {
-            $path = Storage::disk('local')->path($b->attachment_path);
-            $r = $this->bot->upload($kind[0], $params, $kind[1], $path, $b->attachment_name, 300);
-            if ($r->ok() && $r->json('ok')) {
-                $fileId = $this->fileIdFrom($r->json('result'), $kind[1]);
-            }
+            return $this->ok($b, $this->bot->call($kind[0], $params + [$kind[1] => $fileId], 60));
         }
 
-        return $r->ok() && $r->json('ok');
+        $path = Storage::disk('local')->path($b->attachment_path);
+        $r = $this->bot->upload($kind[0], $params, $kind[1], $path, $b->attachment_name, 300);
+        if (! ($r->ok() && $r->json('ok')) && $kind[0] !== 'sendDocument') {
+            $this->ok($b, $r); // xətanı yadda saxla
+            $kind = ['sendDocument', 'document']; // video/şəkil alınmadı — fayl kimi göndəririk
+            $r = $this->bot->upload($kind[0], $params, $kind[1], $path, $b->attachment_name, 300);
+        }
+        if ($r->ok() && $r->json('ok')) {
+            // sonrakılar üçün: Telegram faylı hansı növdə saxlayıbsa, o metodla göndəririk
+            [$fileId, $field] = $this->fileIdFrom((array) $r->json('result')) + [null, null];
+            $kind = match ($field) {
+                'animation' => ['sendAnimation', 'animation'],
+                'document' => ['sendDocument', 'document'],
+                'photo' => ['sendPhoto', 'photo'],
+                'video' => ['sendVideo', 'video'],
+                default => $kind,
+            };
+            $uploadFails = 0;
+        } else {
+            $uploadFails++;
+        }
+
+        return $this->ok($b, $r);
+    }
+
+    /** Uğurlu cavabdır? Deyilsə, Telegram-ın səbəbini yadda saxlayır — admin tarixçədə görür (və log) */
+    private function ok(SupportBroadcast $b, \Illuminate\Http\Client\Response $r): bool
+    {
+        if ($r->ok() && $r->json('ok')) {
+            return true;
+        }
+        $why = (string) ($r->json('description') ?: ('HTTP ' . $r->status()));
+        // bloklayan istifadəçilər normaldır — onları "son xəta" kimi göstərmirik
+        if (! str_contains($why, 'blocked') && ! str_contains($why, 'chat not found') && ! str_contains($why, 'deactivated')) {
+            \Illuminate\Support\Facades\Cache::put(self::errorKey($b->id), mb_substr($why, 0, 200), now()->addDays(3));
+            logger()->warning('Hamıya mesaj: Telegram xətası', ['broadcast_id' => $b->id, 'error' => $why]);
+        }
+
+        return false;
+    }
+
+    public static function errorKey(int $broadcastId): string
+    {
+        return "broadcast_tg_error:{$broadcastId}";
     }
 
     /** [metod, sahə]: şəkil — sendPhoto, video — sendVideo, qalanı — sendDocument */
@@ -127,14 +173,20 @@ class BroadcastSender
         return ['sendDocument', 'document'];
     }
 
-    private function fileIdFrom(?array $result, string $field): ?string
+    /** Göndərilmiş faylın [file_id, növ]: Telegram videonu "animation", böyük faylı "document" kimi də qaytara bilər */
+    private function fileIdFrom(array $result): array
     {
-        $item = $result[$field] ?? null;
-        if ($field === 'photo' && is_array($item)) {
-            $item = end($item); // şəklin ən böyük ölçüsü
+        foreach (['video', 'animation', 'document', 'photo'] as $field) {
+            $item = $result[$field] ?? null;
+            if ($field === 'photo' && is_array($item)) {
+                $item = end($item); // şəklin ən böyük ölçüsü
+            }
+            if (is_array($item) && ! empty($item['file_id'])) {
+                return [$item['file_id'], $field];
+            }
         }
 
-        return is_array($item) ? ($item['file_id'] ?? null) : null;
+        return [];
     }
 
     public function email(SupportBroadcast $b): void

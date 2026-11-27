@@ -31,7 +31,22 @@ class BroadcastController extends Controller
                     ->mapWithKeys(fn ($c) => [$c => SupportBroadcast::channelQuery($key, $c)->count()])->all(),
             ]),
             'telegramReady' => app(\App\Services\TelegramBot::class)->configured(),
-            'history' => SupportBroadcast::with('admin:id,name')->latest('id')->paginate(20),
+            'history' => SupportBroadcast::with('admin:id,name')
+                ->withCount(['messages as read_count' => fn ($q) => $q->whereNotNull('read_at')]) // sayt söhbətində oxuyanlar
+                ->latest('id')->paginate(20),
+        ]);
+    }
+
+    /** Yayımı sayt söhbətində kim oxuyub, kim oxumayıb (oxuyanlar — oxuma vaxtı ilə, ən son oxuyan yuxarıda) */
+    public function readers(SupportBroadcast $broadcast): View
+    {
+        $rows = $broadcast->messages()->with('user:id,name,phone,email')
+            ->orderByRaw('read_at IS NULL')->orderByDesc('read_at')->orderBy('id')->get(['id', 'user_id', 'read_at']);
+
+        return view('frontend.admin.broadcast-readers', [
+            'broadcast' => $broadcast,
+            'read' => $rows->whereNotNull('read_at')->values(),
+            'unread' => $rows->whereNull('read_at')->values(),
         ]);
     }
 

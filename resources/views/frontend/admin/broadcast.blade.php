@@ -105,6 +105,13 @@
                                     <div class="broadcast-results">
                                         @if ($b->hasChannel('chat'))
                                             <span><i class="fa fa-comments me-1"></i>Söhbət: <b>{{ $b->recipients }}</b></span>
+                                            @if ($b->recipients)
+                                                {{-- sayt söhbətində oxuyanlar: istifadəçi söhbəti açanda mesaj "oxundu" olur --}}
+                                                <a href="{{ route('admin.support.broadcast.readers', $b) }}" class="broadcast-read">
+                                                    <i class="fa fa-check-double me-1"></i>Oxuyub: <b>{{ $b->read_count }}</b> / {{ $b->recipients }}
+                                                    ({{ (int) round($b->read_count * 100 / max(1, $b->recipients)) }}%) <i class="fa fa-arrow-right ms-1"></i>
+                                                </a>
+                                            @endif
                                         @endif
                                         {{-- "…" — hələ başlamayıb (növbədə), rəqəm — neçəsinə çatıb; səhifəni yeniləyəndə artır --}}
                                         @if ($b->hasChannel('telegram'))
@@ -114,6 +121,10 @@
                                             <span><i class="fa fa-envelope me-1"></i>E-poçt: <b>{{ $b->email_sent ?? '…' }}</b> / {{ $b->email_total }}@if ($b->email_sent === null && $b->created_at->gt(now()->subHour())) <small class="text-muted">(növbədə)</small>@endif</span>
                                         @endif
                                     </div>
+                                    @if ($b->hasChannel('telegram') && ($tgError = \Illuminate\Support\Facades\Cache::get(\App\Services\BroadcastSender::errorKey($b->id))))
+                                        {{-- Telegram-ın rədd etmə səbəbi (bloklayanlar sayılmır) --}}
+                                        <div class="small text-danger mb-1"><i class="fa fa-exclamation-triangle me-1"></i>Telegram xətası: {{ $tgError }}</div>
+                                    @endif
                                     <div class="broadcast-body">{{ $b->body }}</div>
                                     @if ($b->attachment_path)
                                         <div class="small mt-1"><i class="fa fa-paperclip me-1 text-primary"></i>{{ $b->attachment_name }} ({{ \App\Models\SupportMessage::humanSize((int) $b->attachment_size) }})</div>

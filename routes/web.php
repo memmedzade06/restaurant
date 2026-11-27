@@ -248,6 +248,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Hamıya mesaj (/{user} ünvanından əvvəl olmalıdır)
     Route::get('/mesajlar/hamiya', [\App\Http\Controllers\Admin\BroadcastController::class, 'index'])->name('support.broadcast');
     Route::post('/mesajlar/hamiya', [\App\Http\Controllers\Admin\BroadcastController::class, 'store'])->middleware('throttle:5,1')->name('support.broadcast.store');
+    // yayımı kim oxuyub / oxumayıb (sayt söhbəti)
+    Route::get('/mesajlar/hamiya/{broadcast}/oxuyanlar', [\App\Http\Controllers\Admin\BroadcastController::class, 'readers'])->name('support.broadcast.readers');
     Route::get('/mesajlar/{user}', [\App\Http\Controllers\Admin\SupportController::class, 'show'])->name('support.show');
     Route::post('/mesajlar/{user}', [\App\Http\Controllers\Admin\SupportController::class, 'reply'])->middleware('throttle:30,1')->name('support.reply');
     Route::get('/mesajlar/{user}/yeni', [\App\Http\Controllers\Admin\SupportController::class, 'poll'])->middleware('throttle:poll')->name('support.poll');

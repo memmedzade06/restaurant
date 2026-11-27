@@ -318,4 +318,77 @@ class SupportBroadcastTest extends TestCase
         $this->get($link)->assertOk()->assertHeader('Content-Type', 'video/mp4');
         $this->get(route('support.broadcast.file', $b))->assertForbidden();
     }
+
+    public function test_telegram_video_is_uploaded_once_and_errors_are_shown(): void
+    {
+        config(['services.telegram.bot_token' => 'test-token']);
+        $this->app->forgetInstance(\App\Services\TelegramBot::class);
+        Storage::fake('local');
+        $admin = $this->user(['is_admin' => true]);
+        $this->user(['telegram_chat_id' => '900001']);
+        $this->user(['telegram_chat_id' => '900002']);
+        $total = SupportBroadcast::channelQuery('all', 'telegram')->count();
+
+        // Telegram səssiz mp4-ü "animation" kimi saxlayır — sonrakılar sendAnimation + file_id ilə getməlidir
+        \Illuminate\Support\Facades\Http::fake([
+            'api.telegram.org/*/sendVideo' => \Illuminate\Support\Facades\Http::response(['ok' => true, 'result' => ['animation' => ['file_id' => 'ANIM-1']]]),
+            'api.telegram.org/*/sendAnimation' => \Illuminate\Support\Facades\Http::response(['ok' => true, 'result' => []]),
+        ]);
+        $this->actingAs($admin)->post(route('admin.support.broadcast.store'), [
+            'body' => '', 'audience' => 'all', 'channels' => ['telegram'], 'file' => UploadedFile::fake()->create('reklam.mp4', 2048, 'video/mp4'),
+        ])->assertSessionHas('success');
+        $b = SupportBroadcast::latest('id')->first();
+        $this->assertSame($total, (int) $b->fresh()->telegram_sent);
+        $uploads = \Illuminate\Support\Facades\Http::recorded(fn ($r) => str_contains($r->url(), '/sendVideo'));
+        $this->assertCount(1, $uploads); // fayl yalnız bir dəfə yüklənir
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => str_contains($r->url(), '/sendAnimation') && $r['animation'] === 'ANIM-1');
+
+    }
+
+    public function test_telegram_errors_stop_uploads_and_are_shown(): void
+    {
+        config(['services.telegram.bot_token' => 'test-token']);
+        $this->app->forgetInstance(\App\Services\TelegramBot::class);
+        Storage::fake('local');
+        $admin = $this->user(['is_admin' => true]);
+
+        // Telegram rədd edirsə: 3 uğursuz yükləmədən sonra dayanır, səbəb tarixçədə görünür
+        \Illuminate\Support\Facades\Http::fake(['api.telegram.org/*' => \Illuminate\Support\Facades\Http::response(['ok' => false, 'description' => 'Bad Request: file is too big'], 400)]);
+        for ($k = 0; $k < 3; $k++) {
+            $this->user(['telegram_chat_id' => '91000' . $k]);
+        }
+        $this->actingAs($admin)->post(route('admin.support.broadcast.store'), [
+            'body' => '', 'audience' => 'all', 'channels' => ['telegram'], 'file' => UploadedFile::fake()->create('reklam2.mp4', 2048, 'video/mp4'),
+        ])->assertSessionHas('success');
+        $b2 = SupportBroadcast::latest('id')->first();
+        $this->assertSame(0, (int) $b2->fresh()->telegram_sent);
+        // video + sənəd kimi təkrar cəhd = istifadəçi başına 2 sorğu, 3 istifadəçidən sonra dayanır
+        $this->assertLessThanOrEqual(6, count(\Illuminate\Support\Facades\Http::recorded()));
+        $this->actingAs($admin)->get(route('admin.support.broadcast'))->assertSee('Telegram xətası: Bad Request: file is too big');
+    }
+
+    public function test_admin_sees_who_read_the_broadcast(): void
+    {
+        $admin = $this->user(['is_admin' => true]);
+        $reader = $this->user(['name' => 'Oxuyan Qonaq']);
+        $other = $this->user(['name' => 'Oxumayan Qonaq']);
+
+        $this->actingAs($admin)->post(route('admin.support.broadcast.store'), ['body' => 'Yeni menyu!', 'audience' => 'all'])->assertSessionHas('success');
+        $b = SupportBroadcast::latest('id')->first();
+        $this->actingAs($admin)->get(route('admin.support.broadcast'))->assertSee('Oxuyub: <b>0</b> / ' . $b->recipients, false);
+
+        // istifadəçi söhbəti açır — mesaj oxunur
+        $this->actingAs($reader)->get(route('support'))->assertOk();
+
+        $this->actingAs($admin)->get(route('admin.support.broadcast'))
+            ->assertSee('Oxuyub: <b>1</b> / ' . $b->recipients, false)->assertSee(route('admin.support.broadcast.readers', $b), false);
+        $page = $this->actingAs($admin)->get(route('admin.support.broadcast.readers', $b))->assertOk()
+            ->assertSee('Oxuyub (1)')->assertSee('Oxumayıb (' . ($b->recipients - 1) . ')')->getContent();
+        // oxuyan "Oxuyub" sütununda, oxumayan "Oxumayıb" sütununda
+        $this->assertLessThan(strpos($page, 'Oxumayıb ('), strpos($page, 'Oxuyan Qonaq'));
+        $this->assertGreaterThan(strpos($page, 'Oxumayıb ('), strpos($page, 'Oxumayan Qonaq'));
+
+        // yalnız admin
+        $this->actingAs($reader)->get(route('admin.support.broadcast.readers', $b))->assertForbidden();
+    }
 }

@@ -33,6 +33,12 @@ class SupportBroadcast extends Model
         return $this->belongsTo(User::class, 'admin_id');
     }
 
+    /** Yayımın sayt söhbətinə yazılmış mesajları (hər istifadəçiyə biri); read_at — istifadəçi söhbəti açıb oxuyub */
+    public function messages(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(SupportMessage::class, 'broadcast_id');
+    }
+
     public function audienceLabel(): string
     {
         return self::AUDIENCES[$this->audience][0] ?? $this->audience;
