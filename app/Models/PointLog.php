@@ -22,6 +22,7 @@ class PointLog extends Model
         'market' => ['Hədiyyə marketi', 'fa-gift'],
         'instagram' => ['Instagram izləmə', 'fab fa-instagram'],
         'birthday' => ['Ad günü', 'fa-birthday-cake'],
+        'waiter' => ['Kupon təsdiqi', 'fa-concierge-bell'],
         'admin' => ['Admin düzəlişi', 'fa-user-shield'],
     ];
 
@@ -82,6 +83,7 @@ class PointLog extends Model
             'sufre' => isset($m['tier']) ? $m['tier'] . ' xal mərhələsi — bonus' : 'Bonus',
             'instagram' => isset($m['username']) ? '@' . $m['username'] . ' — izləmə təsdiqləndi' : 'İzləmə təsdiqləndi',
             'birthday' => 'Doğum tarixi əlavə olundu',
+            'waiter' => trim(($m['label'] ?? 'Kupon') . ($forAdmin && ! empty($m['code']) ? ' · ' . $m['code'] : '')) . ' — təsdiqləndi',
             'market' => ($m['label'] ?? 'Hədiyyə') . ($forAdmin && ! empty($m['code']) ? ' · ' . $m['code'] : ''),
             'admin' => trim(($forAdmin && $this->admin ? $this->admin->name : '') . ($this->note ? ($forAdmin && $this->admin ? ' — ' : '') . $this->note : '')) ?: 'Balans düzəldildi',
             default => '',

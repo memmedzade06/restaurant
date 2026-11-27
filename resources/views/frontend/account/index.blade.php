@@ -133,12 +133,13 @@
                     </div>
                 </div>
             @elseif ($me->isStaff())
-                {{-- Ofisiant: rezervasiyalara baxa bilər (ləğv etmək — yalnız admin) --}}
+                {{-- Ofisiant: kuponları təsdiqləyir (hər təsdiqə xal) və rezervasiyalara baxır (ləğv etmək — yalnız admin) --}}
                 @php($reservationsToday = \App\Models\Reservation::active()->whereDate('date', now('Asia/Baku')->toDateString())->count())
                 <div class="col-12">
                     <div class="acc-card acc-admin-card">
                         <div class="acc-head"><span class="acc-ico"><i class="fa fa-concierge-bell"></i></span><h5>Ofisiant</h5></div>
                         <div class="account-admin">
+                            <a href="{{ route('admin.prizes') }}"><span><i class="fa fa-gift me-2"></i>Hədiyyə kodları <small class="acc-badge">təsdiq — +{{ \App\Services\Referrals::format((float) config('games.waiter_redeem_points', 0.5)) }} xal</small></span><i class="fa fa-arrow-right"></i></a>
                             <a href="{{ route('admin.reservations') }}"><span><i class="fa fa-chair me-2"></i>Rezervasiyalar <small class="acc-badge">{{ $reservationsToday }} bu gün</small></span><i class="fa fa-arrow-right"></i></a>
                         </div>
                     </div>

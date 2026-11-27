@@ -16,6 +16,8 @@ return [
     // Mərhələyə görə xal (Bilik Yarışı, Stəkan qülləsi, Süfrəni doldur): eyni mərhələyə görə eyni adama xal
     // yenidən yalnız bu qədər saat keçəndən sonra verilir. Oyunçuya göstərilmir.
     'stage_points_cooldown_hours' => (int) env('STAGE_POINTS_COOLDOWN_HOURS', 48),
+    // ofisiant müştərinin hədiyyə kuponunu təsdiqləyəndə (QR və ya "İstifadə olundu") balansına yazılan xal
+    'waiter_redeem_points' => (float) env('WAITER_REDEEM_POINTS', 0.5),
 
     'wheel' => [
         // Çarx restoranda, masada oynanılır və endirim həmin masanın cari hesabına tətbiq olunur,

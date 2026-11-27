@@ -12,7 +12,16 @@
 
 <section class="section pt-4">
     <div class="container">
-        @include('frontend.admin._nav', ['active' => 'prizes'])
+        {{-- ofisiant yalnız hədiyyə kodlarını və rezervasiyaları görür: admin menyusu ona göstərilmir --}}
+        @if (auth()->user()->is_admin)
+            @include('frontend.admin._nav', ['active' => 'prizes'])
+        @else
+            <div class="admin-nav">
+                <a href="{{ route('admin.prizes') }}" class="active"><i class="fa fa-gift me-1"></i>Hədiyyə kodları</a>
+                <a href="{{ route('admin.reservations') }}"><i class="fa fa-chair me-1"></i>Rezervasiyalar</a>
+            </div>
+            <div class="alert alert-info admin-alert"><i class="fa fa-concierge-bell me-2"></i>Müştərinin kuponunu təsdiqlədikdə balansınıza <b>+{{ \App\Services\Referrals::format((float) config('games.waiter_redeem_points', 0.5)) }} xal</b> yazılır.</div>
+        @endif
 
         @foreach (['success' => 'success', 'error' => 'danger'] as $key => $cls)
             @if (session($key))

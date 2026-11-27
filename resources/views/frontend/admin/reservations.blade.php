@@ -19,6 +19,11 @@
         {{-- ofisiant yalnız rezervasiyaları görür: admin menyusu və ləğv düyməsi ona göstərilmir --}}
         @if (auth()->user()->is_admin)
             @include('frontend.admin._nav', ['active' => 'reservations'])
+        @else
+            <div class="admin-nav">
+                <a href="{{ route('admin.prizes') }}"><i class="fa fa-gift me-1"></i>Hədiyyə kodları</a>
+                <a href="{{ route('admin.reservations') }}" class="active"><i class="fa fa-chair me-1"></i>Rezervasiyalar</a>
+            </div>
         @endif
 
         @foreach (['success' => 'success', 'error' => 'danger'] as $key => $cls)

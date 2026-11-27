@@ -10,7 +10,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
- * Admin: oyunçuların hədiyyə kodlarını yoxlayır və istifadə edir.
+ * Admin və ofisiant: oyunçuların hədiyyə kodlarını yoxlayır və istifadə edir.
+ * Ofisiant hər təsdiq etdiyi kupona config('games.waiter_redeem_points') xal alır (balansına).
  * İstifadə olunan kod silinmir — "istifadə olunub" kimi qeyd olunur (kim, nə vaxt) və
  * ayrıca "İstifadə olunub" bölməsində görünür; bir daha istifadə oluna bilməz.
  */
@@ -62,7 +63,7 @@ class PrizeController extends Controller
      */
     public function redeem(Request $request, string $prize): RedirectResponse
     {
-        $result = $this->redeemPrize($prize, $request->user()->id);
+        $result = $this->redeemPrize($prize, $request->user());
 
         return back()->with($result[0], $result[1]);
     }
@@ -77,16 +78,16 @@ class PrizeController extends Controller
         $code = $this->normalizeCode($code);
         $id = WheelSpin::where('code', $code)->value('id');
         $result = $id
-            ? $this->redeemPrize((string) $id, request()->user()->id)
+            ? $this->redeemPrize((string) $id, request()->user())
             : ['error', "{$code} kodu tapılmadı — vaxtı keçib silinib və ya kod səhvdir."];
 
         return redirect()->route('admin.prizes', ['q' => $code])->with($result[0], $result[1]);
     }
 
     /** Kodu istifadə edir. Qaytarır: ['success'|'error', mesaj] */
-    private function redeemPrize(string $prize, int $adminId): array
+    private function redeemPrize(string $prize, \App\Models\User $by): array
     {
-        return DB::transaction(function () use ($prize, $adminId) {
+        return DB::transaction(function () use ($prize, $by) {
             $prize = WheelSpin::whereKey($prize)->lockForUpdate()->first(); // iki admin eyni anda bassa belə bir dəfə
 
             if (! $prize) {
@@ -102,9 +103,18 @@ class PrizeController extends Controller
                 return ['error', "{$prize->code} kodunun vaxtı keçib — istifadə etmək olmaz."];
             }
 
-            $prize->forceFill(['redeemed_at' => now(), 'redeemed_by' => $adminId])->save();
+            $prize->forceFill(['redeemed_at' => now(), 'redeemed_by' => $by->id])->save();
+            $msg = "{$prize->code} — «{$prize->prize_label}» istifadə olundu. Kod qüvvədən düşdü və «İstifadə olunub» bölməsinə keçdi.";
 
-            return ['success', "{$prize->code} — «{$prize->prize_label}» istifadə olundu. Kod qüvvədən düşdü və «İstifadə olunub» bölməsinə keçdi."];
+            // ofisiant (admin yox) təsdiqləyibsə — balansına xal; kod bir dəfə istifadə olunduğu üçün xal da bir dəfə
+            $reward = (float) config('games.waiter_redeem_points', 0.5);
+            if ($reward > 0 && ! $by->is_admin && $by->type === \App\Models\User::TYPE_WAITER) {
+                \App\Models\User::whereKey($by->id)->increment('points', $reward);
+                \App\Services\Points::log($by->id, $reward, 'waiter', ['code' => $prize->code, 'label' => $prize->prize_label, 'prize_id' => $prize->id]);
+                $msg .= ' Balansınıza +' . \App\Services\Referrals::format($reward) . ' xal yazıldı.';
+            }
+
+            return ['success', $msg];
         });
     }
 

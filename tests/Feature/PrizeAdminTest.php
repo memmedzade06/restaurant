@@ -346,4 +346,63 @@ class PrizeAdminTest extends TestCase
         // Telefonsuz admin "İndi saytda" siyahısında görünmür
         $this->assertFalse(User::online()->whereKey($admin->id)->exists());
     }
+
+    private function waiter(): User
+    {
+        $w = $this->user();
+        $w->forceFill(['type' => User::TYPE_WAITER])->save();
+
+        return $w->fresh();
+    }
+
+    public function test_waiter_scans_coupon_and_gets_half_a_point(): void
+    {
+        $this->assertEquals(0.5, config('games.waiter_redeem_points'));
+        $waiter = $this->waiter();
+        $player = $this->user();
+        $p = $this->prize($player);
+
+        // ofisiant kupon səhifəsini görür (admin menyusu yox), profilində link var
+        $this->actingAs($waiter)->get('/admin/hediyyeler')->assertOk()->assertSee('+0,5 xal')
+            ->assertDontSee(route('admin.users'), false);
+        $this->actingAs($waiter)->get(route('account'))->assertSee(route('admin.prizes'), false);
+
+        // QR oxudanda kod istifadə olunur, ofisianta +0,5 xal
+        $this->actingAs($waiter)->get(route('admin.prizes.qr', $p->code))
+            ->assertRedirect(route('admin.prizes', ['q' => $p->code]))
+            ->assertSessionHas('success', fn ($m) => str_contains($m, 'Balansınıza +0,5 xal yazıldı'));
+        $this->assertSame($waiter->id, $p->fresh()->redeemed_by);
+        $this->assertEquals(0.5, $waiter->fresh()->points);
+        $log = \App\Models\PointLog::where('user_id', $waiter->id)->sole();
+        $this->assertSame('waiter', $log->source);
+        $this->assertSame($p->code, $log->meta['code']);
+
+        // eyni kod ikinci dəfə — xəta, xal yenə verilmir
+        $this->actingAs($waiter)->get(route('admin.prizes.qr', $p->code))->assertSessionHas('error');
+        $this->assertEquals(0.5, $waiter->fresh()->points);
+
+        // "İstifadə olundu" düyməsi ilə də — daha +0,5
+        $p2 = $this->prize($player);
+        $this->actingAs($waiter)->post("/admin/hediyyeler/{$p2->id}/istifade")->assertSessionHas('success');
+        $this->assertEquals(1.0, $waiter->fresh()->points);
+
+        // vaxtı keçmiş kod — xal yoxdur
+        $old = $this->prize($player, ['expires_at' => now()->subHour()]);
+        $this->actingAs($waiter)->post("/admin/hediyyeler/{$old->id}/istifade")->assertSessionHas('error');
+        $this->assertEquals(1.0, $waiter->fresh()->points);
+
+        // ofisiant admin səhifələrinə girə bilmir
+        $this->actingAs($waiter)->get('/admin/istifadeciler')->assertForbidden();
+        $this->actingAs($waiter)->get(route('admin.support'))->assertForbidden();
+    }
+
+    public function test_admin_redeeming_gets_no_points(): void
+    {
+        $admin = $this->user(true);
+        $p = $this->prize($this->user());
+        $this->actingAs($admin)->get(route('admin.prizes.qr', $p->code))
+            ->assertSessionHas('success', fn ($m) => ! str_contains($m, 'Balansınıza'));
+        $this->assertEquals(0, (float) $admin->fresh()->points);
+        $this->assertSame(0, \App\Models\PointLog::where('user_id', $admin->id)->count());
+    }
 }
