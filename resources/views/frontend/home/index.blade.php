@@ -17,7 +17,7 @@
             </div>
             <div class="col-lg-6">
                 <div class="hero-plate">
-                    <img class="img-fluid" src="{{ asset('img/duyu.png') }}" alt="Plov">
+                    <img class="img-fluid hero-photo" src="{{ asset('img/plov-hero.webp') }}" alt="Plov">
                     <div class="hero-badge">
                         <i class="fa fa-fire-alt"></i>
                         <div>Hər gün təzə<small>öz mətbəximizdə bişirilir</small></div>
@@ -57,9 +57,16 @@
             <div class="col-lg-6">
                 <div class="about-grid">
                     <img class="wow zoomIn" data-wow-delay="0.1s" src="{{ asset('img/outside.jpg') }}" alt="Restoranın xarici görünüşü">
-                    <img class="wow zoomIn" data-wow-delay="0.3s" src="{{ asset('img/inside.jpeg') }}" alt="Restoranın zalı">
-                    <img class="wow zoomIn" data-wow-delay="0.5s" src="{{ asset('img/duyu2.PNG') }}" alt="Plov">
-                    <img class="wow zoomIn" data-wow-delay="0.7s" src="{{ asset('img/set.png') }}" alt="Yemək seti">
+                    {{-- videolar (zal, plov və set şəkillərinin yerində): özü oynayır (səssiz, dövrə ilə); basanda böyük ekranda səslə açılır --}}
+                    <div class="about-video wow zoomIn" data-wow-delay="0.3s">
+                        <video src="{{ asset('video/haqqimizda-zal.mp4') }}?v=1" poster="{{ asset('img/inside.jpeg') }}" autoplay muted loop playsinline preload="metadata" aria-label="50 Qəpik — video"></video>
+                    </div>
+                    <div class="about-video wow zoomIn" data-wow-delay="0.5s">
+                        <video src="{{ asset('video/haqqimizda-2.mp4') }}?v=1" poster="{{ asset('img/duyu2.PNG') }}" autoplay muted loop playsinline preload="metadata" aria-label="50 Qəpik — video"></video>
+                    </div>
+                    <div class="about-video wow zoomIn" data-wow-delay="0.7s">
+                        <video src="{{ asset('video/cay-destgahi.mp4') }}?v=2" poster="{{ asset('img/set.png') }}" autoplay muted loop playsinline preload="metadata" aria-label="50 Qəpik — video"></video>
+                    </div>
                 </div>
             </div>
             <div class="col-lg-6">
@@ -80,6 +87,7 @@
         </div>
     </div>
 </section>
+
 
 {{-- Seçmə yeməklər --}}
 @if ($featured->isNotEmpty())
@@ -132,4 +140,30 @@
     </div>
 </section>
 
+@endsection
+
+@section('js')
+<script>
+(function () {
+    // "Haqqımızda" videosu: basanda böyük ekranda səslə açılır; böyük ekrandan çıxanda yenə səssiz oynayır
+    var videos = document.querySelectorAll('.about-video video');
+    videos.forEach(function (v) {
+        v.play && v.play().catch(function () {}); // bəzi brauzerlərdə autoplay atributu ilk yükləmədə işləmir
+        v.parentNode.addEventListener('click', function () {
+            v.muted = false;
+            if (v.requestFullscreen) v.requestFullscreen().catch(function () {});
+            else if (v.webkitEnterFullscreen) v.webkitEnterFullscreen(); // iPhone Safari
+            else if (v.webkitRequestFullscreen) v.webkitRequestFullscreen();
+            v.play().catch(function () {});
+        });
+        v.addEventListener('webkitendfullscreen', function () { v.muted = true; v.play().catch(function () {}); });
+    });
+    // böyük ekrandan çıxanda hamısı yenə səssiz
+    var back = function () {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) videos.forEach(function (v) { v.muted = true; });
+    };
+    document.addEventListener('fullscreenchange', back);
+    document.addEventListener('webkitfullscreenchange', back);
+})();
+</script>
 @endsection

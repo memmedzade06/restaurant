@@ -117,6 +117,10 @@ img { max-width: 100%; }
     box-shadow: 0 40px 80px rgba(0, 0, 0, .55), 0 0 0 18px rgba(255, 255, 255, .05), 0 0 0 40px rgba(255, 255, 255, .03);
 }
 .hero-plate img { position: relative; animation: imgRotate 60s linear infinite; }
+/* plov-hero.webp: boşqab fotodan "kəsilir" — yalnız boşqab görünür (masa və qablar yox), tam boşqab sığır.
+   Boşqab fotoda yandan görünür (ellips), ona görə fırlanmır — fırlansa əyri görünərdi */
+.hero-plate:has(.hero-photo)::before { inset: 4% 3% 2%; }
+.hero-plate img.hero-photo { display: block; width: 100%; animation: none; clip-path: ellipse(48.6% 49.5% at 49.3% 52.6%); filter: drop-shadow(0 30px 40px rgba(0,0,0,.45)); }
 .hero-badge {
     position: absolute; left: -6%; bottom: 10%;
     background: #fff; color: var(--dark);
@@ -173,8 +177,13 @@ img { max-width: 100%; }
 /* ---------- Haqqımızda ---------- */
 .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .about-grid img { width: 100%; height: 230px; object-fit: cover; border-radius: var(--radius); box-shadow: var(--shadow); }
-.about-grid img:nth-child(2) { margin-top: 40px; }
-.about-grid img:nth-child(3) { margin-top: -40px; }
+.about-grid > :nth-child(2) { margin-top: 40px; }
+.about-grid > :nth-child(3) { margin-top: -40px; }
+/* set şəklinin yerində video: özü oynayır (səssiz, dövrə ilə), basanda böyük ekranda açılır */
+.about-video { position: relative; height: 230px; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); cursor: pointer; background: #1e0b08; }
+.about-video video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.about-video video:fullscreen { object-fit: contain; background: #000; }
+
 .stat { display: flex; align-items: center; gap: 14px; padding: 16px 20px; background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); }
 .stat b { font-family: var(--head-font); font-size: 40px; color: var(--wine); line-height: 1; }
 .stat span { line-height: 1.2; color: var(--muted); font-weight: 700; }
@@ -304,7 +313,7 @@ a.contact-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg)
     .section { padding: 70px 0; }
 }
 @media (max-width: 575.98px) {
-    .about-grid img { height: 160px; }
+    .about-grid img, .about-video { height: 160px; }
     .cta-band { padding: 32px 24px; text-align: center; justify-content: center; }
     .features { margin-top: -40px; }
 }

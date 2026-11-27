@@ -72,8 +72,8 @@
 
     // Facts counter
     $('[data-toggle="counter-up"]').counterUp({
-        delay: 10,
-        time: 2000
+        delay: 16,
+        time: 400   // sayğac ~0,5 saniyəyə dolur (əvvəl 2 saniyə idi — gec görünürdü)
     });
 
 

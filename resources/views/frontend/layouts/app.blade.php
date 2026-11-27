@@ -46,7 +46,7 @@
     <link href="{{ asset('lib/owlcarousel/assets/owl.carousel.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/custom.css') }}?v=71" rel="stylesheet">
+    <link href="{{ asset('css/custom.css') }}?v=77" rel="stylesheet">
     <link href="{{ asset('css/games.css') }}?v=63" rel="stylesheet">
     @yield('css')
 </head>
@@ -193,7 +193,7 @@
 <script src="{{ asset('lib/waypoints/waypoints.min.js') }}"></script>
 <script src="{{ asset('lib/counterup/counterup.min.js') }}"></script>
 <script src="{{ asset('lib/owlcarousel/owl.carousel.min.js') }}"></script>
-<script src="{{ asset('js/main.js') }}?v=2"></script>
+<script src="{{ asset('js/main.js') }}?v=4"></script>
 <script src="{{ asset('js/games/rules.js') }}?v=3"></script>{{-- oyun səhifələrində əvvəlcə qaydalar pəncərəsi --}}
 <script src="{{ asset('js/password-toggle.js') }}?v=1"></script>{{-- şifrə sahələrində göz düyməsi --}}
 @include('frontend.partials.registered-modal')
