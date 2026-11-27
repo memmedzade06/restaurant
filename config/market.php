@@ -16,6 +16,7 @@
 return [
     'code_valid_days' => (int) env('MARKET_CODE_DAYS', 1),  // alınan kupon neçə gün etibarlıdır (1 — alındığı andan 24 saat)
     'per_day' => (int) env('MARKET_PER_DAY', 1),            // bir istifadəçi gündə neçə hədiyyə ala bilər (Bakı vaxtı ilə gün)
+    'small_max' => 3,                                        // bu qədər xala qədər olan hədiyyə yarım sayılır: 1 hədiyyənin yerinə 2 dənə seçmək olar
     'min_bill' => 10,                                        // hədiyyədən istifadə üçün minimal masa hesabı (AZN) — qaydalarda göstərilir
 
     // Menyudan (config/market_menu.php) markete düşməyən kateqoriyalar — adı ilə; sinxronizasiyadan sonra da gizli qalır

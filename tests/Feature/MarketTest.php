@@ -20,6 +20,8 @@ class MarketTest extends TestCase
         config(['market.items' => [
             ['key' => 'market_tea', 'label' => 'Çaynik çay', 'cost' => 5, 'icon' => 'fa-mug-hot', 'desc' => 'Çay'],
             ['key' => 'market_hookah', 'label' => 'Qəlyan', 'cost' => 2.5, 'icon' => 'fa-smoking', 'desc' => 'Qəlyan'],
+            ['key' => 'market_sugar', 'label' => 'Qənd', 'cost' => 1, 'icon' => 'fa-cube', 'desc' => 'Qənd'],
+            ['key' => 'market_lemon', 'label' => 'Limon', 'cost' => 3, 'icon' => 'fa-lemon', 'desc' => 'Limon'],
         ]]);
         // bütün menyu (php artisan market:sync-menu) — testdə sabit kiçik menyu
         config(['market_menu' => [
@@ -152,6 +154,7 @@ class MarketTest extends TestCase
     public function test_site_allows_one_gift_per_day(): void
     {
         $this->assertSame(1, config('market.per_day'));
+        config(['market.small_max' => 2]); // 2,5 xallıq qəlyan burada adi hədiyyədir
         $u = $this->user(100);
 
         $this->actingAs($u)->get('/hediyye-marketi?kat=secilmis')->assertSee('Bu gün: <b>1</b> / 1', false)
@@ -171,7 +174,7 @@ class MarketTest extends TestCase
 
     public function test_only_two_gifts_per_day(): void
     {
-        config(['market.per_day' => 2]);
+        config(['market.per_day' => 2, 'market.small_max' => 2]); // 2,5 xallıq qəlyan burada adi hədiyyədir
         $u = $this->user(100);
 
         $this->actingAs($u)->get('/hediyye-marketi?kat=secilmis')->assertSee('Bu gün: <b>2</b> / 2', false)
@@ -195,6 +198,97 @@ class MarketTest extends TestCase
         // sabah yenə 2 hədiyyə
         $this->travel(1)->days();
         $this->actingAs($u)->post('/hediyye-marketi/market_tea')->assertSessionHas('market_bought');
+    }
+
+    public function test_two_small_gifts_can_be_picked_together_instead_of_one(): void
+    {
+        $this->assertEquals(3, config('market.small_max'));
+        $u = $this->user(100);
+
+        $this->actingAs($u)->get('/hediyye-marketi?kat=secilmis')
+            ->assertSee('3 xala qədər</b> olan hədiyyələrdən 1 hədiyyənin yerinə <b>2 dənə</b>', false)
+            ->assertSee('2 hədiyyəni al')
+            // alış brauzerin confirm-i ilə yox, saytın təsdiq pəncərəsi ilə təsdiqlənir
+            ->assertSee('id="buyConfirm"', false)->assertSee('Hədiyyəni təsdiqləyin')->assertDontSee('Davam edək?');
+        auth()->logout();
+        $this->get('/hediyye-marketi?kat=secilmis')->assertDontSee('id="buyConfirm"', false); // qonaq ala bilmir
+        $this->actingAs($u);
+
+        // 3 xala qədər olan 2 hədiyyə birlikdə: ikisinə bir kupon, xal cəmi çıxılır
+        $this->actingAs($u)->post('/hediyye-marketi/market_sugar', ['also' => 'market_lemon'])
+            ->assertRedirect(route('market', ['kat' => 'secilmis']))->assertSessionHas('market_bought');
+        $this->assertEquals(96, $u->fresh()->points);
+        $coupon = WheelSpin::where('user_id', $u->id)->where('game', 'market')->sole();
+        $this->assertSame('market_sugar+market_lemon', $coupon->prize_key);
+        $this->assertSame('Qənd + Limon', $coupon->prize_label);
+        $this->actingAs($u)->withSession(['market_bought' => [$coupon->id]])->get('/hediyye-marketi?kat=secilmis')
+            ->assertSee($coupon->code)->assertSee('Qənd + Limon');
+        $this->actingAs($u)->get('/hediyyelerim')->assertSee($coupon->code)->assertSee('Qənd + Limon');
+
+        // bu günün limiti bitdi: nə adi, nə kiçik hədiyyə
+        $this->actingAs($u)->post('/hediyye-marketi/market_sugar')->assertSessionHas('market_error');
+        $this->assertEquals(96, $u->fresh()->points);
+        $this->actingAs($u)->get('/hediyye-marketi?kat=secilmis')->assertSee('Bu gün: <b>0</b> / 1', false);
+    }
+
+    public function test_small_gifts_one_by_one_and_mixing_rules(): void
+    {
+        $u = $this->user(100);
+
+        // bir kiçik hədiyyə alınandan sonra yalnız kiçik hədiyyə qalır
+        $this->actingAs($u)->post('/hediyye-marketi/market_sugar')->assertSessionHas('market_bought');
+        $this->actingAs($u)->get('/hediyye-marketi?kat=secilmis')->assertSee('Bu gün: 3 xala qədər <b>1</b> hədiyyə qalıb', false)
+            ->assertSee('Bu gün yalnız 3 xala qədər');
+        $this->actingAs($u)->post('/hediyye-marketi/market_tea')
+            ->assertSessionHas('market_error', 'Bu gün yalnız 3 xala qədər olan 1 hədiyyə də seçə bilərsiniz.');
+        $this->assertEquals(99, $u->fresh()->points);
+        // iki kiçik hədiyyə birlikdə də olmur — yalnız biri qalıb
+        $this->actingAs($u)->post('/hediyye-marketi/market_sugar', ['also' => 'market_lemon'])->assertSessionHas('market_error');
+        $this->actingAs($u)->post('/hediyye-marketi/market_lemon')->assertSessionHas('market_bought');
+        $this->assertEquals(96, $u->fresh()->points);
+
+        // kupon istifadə olunub silinsə də limit qalır
+        WheelSpin::where('user_id', $u->id)->delete();
+        $this->actingAs($u)->post('/hediyye-marketi/market_sugar')->assertSessionHas('market_error');
+
+        // birlikdə yalnız 2 kiçik hədiyyə: adi hədiyyə ilə olmaz
+        $this->travel(1)->days();
+        $this->actingAs($u)->post('/hediyye-marketi/market_sugar', ['also' => 'market_tea'])->assertSessionHas('market_error');
+        $this->actingAs($u)->post('/hediyye-marketi/market_tea', ['also' => 'market_sugar'])->assertSessionHas('market_error');
+        $this->actingAs($u)->post('/hediyye-marketi/market_sugar', ['also' => 'market_yoxdur'])->assertNotFound();
+        $this->assertEquals(96, $u->fresh()->points);
+        // adi hədiyyə alınandan sonra kiçik də olmur
+        $this->actingAs($u)->post('/hediyye-marketi/market_tea')->assertSessionHas('market_bought');
+        $this->actingAs($u)->post('/hediyye-marketi/market_sugar')->assertSessionHas('market_error');
+        $this->assertEquals(91, $u->fresh()->points);
+    }
+
+    public function test_same_small_gift_can_be_taken_twice(): void
+    {
+        $u = $this->user(10);
+        $this->actingAs($u)->get('/hediyye-marketi?kat=secilmis')->assertSee('shelf-qty', false)
+            ->assertSee('qty-plus', false)->assertSee('2 ədəd üçün isə <b>+</b> düyməsini basın', false);
+
+        $this->actingAs($u)->post('/hediyye-marketi/market_lemon', ['also' => 'market_lemon'])->assertSessionHas('market_bought');
+        $this->assertEquals(4, $u->fresh()->points);
+        // 2 ədədə bir kupon
+        $coupon = WheelSpin::where('user_id', $u->id)->where('game', 'market')->sole();
+        $this->assertSame('market_lemon+market_lemon', $coupon->prize_key);
+        $this->assertSame('2 x Limon', $coupon->prize_label);
+
+        // bu günün limiti bitdi; kupon istifadə olunub silinsə də limit qalır
+        $this->actingAs($u)->post('/hediyye-marketi/market_sugar')->assertSessionHas('market_error');
+        WheelSpin::where('user_id', $u->id)->delete();
+        $this->actingAs($u)->post('/hediyye-marketi/market_sugar')->assertSessionHas('market_error');
+        $this->assertEquals(4, $u->fresh()->points);
+    }
+
+    public function test_cannot_buy_two_small_gifts_without_enough_points(): void
+    {
+        $u = $this->user(3.5);
+        $this->actingAs($u)->post('/hediyye-marketi/market_sugar', ['also' => 'market_lemon'])->assertSessionHas('market_error');
+        $this->assertEquals(3.5, $u->fresh()->points);
+        $this->assertSame(0, WheelSpin::where('user_id', $u->id)->count());
     }
 
     public function test_cannot_buy_without_enough_points(): void

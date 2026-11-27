@@ -5,11 +5,16 @@
     $fmt = fn ($p) => \App\Services\Referrals::format((float) $p);
     $authUrl = auth()->check() ? route('verify.telegram') : route('login');
     $levels = \App\Services\Referrals::levels();
-    $limitReached = $verified && $left <= 0;
+    $limitReached = $verified && $smallLeft <= 0;
+    $isSmall = fn ($it) => (float) $it['cost'] <= $smallMax;
+    // adi hədiyyə gündəlik limitdən 2 pay, kiçik hədiyyə (smallMax xala qədər) 1 pay aparır
+    $fits = fn ($it) => $verified && $smallLeft >= ($isSmall($it) ? 1 : 2);
     $img = fn ($it) => ! empty($it['image']) && is_file(public_path($it['image'])) ? asset($it['image']) : null;
 @endphp
 
 @section('content')
+{{-- telefonda küncdəki söhbət düyməsi piştaxtanın düymələrini örtür — marketdə gizlədilir --}}
+<style>@media (max-width: 767.98px) { .chat-widget, .chat-fab, .chat-fab-label { display: none !important; } }</style>
 <section class="page-hero page-hero-sm">
     <div class="container">
         <span class="eyebrow">Oyunlar</span>
@@ -26,13 +31,15 @@
             {{-- Sol: balans və hədiyyələr --}}
             <div class="col-lg-8">
                 @if ($bought)
-                    {{-- yenicə alınmış hədiyyə: kupon kodu --}}
+                    {{-- yenicə alınmış hədiyyə: kupon kodu (2 kiçik hədiyyə birlikdə alınanda da bir kod) --}}
                     <div class="acc-card market-bought mb-4" role="status">
                         <span class="eyebrow">Təbriklər 🎉</span>
-                        <h3>{{ $bought->prize_label }}</h3>
-                        <div class="prize-code">{{ $bought->code }}</div>
-                        <p class="small text-muted mb-0">Kodu restoranda ofisianta göstərin. {{ $bought->expires_at->timezone('Asia/Baku')->format('d.m.Y H:i') }} tarixinədək etibarlıdır.
-                            Kod <a href="{{ route('prizes') }}">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>
+                        @foreach ($bought as $b)
+                            <h3 @unless ($loop->first) class="mt-3" @endunless>{{ $b->prize_label }}</h3>
+                            <div class="prize-code">{{ $b->code }}</div>
+                        @endforeach
+                        <p class="small text-muted mb-0">{{ $bought->count() > 1 ? 'Kodları' : 'Kodu' }} restoranda ofisianta göstərin. {{ $bought->first()->expires_at->timezone('Asia/Baku')->format('d.m.Y H:i') }} tarixinədək etibarlıdır.
+                            {{ $bought->count() > 1 ? 'Kodlar' : 'Kod' }} <a href="{{ route('prizes') }}">Hədiyyələrim</a> səhifəsində də saxlanılır.</p>
                     </div>
                 @endif
                 @if (session('market_error'))
@@ -51,7 +58,11 @@
                             <p class="mb-2 text-muted">Xal qazanmaq üçün profilinizdəki linki və ya QR kodu dostlarınızla paylaşın.
                                 <a href="{{ route('account') }}#xallar" class="fw-bold">Xal qazan <i class="fa fa-arrow-right ms-1"></i></a></p>
                             <span class="market-left {{ $limitReached ? 'is-out' : '' }}">
-                                <i class="fa fa-gift me-1"></i>Bu gün: <b>{{ $left }}</b> / {{ $perDay }} hədiyyə qalıb
+                                @if ($left === 0 && $smallLeft > 0)
+                                    <i class="fa fa-gift me-1"></i>Bu gün: {{ $fmt($smallMax) }} xala qədər <b>{{ $smallLeft }}</b> hədiyyə qalıb
+                                @else
+                                    <i class="fa fa-gift me-1"></i>Bu gün: <b>{{ $left }}</b> / {{ $perDay }} hədiyyə qalıb
+                                @endif
                             </span>
                         </div>
                     @else
@@ -69,7 +80,7 @@
 
                 {{-- hədiyyələr: rəf (piştaxta) + seçilən hədiyyə üçün kassa --}}
                 @php
-                    $canBuy = fn ($it) => $verified && ! $limitReached && $balance >= (float) $it['cost'];
+                    $canBuy = fn ($it) => $fits($it) && $balance >= (float) $it['cost'];
                     $first = collect($items)->first($canBuy) ?? collect($items)->first();
                     $selectedKey = $first['key'] ?? null;
                 @endphp
@@ -85,10 +96,12 @@
                         </div>
                     </nav>
                 @endif
-                <div class="shop {{ $cat ? '' : 'is-cats' }}" id="shop">
+                <div class="shop {{ $cat ? '' : 'is-cats' }}" id="shop"
+                     data-small-left="{{ (int) $smallLeft }}" data-balance="{{ (float) $balance }}" data-verified="{{ $verified ? 1 : 0 }}"
+                     data-buy-url="{{ route('market.buy', '__KEY__') }}" data-small-max="{{ $fmt($smallMax) }}">
                     <div class="shop-awning" aria-hidden="true"></div>
                     <div class="shop-sign"><span class="sign-board">
-                        @if ($cat)<i class="fa fa-store me-2"></i>{{ $cat['label'] }} <small>istədiyinizi seçin</small>
+                        @if ($cat)<i class="fa fa-store me-2"></i>{{ $cat['label'] }} <small>istədiyinizi seçin{{ collect($items)->filter($isSmall)->count() > 1 ? ' — ' . $fmt($smallMax) . ' xala qədər olanlardan 2 dənə' : '' }}</small>
                         @else<i class="fa fa-store me-2"></i>Hədiyyə marketi <small>kateqoriya seçin</small>@endif
                     </span></div>
 
@@ -123,14 +136,16 @@
                         </div>
                     @else
                     <div class="shop-cabinet">
-                    <div class="shop-shelves" role="radiogroup" aria-label="Hədiyyələr">
+                    <div class="shop-shelves" role="group" aria-label="Hədiyyələr">
                         @foreach ($items as $item)
                             @php $sel = $item['key'] === $selectedKey; @endphp
-                            <button type="button" class="shelf-item {{ $canBuy($item) ? '' : 'locked' }} {{ $sel ? 'is-selected' : '' }}"
-                                    data-key="{{ $item['key'] }}" role="radio" aria-checked="{{ $sel ? 'true' : 'false' }}">
+                            <button type="button" class="shelf-item {{ $canBuy($item) ? '' : 'locked' }} {{ $sel ? 'is-selected' : '' }} {{ $isSmall($item) ? 'is-small' : '' }}"
+                                    data-key="{{ $item['key'] }}" data-cost="{{ (float) $item['cost'] }}" data-label="{{ $item['label'] }}"
+                                    aria-pressed="{{ $sel ? 'true' : 'false' }}">
                                 <span class="shelf-tag"><i class="fa fa-star"></i>{{ $fmt($item['cost']) }}</span>
                                 <span class="shelf-prod {{ $img($item) ? 'has-img' : '' }}">
                                     @if ($img($item))<img src="{{ $img($item) }}" alt="" loading="lazy">@else<i class="fa {{ $item['icon'] }}"></i>@endif
+                                    @if ($isSmall($item))<span class="shelf-qty" hidden>×2</span>@endif
                                 </span>
                                 <span class="shelf-board" aria-hidden="true"></span>
                                 <span class="shelf-name">{{ $item['label'] }}</span>
@@ -157,14 +172,24 @@
                                     <p>{{ $item['desc'] ?: $cat['label'] }}</p>
                                 </div>
                                 <div class="counter-buy">
+                                    @if ($isSmall($item))
+                                        {{-- kiçik hədiyyədən 2 ədəd götürmək olar: + basanda say 2 olur --}}
+                                        <div class="qty-step" role="group" aria-label="Say">
+                                            <button type="button" class="qty-minus" aria-label="Azalt">&minus;</button>
+                                            <span class="qty-num">1</span>
+                                            <button type="button" class="qty-plus" aria-label="Artır">+</button>
+                                        </div>
+                                    @endif
                                     <div class="counter-price"><i class="fa fa-star me-1"></i>{{ $fmt($cost) }} xal</div>
                                     @if (! $verified)
                                         <a href="{{ $authUrl }}" class="btn btn-ghost-dark w-100">Daxil olun</a>
                                     @elseif ($limitReached)
                                         <button type="button" class="btn btn-ghost-dark w-100" disabled>Bu günün limiti bitib</button>
+                                    @elseif (! $fits($item))
+                                        <button type="button" class="btn btn-ghost-dark w-100" disabled>Bu gün yalnız {{ $fmt($smallMax) }} xala qədər</button>
                                     @elseif ($enough)
-                                        <form method="POST" action="{{ route('market.buy', $item['key']) }}"
-                                              onsubmit="return confirm({{ \Illuminate\Support\Js::from($item['label'] . ' — ' . $fmt($cost) . ' xal balansınızdan çıxılacaq. Davam edək?') }})">
+                                        <form method="POST" action="{{ route('market.buy', $item['key']) }}" class="buy-form"
+                                              data-label="{{ $item['label'] }}" data-cost="{{ $fmt($cost) }}">
                                             @csrf
                                             <button type="submit" class="btn btn-primary w-100"><i class="fa fa-gift me-2"></i>Xalla al</button>
                                         </form>
@@ -174,6 +199,28 @@
                                 </div>
                             </div>
                         @endforeach
+                            {{-- 2 kiçik hədiyyə birlikdə seçiləndə (aşağıdakı skript doldurur) --}}
+                            <div class="counter-pane counter-pair" hidden>
+                                <div class="counter-prod"><i class="fa fa-gifts"></i></div>
+                                <div class="counter-info">
+                                    <h5 class="pair-names"></h5>
+                                    <p class="pair-note"></p>
+                                </div>
+                                <div class="counter-buy">
+                                    <div class="qty-step" role="group" aria-label="Say">
+                                            <button type="button" class="qty-minus" aria-label="Azalt">&minus;</button>
+                                            <span class="qty-num">2</span>
+                                            <button type="button" class="qty-plus" aria-label="Artır">+</button>
+                                        </div>
+                                    <div class="counter-price"><i class="fa fa-star me-1"></i><span class="pair-total"></span> xal</div>
+                                    <form method="POST" class="pair-form buy-form" action="">
+                                        @csrf
+                                        <input type="hidden" name="also" value="">
+                                        <button type="submit" class="btn btn-primary w-100"><i class="fa fa-gift me-2"></i>2 hədiyyəni al</button>
+                                    </form>
+                                    <button type="button" class="btn btn-ghost-dark w-100 pair-off" disabled hidden></button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     @endunless
@@ -187,6 +234,7 @@
                     <div class="rules-note"><i class="fa fa-info-circle me-2"></i>Hədiyyədən istifadə üçün minimal masa hesabı <b>{{ (int) config('market.min_bill', 10) }} AZN</b> olmalıdır.</div>
                     <ul class="rules">
                         <li>Gündə ən çox <b>{{ $perDay }} hədiyyə</b> almaq olar.</li>
+                        <li><b>{{ $fmt($smallMax) }} xala qədər</b> olan hədiyyələrdən 1 hədiyyənin yerinə <b>2 dənə</b> seçə bilərsiniz — rəfdə ikisinə də klikləyin, eyni hədiyyədən 2 ədəd üçün isə <b>+</b> düyməsini basın.</li>
                         <li>Hədiyyə seçəndə qiyməti <b>xal balansınızdan çıxılır</b> və sizə <b>kupon kodu</b> verilir.</li>
                         <li>Kodu restoranda <b>ofisianta göstərin</b>. Hər kod bir dəfə istifadə olunur.</li>
                         @php
@@ -208,6 +256,23 @@
         </div>
     </div>
 </section>
+@if ($cat && $verified)
+    {{-- alışın təsdiqi (brauzerin "OK / Cancel" pəncərəsi əvəzinə) --}}
+    <div class="modal fade" id="buyConfirm" tabindex="-1" aria-labelledby="buyConfirmTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content success-modal">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Bağla"></button>
+                <div class="success-ico points-ico"><i class="fa fa-gift"></i></div>
+                <h3 id="buyConfirmTitle">Hədiyyəni təsdiqləyin</h3>
+                <p><b class="bc-name"></b><br>Balansınızdan <b class="bc-cost"></b> çıxılacaq, kupon kodu dərhal verilir.</p>
+                <div class="d-flex flex-wrap justify-content-center gap-2">
+                    <button type="button" class="btn btn-primary px-4 py-2 bc-ok"><i class="fa fa-check me-2"></i>Təsdiqlə</button>
+                    <button type="button" class="btn btn-outline-secondary px-4 py-2" data-bs-dismiss="modal">Ləğv et</button>
+                </div>
+            </div>
+        </div>
+    </div>
+@endif
 @endsection
 
 @section('js')
@@ -220,21 +285,91 @@
     var shop = document.getElementById('shop');
     if (!shop) return;
     var items = shop.querySelectorAll('button.shelf-item');
-    var panes = shop.querySelectorAll('.counter-pane');
+    var panes = shop.querySelectorAll('.counter-pane[data-key]');
+    var pair = shop.querySelector('.counter-pair');
     var counter = shop.querySelector('.shop-counter');
-    items.forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            var key = btn.dataset.key;
-            items.forEach(function (b) {
-                var on = b === btn;
-                b.classList.toggle('is-selected', on);
-                b.setAttribute('aria-checked', on ? 'true' : 'false');
-            });
-            panes.forEach(function (p) { p.hidden = p.dataset.key !== key; });
-            counter.classList.remove('bump');
-            void counter.offsetWidth;
-            counter.classList.add('bump');
+    var picked = [];
+    items.forEach(function (b) { if (b.classList.contains('is-selected')) picked.push(b); });
+
+    // kiçik hədiyyələrdən (data-small-max xala qədər) 2 dənə seçmək olar: ikinci kiçik hədiyyəyə klikləyəndə o da seçilir,
+    // eyni hədiyyədən 2 ədəd üçün piştaxtadakı "+" basılır ("−" — yenə 1 ədəd);
+    // iki fərqli hədiyyədən birinə klikləyəndə o seçimdən çıxır; adi hədiyyəyə klikləyəndə yalnız o seçilir
+    function click(btn) {
+        var small = btn.classList.contains('is-small');
+        var i = picked.indexOf(btn);
+        if (picked.length === 2 && picked[0] === btn && picked[1] === btn) return;
+        else if (picked.length === 1 && picked[0] === btn) return;
+        else if (i >= 0) picked.splice(i, 1);
+        else if (small && picked.length === 1 && picked[0].classList.contains('is-small')) picked.push(btn);
+        else if (small && picked.length === 2) picked = [picked[1], btn];
+        else picked = [btn];
+        render();
+    }
+    function fmt(n) { return String(Math.round(n * 100) / 100).replace('.', ','); }
+    function render() {
+        var same = picked.length === 2 && picked[0] === picked[1];
+        items.forEach(function (b) {
+            var on = picked.indexOf(b) >= 0;
+            b.classList.toggle('is-selected', on);
+            b.setAttribute('aria-pressed', on ? 'true' : 'false');
+            var q = b.querySelector('.shelf-qty');
+            if (q) q.hidden = !(same && picked[0] === b);
         });
+        var two = picked.length === 2;
+        panes.forEach(function (p) { p.hidden = two || p.dataset.key !== picked[0].dataset.key; });
+        if (pair) {
+            pair.hidden = !two;
+            pair.querySelector('.qty-step').hidden = !same; // iki fərqli hədiyyədə say düyməsi yoxdur
+            if (two) {
+                var total = parseFloat(picked[0].dataset.cost) + parseFloat(picked[1].dataset.cost);
+                pair.querySelector('.pair-names').textContent = same ? '2 x ' + picked[0].dataset.label : picked[0].dataset.label + ' + ' + picked[1].dataset.label;
+                pair.querySelector('.pair-note').textContent = (same ? '2 ədəd' : '2 hədiyyə') + ' — ikisi üçün bir kupon kodu verilir';
+                pair.querySelector('.pair-total').textContent = fmt(total);
+                var form = pair.querySelector('.pair-form');
+                form.action = shop.dataset.buyUrl.replace('__KEY__', encodeURIComponent(picked[0].dataset.key));
+                form.querySelector('[name=also]').value = picked[1].dataset.key;
+                var balance = parseFloat(shop.dataset.balance || '0');
+                var why = shop.dataset.verified !== '1' ? 'Daxil olun'
+                    : parseInt(shop.dataset.smallLeft, 10) < 2 ? (parseInt(shop.dataset.smallLeft, 10) === 1 ? 'Bu gün yalnız 1 hədiyyə qalıb' : 'Bu günün limiti bitib')
+                    : balance < total ? fmt(total - balance) + ' xal çatmır' : '';
+                form.hidden = !!why;
+                var off = pair.querySelector('.pair-off');
+                off.hidden = !why;
+                off.textContent = why;
+            }
+        }
+        counter.classList.remove('bump');
+        void counter.offsetWidth;
+        counter.classList.add('bump');
+    }
+    // "Xalla al" — əvvəlcə təsdiq pəncərəsi (brauzerin confirm-i əvəzinə), "Təsdiqlə" basılanda forma göndərilir
+    var modalEl = document.getElementById('buyConfirm');
+    var pending = null;
+    shop.querySelectorAll('form.buy-form').forEach(function (f) {
+        f.addEventListener('submit', function (e) {
+            if (!modalEl || !window.bootstrap) return; // pəncərə açılmasa, alış adi qaydada olur
+            e.preventDefault();
+            pending = f;
+            var isPair = f.classList.contains('pair-form');
+            modalEl.querySelector('.bc-name').textContent = isPair ? pair.querySelector('.pair-names').textContent : f.dataset.label;
+            modalEl.querySelector('.bc-cost').textContent = (isPair ? pair.querySelector('.pair-total').textContent : f.dataset.cost) + ' xal';
+            var ok = modalEl.querySelector('.bc-ok');
+            ok.disabled = false;
+            (bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl)).show(); // saytda Bootstrap 5.0.0 — getOrCreateInstance yoxdur
+        });
+    });
+    if (modalEl) modalEl.querySelector('.bc-ok').addEventListener('click', function () {
+        if (!pending) return;
+        this.disabled = true; // iki dəfə basılmasın
+        pending.submit();
+    });
+    items.forEach(function (btn) { btn.addEventListener('click', function () { click(btn); }); });
+    // say: "+" — eyni hədiyyədən 2 ədəd, "−" — 1 ədəd (ən çox 2)
+    shop.querySelectorAll('.qty-plus').forEach(function (b) {
+        b.addEventListener('click', function () { if (picked.length === 1) { picked = [picked[0], picked[0]]; render(); } });
+    });
+    shop.querySelectorAll('.qty-minus').forEach(function (b) {
+        b.addEventListener('click', function () { if (picked.length === 2) { picked = [picked[0]]; render(); } });
     });
 })();
 </script>
