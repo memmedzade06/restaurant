@@ -50,7 +50,7 @@
                         <label class="form-label fw-bold mb-1 mt-3" for="broadcastFile">Fayl <span class="fw-normal text-muted">(istəyə görə)</span></label>
                         <input type="file" name="file" id="broadcastFile" class="form-control" accept=".{{ str_replace(',', ',.', \App\Models\SupportMessage::FILE_TYPES) }}">
                         @error('file') <div class="text-danger small">{{ $message }}</div> @enderror
-                        <p class="small text-muted mt-1 mb-0">Şəkil, PDF, Word, Excel və ya mətn faylı, ən çox {{ \App\Models\SupportMessage::FILE_MAX_KB / 1024 }} MB. Şəkil söhbətdə görünür, qalan fayllar yüklənir.</p>
+                        <p class="small text-muted mt-1 mb-0">Şəkil, video (mp4, mov, webm — ən çox {{ \App\Models\SupportMessage::VIDEO_MAX_KB / 1024 }} MB), PDF, Word, Excel və ya mətn faylı (ən çox {{ \App\Models\SupportMessage::FILE_MAX_KB / 1024 }} MB). Şəkil və video söhbətdə görünür, video böyük ekranda da açılır; qalan fayllar yüklənir.</p>
                         <p class="small text-muted mt-2 mb-0">Link yazsanız, mesajın altında düymə görünəcək. Saytın səhifəsi üçün yalnız yolu yazın (məs. <code>/hediyye-marketi</code>, <code>/oyunlar</code>). Yazı boş qalsa: «{{ \App\Models\SupportMessage::DEFAULT_LINK_LABEL }}».</p>
 
                         <div class="fw-bold mt-3 mb-2">Kimə</div>

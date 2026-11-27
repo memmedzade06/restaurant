@@ -17,20 +17,29 @@ class SupportMessage extends Model
     protected $fillable = ['user_id', 'sender_id', 'from_admin', 'broadcast_id', 'body', 'link_url', 'link_label',
         'attachment_path', 'attachment_name', 'attachment_mime', 'attachment_size', 'read_at'];
 
-    /** Admin mesaja fayl əlavə edə bilər: şəkil, PDF, Word, Excel, mətn — ən çox 10 MB */
+    /** Admin mesaja fayl əlavə edə bilər: şəkil, PDF, Word, Excel, mətn — ən çox 10 MB; video (mp4, mov, webm) — ən çox 50 MB */
     public const FILE_MAX_KB = 10240;
-    public const FILE_TYPES = 'jpg,jpeg,png,webp,gif,pdf,doc,docx,xls,xlsx,txt';
+    public const VIDEO_MAX_KB = 51200;
+    public const VIDEO_TYPES = 'mp4,mov,webm';
+    public const FILE_TYPES = 'jpg,jpeg,png,webp,gif,pdf,doc,docx,xls,xlsx,txt,' . self::VIDEO_TYPES;
+    public const VIDEO_MIMES = ['video/mp4', 'video/quicktime', 'video/webm'];
 
-    /** Faylın yoxlanması (admin cavabı və hamıya mesaj üçün eyni) */
+    /** Faylın yoxlanması (admin cavabı və hamıya mesaj üçün eyni): video 50 MB-a, qalan fayllar 10 MB-a qədər */
     public static function fileRules(): array
     {
-        return ['nullable', 'file', 'max:' . self::FILE_MAX_KB, 'mimes:' . self::FILE_TYPES];
+        return ['nullable', 'file', 'max:' . self::VIDEO_MAX_KB, 'mimes:' . self::FILE_TYPES,
+            function (string $attribute, $value, \Closure $fail) {
+                $video = in_array($value->getMimeType(), self::VIDEO_MIMES, true);
+                if (! $video && $value->getSize() > self::FILE_MAX_KB * 1024) {
+                    $fail('Fayl ən çox ' . (self::FILE_MAX_KB / 1024) . ' MB ola bilər (video — ' . (self::VIDEO_MAX_KB / 1024) . ' MB).');
+                }
+            }];
     }
 
     public static function fileMessages(): array
     {
         return [
-            'file.max' => 'Fayl ən çox ' . (self::FILE_MAX_KB / 1024) . ' MB ola bilər.',
+            'file.max' => 'Video ən çox ' . (self::VIDEO_MAX_KB / 1024) . ' MB, digər fayllar ' . (self::FILE_MAX_KB / 1024) . ' MB ola bilər.',
             'file.mimes' => 'Bu növ fayl olmaz. Olar: ' . str_replace(',', ', ', self::FILE_TYPES) . '.',
             'file.uploaded' => 'Fayl yüklənmədi (çox böyük ola bilər).',
         ];
@@ -54,6 +63,11 @@ class SupportMessage extends Model
     public function isImageAttachment(): bool
     {
         return in_array($this->attachment_mime, ['image/jpeg', 'image/png', 'image/webp', 'image/gif'], true);
+    }
+
+    public function isVideoAttachment(): bool
+    {
+        return in_array($this->attachment_mime, self::VIDEO_MIMES, true);
     }
 
     /** 1,2 MB / 340 KB */
@@ -113,6 +127,7 @@ class SupportMessage extends Model
                 'name' => $this->attachment_name,
                 'size' => self::humanSize((int) $this->attachment_size),
                 'image' => $this->isImageAttachment(),
+                'video' => $this->isVideoAttachment(), // söhbətdə oynadılır
             ] : null,
             // mesajın altındakı düymə (admin hamıya mesajda link qoyubsa)
             'link' => $this->link_url ? [

@@ -37,6 +37,18 @@
 
     /** Mesajdakı fayl: şəkil — kiçik şəkil (basanda böyük açılır), qalanı — ad və ölçü ilə yükləmə linki */
     function fileEl(f) {
+        if (f.video) { // video: söhbətdə oynadılır, ⤢ düyməsi ilə böyük ekranda açılır
+            var box = document.createElement('div');
+            box.className = 'chat-file-video';
+            var v = document.createElement('video');
+            v.src = f.url; v.controls = true; v.preload = 'metadata';
+            v.setAttribute('playsinline', '');
+            var full = document.createElement('button');
+            full.type = 'button'; full.className = 'chat-video-full'; full.setAttribute('aria-label', 'Böyük ekranda aç');
+            full.innerHTML = '<i class="fa fa-expand"></i>';
+            box.appendChild(v); box.appendChild(full);
+            return box;
+        }
         var a = document.createElement('a');
         a.href = f.url;
         if (f.image) {
@@ -266,6 +278,18 @@
             return null;
         }
     };
+
+    // videonu böyük ekranda açmaq (söhbətə sonradan gələn mesajlar üçün də — hadisə sənəddə tutulur)
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest && e.target.closest('.chat-video-full');
+        if (!btn) return;
+        var v = btn.parentNode.querySelector('video');
+        if (!v) return;
+        if (v.requestFullscreen) v.requestFullscreen().catch(function () {});
+        else if (v.webkitEnterFullscreen) v.webkitEnterFullscreen(); // iPhone Safari
+        else if (v.webkitRequestFullscreen) v.webkitRequestFullscreen();
+        v.play && v.play().catch(function () {});
+    });
 
     document.querySelectorAll('[data-support-chat]').forEach(function (el) {
         var chat = new Chat(el);

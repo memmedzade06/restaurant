@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /** İstifadəçi: adminə sual yazır və cavabları görür (bir söhbət — "Mesajlar") */
@@ -17,14 +18,22 @@ class SupportController extends Controller
     /** Söhbətdə göstərilən son mesajların sayı */
     private const HISTORY = 200;
 
-    /** Mesajdakı fayl: şəkil brauzerdə açılır, qalanı yüklənir. Başqasının faylı görünmür (404) */
-    public function file(Request $request, SupportMessage $message): StreamedResponse
+    /**
+     * Mesajdakı fayl: şəkil və video brauzerdə açılır (video hissə-hissə — irəli-geri çəkmək olur), qalanı yüklənir.
+     * Başqasının faylı görünmür (404).
+     */
+    public function file(Request $request, SupportMessage $message): StreamedResponse|BinaryFileResponse
     {
         $user = $request->user();
         abort_unless($message->attachment_path && ($user->is_admin || $message->user_id === $user->id), 404);
         abort_unless(Storage::disk('local')->exists($message->attachment_path), 404);
 
         $headers = ['Content-Type' => $message->attachment_mime ?: 'application/octet-stream', 'X-Content-Type-Options' => 'nosniff'];
+
+        if ($message->isVideoAttachment()) {
+            // BinaryFileResponse "Range" sorğularını dəstəkləyir — video dərhal başlayır və irəli çəkilir
+            return response()->file(Storage::disk('local')->path($message->attachment_path), $headers + ['Accept-Ranges' => 'bytes']);
+        }
 
         return $message->isImageAttachment()
             ? Storage::disk('local')->response($message->attachment_path, $message->attachment_name, $headers)

@@ -159,7 +159,7 @@ class SupportBroadcastTest extends TestCase
 
         $msg = SupportMessage::where('broadcast_id', $b->id)->where('user_id', $guest->id)->sole();
         $file = $msg->toChat(false)['file'];
-        $this->assertSame(['url' => route('support.file', $msg), 'name' => 'Menyu.pdf', 'size' => '300 KB', 'image' => false], $file);
+        $this->assertSame(['url' => route('support.file', $msg), 'name' => 'Menyu.pdf', 'size' => '300 KB', 'image' => false, 'video' => false], $file);
         $this->actingAs($guest)->get(route('support'))->assertSee('class="chat-file" download="Menyu.pdf"', false);
         $this->actingAs($admin)->get(route('admin.support.broadcast'))->assertSee('Menyu.pdf (300 KB)');
 
@@ -201,5 +201,43 @@ class SupportBroadcastTest extends TestCase
         // istifadəçi fayl göndərə bilmir (sahə nəzərə alınmır)
         $this->actingAs($guest)->post(route('support.store'), ['body' => 'salam', 'file' => UploadedFile::fake()->create('a.pdf', 10, 'application/pdf')], ['Accept' => 'application/json'])->assertCreated();
         $this->assertNull(SupportMessage::where('user_id', $guest->id)->latest('id')->first()->attachment_path);
+    }
+
+    public function test_admin_can_send_a_video_that_plays_in_the_chat(): void
+    {
+        Storage::fake('local');
+        $admin = $this->user(['is_admin' => true]);
+        $guest = $this->user();
+
+        // 30 MB video — olar (video üçün hədd 50 MB)
+        $res = $this->actingAs($admin)->post(route('admin.support.reply', $guest), [
+            'body' => 'Yeni menyumuz', 'file' => UploadedFile::fake()->create('menyu.mp4', 30 * 1024, 'video/mp4'),
+        ], ['Accept' => 'application/json'])->assertCreated();
+        $this->assertTrue($res->json('message.file.video'));
+        $this->assertFalse($res->json('message.file.image'));
+        $msg = SupportMessage::where('user_id', $guest->id)->latest('id')->first();
+
+        // söhbətdə oynadılan video və böyük ekran düyməsi
+        $this->actingAs($guest)->get(route('support'))
+            ->assertSee('<video src="' . route('support.file', $msg) . '" controls playsinline', false)
+            ->assertSee('class="chat-video-full"', false);
+        // fayl hissə-hissə verilir (irəli-geri çəkmək olur), yüklənmir (saxta faylın içi boşdur — 1000 bayt yazırıq)
+        Storage::disk('local')->put($msg->attachment_path, str_repeat('v', 1000));
+        $this->actingAs($guest)->get(route('support.file', $msg), ['Range' => 'bytes=0-99'])
+            ->assertStatus(206)->assertHeader('Content-Range', 'bytes 0-99/1000')->assertHeader('Content-Type', 'video/mp4');
+        $this->actingAs($this->user())->get(route('support.file', $msg))->assertNotFound(); // başqası açmır
+
+        // video 50 MB-dan böyük olmaz; adi fayl isə 10 MB-dan böyük olmaz
+        $this->actingAs($admin)->post(route('admin.support.reply', $guest), ['file' => UploadedFile::fake()->create('big.mp4', 60 * 1024, 'video/mp4')], ['Accept' => 'application/json'])
+            ->assertUnprocessable()->assertJsonValidationErrors('file');
+        $this->actingAs($admin)->post(route('admin.support.reply', $guest), ['file' => UploadedFile::fake()->create('big.pdf', 20 * 1024, 'application/pdf')], ['Accept' => 'application/json'])
+            ->assertUnprocessable()->assertJsonValidationErrors('file');
+
+        // hamıya mesajda da video olar
+        $this->actingAs($admin)->get(route('admin.support.broadcast'))->assertSee('video (mp4, mov, webm');
+        $this->actingAs($admin)->post(route('admin.support.broadcast.store'), [
+            'body' => 'Video', 'audience' => 'all', 'file' => UploadedFile::fake()->create('reklam.mp4', 1024, 'video/mp4'),
+        ])->assertSessionHas('success');
+        $this->assertTrue(SupportMessage::where('user_id', $guest->id)->latest('id')->first()->isVideoAttachment());
     }
 }

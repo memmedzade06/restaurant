@@ -928,6 +928,11 @@ div.coupon-row .prize-code { margin-bottom: 0; font-size: 16px; padding: 8px 10p
 /* mesajdakı fayl */
 .chat-bubble .chat-file-img { display: block; margin: 0 0 8px; text-decoration: none; }
 .chat-bubble .chat-file-img img { display: block; max-width: 100%; max-height: 260px; border-radius: 12px; }
+.chat-bubble .chat-file-video { position: relative; margin: 0 0 8px; }
+.chat-bubble .chat-file-video video { display: block; width: 100%; max-width: 320px; max-height: 360px; border-radius: 12px; background: #000; }
+.chat-bubble .chat-video-full { position: absolute; top: 8px; right: 8px; width: 34px; height: 34px; border: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    color: #fff; background: rgba(0,0,0,.55); font-size: 15px; cursor: pointer; }
+.chat-bubble .chat-video-full:hover { background: rgba(0,0,0,.75); }
 .chat-bubble .chat-file { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; padding: 10px 12px; border-radius: 12px; text-decoration: none; word-break: normal;
     background: rgba(0,0,0,.06); }
 .chat-msg.mine .chat-bubble .chat-file { background: rgba(255,255,255,.15); }

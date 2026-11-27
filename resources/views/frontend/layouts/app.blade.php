@@ -46,7 +46,7 @@
     <link href="{{ asset('lib/owlcarousel/assets/owl.carousel.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/bootstrap.min.css') }}" rel="stylesheet">
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
-    <link href="{{ asset('css/custom.css') }}?v=70" rel="stylesheet">
+    <link href="{{ asset('css/custom.css') }}?v=71" rel="stylesheet">
     <link href="{{ asset('css/games.css') }}?v=63" rel="stylesheet">
     @yield('css')
 </head>
@@ -72,7 +72,7 @@
                 <a href="{{ route('contact') }}" class="nav-item nav-link {{ request()->routeIs('contact') ? 'active' : '' }}">Əlaqə</a>
             </div>
             @auth
-                <a href="{{ route('account') }}" class="nav-user"><i class="fa fa-user-circle"></i>{{ \Illuminate\Support\Str::of(auth()->user()->name)->explode(' ')->first() }}</a>
+                <a href="{{ route('account') }}" class="nav-user"><i class="fa fa-user-circle"></i>Hesabım</a>
             @else
                 <a href="{{ route('login') }}" class="nav-user"><i class="fa fa-user-circle"></i>Daxil ol</a>
             @endauth
@@ -201,7 +201,7 @@
 @include('frontend.partials.earn-more')
 {{-- Adminə yaz: sağ aşağı küncdə söhbət pəncərəsi (və Mesajlar səhifələrindəki söhbət) --}}
 @include('frontend.support._widget')
-<script src="{{ asset('js/support-chat.js') }}?v=6"></script>
+<script src="{{ asset('js/support-chat.js') }}?v=7"></script>
 @auth
 <script>
     // "İndi saytda": səhifə açıq olduqca serverə siqnal göndəririk

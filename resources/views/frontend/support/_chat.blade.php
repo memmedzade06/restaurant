@@ -19,7 +19,7 @@
     <form method="POST" action="{{ $postUrl }}" class="chat-form" @if (! empty($attach)) enctype="multipart/form-data" @endif>
         @csrf
         @if (! empty($attach))
-            <label class="chat-attach" title="Fayl əlavə et (ən çox {{ \App\Models\SupportMessage::FILE_MAX_KB / 1024 }} MB)">
+            <label class="chat-attach" title="Fayl əlavə et: şəkil, sənəd (ən çox {{ \App\Models\SupportMessage::FILE_MAX_KB / 1024 }} MB) və ya video (ən çox {{ \App\Models\SupportMessage::VIDEO_MAX_KB / 1024 }} MB)">
                 <i class="fa fa-paperclip"></i>
                 <input type="file" name="file" accept=".{{ str_replace(',', ',.', \App\Models\SupportMessage::FILE_TYPES) }}" hidden>
             </label>
