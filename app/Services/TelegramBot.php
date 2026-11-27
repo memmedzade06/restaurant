@@ -26,6 +26,17 @@ class TelegramBot
             ->post("https://api.telegram.org/bot{$this->token}/{$method}", $params);
     }
 
+    /** Faylı yükləyərək göndərir (sendPhoto / sendVideo / sendDocument): multipart, sahələr mətn kimi */
+    public function upload(string $method, array $params, string $field, string $path, string $name, int $timeout = 120): Response
+    {
+        $req = Http::timeout($timeout)->attach($field, fopen($path, 'r'), $name);
+
+        return $req->post("https://api.telegram.org/bot{$this->token}/{$method}", array_map(
+            fn ($v) => is_array($v) ? json_encode($v) : (string) $v,
+            $params,
+        ));
+    }
+
     public function sendMessage(string|int $chatId, string $text, array $extra = []): void
     {
         $this->call('sendMessage', ['chat_id' => $chatId, 'text' => $text, 'parse_mode' => 'HTML'] + $extra);

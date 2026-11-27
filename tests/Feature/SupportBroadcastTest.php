@@ -48,7 +48,7 @@ class SupportBroadcastTest extends TestCase
         $this->actingAs($admin)->get(route('admin.support'))->assertSee(route('admin.support.broadcast'));
 
         $this->actingAs($admin)->post(route('admin.support.broadcast.store'), ['body' => 'Bu axşam canlı musiqi! 🎶', 'audience' => 'all'])
-            ->assertRedirect(route('admin.support.broadcast'))->assertSessionHas('success', "Mesaj {$expected} istifadəçinin söhbətinə göndərildi.");
+            ->assertRedirect(route('admin.support.broadcast'))->assertSessionHas('success', "Mesaj: {$expected} istifadəçinin söhbətinə göndərildi.");
 
         $b = SupportBroadcast::latest('id')->first();
         $this->assertSame($expected, $b->recipients);
@@ -64,7 +64,7 @@ class SupportBroadcastTest extends TestCase
 
         // admin Mesajlar siyahısı yalnız yayımla dolmur; tarixçədə var
         $this->actingAs($admin)->get(route('admin.support'))->assertDontSee(route('admin.support.show', $guest));
-        $this->actingAs($admin)->get(route('admin.support.broadcast'))->assertSee('Bu axşam canlı musiqi!')->assertSee($expected . ' nəfər</b>', false);
+        $this->actingAs($admin)->get(route('admin.support.broadcast'))->assertSee('Bu axşam canlı musiqi!')->assertSee('Söhbət: <b>' . $expected . '</b>', false);
 
         // istifadəçi cavab yazanda söhbət siyahıda görünür, yayım "Hamıya" qeydi ilə
         $this->actingAs($guest)->postJson(route('support.store'), ['body' => 'Saat neçədə başlayır?'])->assertCreated();
@@ -239,5 +239,65 @@ class SupportBroadcastTest extends TestCase
             'body' => 'Video', 'audience' => 'all', 'file' => UploadedFile::fake()->create('reklam.mp4', 1024, 'video/mp4'),
         ])->assertSessionHas('success');
         $this->assertTrue(SupportMessage::where('user_id', $guest->id)->latest('id')->first()->isVideoAttachment());
+    }
+
+    public function test_broadcast_can_go_to_telegram_and_email_instead_of_chat(): void
+    {
+        config(['services.telegram.bot_token' => 'test-token']);
+        $this->app->forgetInstance(\App\Services\TelegramBot::class);
+        \Illuminate\Support\Facades\Http::fake(['api.telegram.org/*' => \Illuminate\Support\Facades\Http::response(['ok' => true, 'result' => []])]);
+        \Illuminate\Support\Facades\Mail::fake();
+
+        $admin = $this->user(['is_admin' => true]);
+        $tg = $this->user(['telegram_chat_id' => '777001']);
+        $mail = $this->user(['email_verified_at' => now()]);
+        $plain = $this->user(); // nə Telegram, nə təsdiqlənmiş e-poçt
+
+        $this->actingAs($admin)->get(route('admin.support.broadcast'))->assertOk()
+            ->assertSee('name="channels[]"', false)->assertSee('Telegram')->assertSee('E-poçt')->assertSee('Sayt söhbəti');
+
+        $tgTotal = \App\Models\SupportBroadcast::channelQuery('all', 'telegram')->count();
+        $mailTotal = \App\Models\SupportBroadcast::channelQuery('all', 'email')->count();
+
+        $this->actingAs($admin)->post(route('admin.support.broadcast.store'), [
+            'body' => "Bu axşam <canlı> musiqi!", 'audience' => 'all', 'channels' => ['telegram', 'email'],
+            'link_url' => '/hesabim', 'link_label' => 'Hesabıma keç',
+        ])->assertSessionHas('success', fn ($m) => str_contains($m, "Telegram-a {$tgTotal} nəfərə") && str_contains($m, "e-poçtla {$mailTotal} nəfərə"));
+
+        $b = SupportBroadcast::latest('id')->first();
+        $this->assertSame('telegram,email', $b->channels);
+        // sayt söhbəti seçilməyib — mesaj yazılmır
+        $this->assertSame(0, SupportMessage::where('broadcast_id', $b->id)->count());
+        $this->assertSame(0, (int) $b->recipients);
+        // arxa plandakı göndəriş: Telegram-a mətn (HTML ekranlanıb) və link, e-poçt məktubu
+        $this->assertSame($tgTotal, (int) $b->fresh()->telegram_sent);
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => str_contains($r->url(), '/sendMessage')
+            && $r['chat_id'] === '777001' && str_contains($r['text'], 'Bu axşam &lt;canlı&gt; musiqi!') && str_contains($r['text'], '/hesabim'));
+        $this->assertSame($mailTotal, (int) $b->fresh()->email_sent);
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\BroadcastMail::class, fn ($m) => $m->hasTo($mail->email));
+        \Illuminate\Support\Facades\Mail::assertNotSent(\App\Mail\BroadcastMail::class, fn ($m) => $m->hasTo($plain->email));
+
+        // tarixçədə kanalların nəticəsi
+        $this->actingAs($admin)->get(route('admin.support.broadcast'))
+            ->assertSee('Telegram: <b>' . $tgTotal . '</b> / ' . $tgTotal, false)->assertSee('E-poçt: <b>' . $mailTotal . '</b> / ' . $mailTotal, false);
+    }
+
+    public function test_channel_rules(): void
+    {
+        $admin = $this->user(['is_admin' => true]);
+        // heç bir kanal və ya naməlum kanal — xəta
+        $this->actingAs($admin)->post(route('admin.support.broadcast.store'), ['body' => 'x', 'audience' => 'all', 'channels' => []])
+            ->assertSessionHasErrors('channels');
+        $this->actingAs($admin)->post(route('admin.support.broadcast.store'), ['body' => 'x', 'audience' => 'all', 'channels' => ['sms']])
+            ->assertSessionHasErrors('channels.0');
+        // böyük fayl yalnız e-poçtla — olmaz (məktuba əlavə olunmur), sayt söhbəti ilə birlikdə olar
+        Storage::fake('local');
+        $big = fn () => UploadedFile::fake()->create('video.mp4', 20 * 1024, 'video/mp4');
+        $this->actingAs($admin)->post(route('admin.support.broadcast.store'), ['body' => 'x', 'audience' => 'all', 'channels' => ['email'], 'file' => $big()])
+            ->assertSessionHasErrors('channels');
+        $this->assertSame(0, SupportBroadcast::where('admin_id', $admin->id)->count());
+        \Illuminate\Support\Facades\Mail::fake();
+        $this->actingAs($admin)->post(route('admin.support.broadcast.store'), ['body' => 'x', 'audience' => 'all', 'channels' => ['chat', 'email'], 'file' => $big()])
+            ->assertSessionHas('success');
     }
 }

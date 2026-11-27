@@ -56,14 +56,31 @@
                         <div class="fw-bold mt-3 mb-2">Kimə</div>
                         @foreach ($audiences as $key => $a)
                             <label class="broadcast-audience">
-                                <input type="radio" name="audience" value="{{ $key }}" data-count="{{ $a['count'] }}" @checked(old('audience', 'all') === $key)>
+                                <input type="radio" name="audience" value="{{ $key }}" data-count="{{ $a['count'] }}" data-channels='@json($a['channels'])' @checked(old('audience', 'all') === $key)>
                                 <span><b>{{ $a['label'] }}</b> <span class="badge bg-secondary ms-1">{{ $a['count'] }} nəfər</span>
                                     <small class="d-block text-muted">{{ $a['hint'] }}</small></span>
                             </label>
                         @endforeach
                         @error('audience') <div class="text-danger small mb-2">{{ $message }}</div> @enderror
 
-                        <p class="small text-muted mt-3 mb-3"><i class="fa fa-info-circle me-1"></i>Ofisiant və adminlərə getmir. İstifadəçi cavab yazsa, söhbət <a href="{{ route('admin.support') }}">Mesajlar</a> siyahısında görünəcək.</p>
+                        {{-- hara göndərilsin: bir və ya bir neçəsi; yanında seçilmiş qrupda neçə nəfərə çatacağı --}}
+                        <div class="fw-bold mt-3 mb-2">Hara göndərilsin</div>
+                        @php $oldChannels = old('channels', ['chat']); @endphp
+                        <div class="broadcast-channels">
+                            @foreach (\App\Models\SupportBroadcast::CHANNELS as $ch => [$chLabel, $chHint, $chIcon])
+                                <label class="broadcast-channel">
+                                    <input type="checkbox" name="channels[]" value="{{ $ch }}" @checked(in_array($ch, $oldChannels, true))
+                                           @if ($ch === 'telegram' && ! $telegramReady) disabled @endif>
+                                    <span><i class="fa {{ $chIcon }} me-1"></i><b>{{ $chLabel }}</b>
+                                        <span class="badge bg-secondary ms-1" data-channel-count="{{ $ch }}">{{ $audiences[old('audience', 'all')]['channels'][$ch] ?? 0 }} nəfər</span>
+                                        <small class="d-block text-muted">{{ $ch === 'telegram' && ! $telegramReady ? 'Telegram botu qoşulmayıb (TELEGRAM_BOT_TOKEN)' : $chHint }}</small></span>
+                                </label>
+                            @endforeach
+                        </div>
+                        @error('channels') <div class="text-danger small mb-2">{{ $message }}</div> @enderror
+                        @error('channels.*') <div class="text-danger small mb-2">{{ $message }}</div> @enderror
+
+                        <p class="small text-muted mt-3 mb-3"><i class="fa fa-info-circle me-1"></i>Ofisiant və adminlərə getmir. İstifadəçi saytda cavab yazsa, söhbət <a href="{{ route('admin.support') }}">Mesajlar</a> siyahısında görünəcək. Telegram və e-poçt arxa planda göndərilir — nəticə aşağıdakı tarixçədə görünür. E-poçtda {{ \App\Mail\BroadcastMail::ATTACH_MAX_BYTES / 1048576 }} MB-dan böyük fayl məktuba əlavə olunmur.</p>
                         <button type="submit" class="btn btn-wine px-4"><i class="fa fa-paper-plane me-2"></i>Göndər</button>
                     </form>
                 </div>
@@ -78,7 +95,19 @@
                                 <div class="broadcast-item">
                                     <div class="broadcast-meta">
                                         <span>{{ $b->created_at->timezone('Asia/Baku')->format('d.m.Y H:i') }} · {{ $b->admin?->name ?? '—' }}</span>
-                                        <span>{{ $b->audienceLabel() }} · <b>{{ $b->recipients }} nəfər</b></span>
+                                        <span>{{ $b->audienceLabel() }}</span>
+                                    </div>
+                                    {{-- hər kanalın nəticəsi: Telegram/e-poçt arxa planda göndərilir (çatdı / cəmi) --}}
+                                    <div class="broadcast-results">
+                                        @if ($b->hasChannel('chat'))
+                                            <span><i class="fa fa-comments me-1"></i>Söhbət: <b>{{ $b->recipients }}</b></span>
+                                        @endif
+                                        @if ($b->hasChannel('telegram'))
+                                            <span><i class="fab fa-telegram-plane me-1"></i>Telegram: <b>{{ $b->telegram_sent ?? '…' }}</b> / {{ $b->telegram_total }}</span>
+                                        @endif
+                                        @if ($b->hasChannel('email'))
+                                            <span><i class="fa fa-envelope me-1"></i>E-poçt: <b>{{ $b->email_sent ?? '…' }}</b> / {{ $b->email_total }}</span>
+                                        @endif
                                     </div>
                                     <div class="broadcast-body">{{ $b->body }}</div>
                                     @if ($b->attachment_path)
@@ -101,11 +130,25 @@
 
 @section('js')
 <script>
-    // göndərməzdən əvvəl: neçə nəfərə gedəcəyini soruşuruq
-    document.getElementById('broadcastForm').addEventListener('submit', function (e) {
-        var r = this.querySelector('input[name="audience"]:checked');
-        var n = r ? r.dataset.count : '?';
-        if (!confirm('Mesaj ' + n + ' istifadəçinin söhbətinə göndəriləcək. Göndərilsin?')) e.preventDefault();
+    var form = document.getElementById('broadcastForm');
+    var names = { chat: 'sayt söhbətinə', telegram: 'Telegram-a', email: 'e-poçtla' };
+    function counts() {
+        var r = form.querySelector('input[name="audience"]:checked');
+        return r ? JSON.parse(r.dataset.channels) : {};
+    }
+    // qrup dəyişəndə kanalların yanındakı say yenilənir
+    form.querySelectorAll('input[name="audience"]').forEach(function (r) {
+        r.addEventListener('change', function () {
+            var c = counts();
+            form.querySelectorAll('[data-channel-count]').forEach(function (el) { el.textContent = (c[el.dataset.channelCount] || 0) + ' nəfər'; });
+        });
+    });
+    // göndərməzdən əvvəl: hara və neçə nəfərə gedəcəyini soruşuruq
+    form.addEventListener('submit', function (e) {
+        var c = counts(), parts = [];
+        form.querySelectorAll('input[name="channels[]"]:checked').forEach(function (x) { parts.push(names[x.value] + ' ' + (c[x.value] || 0) + ' nəfərə'); });
+        if (!parts.length) { e.preventDefault(); alert('Hara göndəriləcəyini seçin: sayt söhbəti, Telegram və ya e-poçt.'); return; }
+        if (!confirm('Mesaj ' + parts.join(', ') + ' göndəriləcək. Göndərilsin?')) e.preventDefault();
     });
 </script>
 @endsection
