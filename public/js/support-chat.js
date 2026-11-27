@@ -17,6 +17,8 @@
         this.errorEl = root.querySelector('.chat-error');
         this.empty = root.querySelector('.chat-empty');
         this.sendBtn = this.form.querySelector('button[type="submit"]');
+        this.fileInput = this.form.querySelector('input[type="file"]'); // yalnız admin söhbətində
+        this.picked = root.querySelector('.chat-file-picked');
         this.after = parseInt(root.dataset.after, 10) || 0;
         this.started = false;
         this.polling = false;
@@ -27,6 +29,54 @@
 
     Chat.prototype.scrollDown = function () { this.box.scrollTop = this.box.scrollHeight; };
 
+    Chat.prototype.clearFile = function () {
+        if (!this.fileInput) return;
+        this.fileInput.value = '';
+        if (this.picked) this.picked.hidden = true;
+    };
+
+    /** Mesajdakı fayl: şəkil — kiçik şəkil (basanda böyük açılır), qalanı — ad və ölçü ilə yükləmə linki */
+    function fileEl(f) {
+        var a = document.createElement('a');
+        a.href = f.url;
+        if (f.image) {
+            a.className = 'chat-file-img';
+            a.target = '_blank';
+            a.rel = 'noopener';
+            var img = document.createElement('img');
+            img.src = f.url; img.alt = f.name; img.loading = 'lazy';
+            a.appendChild(img);
+        } else {
+            a.className = 'chat-file';
+            a.setAttribute('download', f.name);
+            var ico = document.createElement('i');
+            ico.className = 'fa fa-file-alt';
+            var name = document.createElement('span');
+            name.className = 'chat-file-name';
+            name.textContent = f.name;
+            var size = document.createElement('small');
+            size.textContent = f.size;
+            a.appendChild(ico); a.appendChild(name); a.appendChild(size);
+        }
+        return a;
+    }
+
+    /** Mətndəki http(s):// ünvanları basıla bilən link edir (HTML yox, yalnız mətn və <a> düyünləri) */
+    function linkify(el, text) {
+        var re = /https?:\/\/[^\s<>"']+/g, pos = 0, m;
+        while ((m = re.exec(text))) {
+            var url = m[0].replace(/[.,!?:;)]+$/, '');
+            el.appendChild(document.createTextNode(text.slice(pos, m.index)));
+            var a = document.createElement('a');
+            a.href = url; a.target = '_blank'; a.rel = 'noopener nofollow';
+            a.textContent = url;
+            el.appendChild(a);
+            pos = m.index + url.length;
+            re.lastIndex = pos;
+        }
+        el.appendChild(document.createTextNode(text.slice(pos)));
+    }
+
     Chat.prototype.append = function (m) {
         if (this.box.querySelector('[data-id="' + m.id + '"]')) return false; // göndərmə və soruşma eyni mesajı gətirə bilər
         var wrap = document.createElement('div');
@@ -34,7 +84,19 @@
         wrap.dataset.id = m.id;
         var bubble = document.createElement('div');
         bubble.className = 'chat-bubble';
-        bubble.textContent = m.body;
+        if (m.file) bubble.appendChild(fileEl(m.file));
+        linkify(bubble, m.body);
+        if (m.link) { // admin mesajındakı düymə
+            var a = document.createElement('a');
+            a.className = 'chat-link-btn';
+            a.href = m.link.url;
+            if (m.link.external) { a.target = '_blank'; a.rel = 'noopener nofollow'; }
+            a.textContent = m.link.label + ' ';
+            var arrow = document.createElement('i');
+            arrow.className = 'fa fa-arrow-right ms-1';
+            a.appendChild(arrow);
+            bubble.appendChild(a);
+        }
         var meta = document.createElement('div');
         meta.className = 'chat-meta';
         meta.textContent = (m.author ? m.author + ' · ' : '') + m.time;
@@ -130,31 +192,39 @@
         self.form.addEventListener('submit', function (e) {
             e.preventDefault();
             var body = self.input.value.trim();
-            if (!body) { self.showError('Mesajı yazın.'); return; }
+            var file = self.fileInput && self.fileInput.files[0];
+            if (!body && !file) { self.showError(self.fileInput ? 'Mesajı yazın və ya fayl əlavə edin.' : 'Mesajı yazın.'); return; }
             self.sendBtn.disabled = true;
             self.showError('');
+            var headers = { 'Accept': 'application/json', 'X-CSRF-TOKEN': token, 'X-Requested-With': 'XMLHttpRequest' };
+            var payload;
+            if (file) { // faylla: multipart (Content-Type-ı brauzer özü qoyur)
+                payload = new FormData();
+                payload.append('body', body);
+                payload.append('file', file);
+            } else {
+                headers['Content-Type'] = 'application/json';
+                payload = JSON.stringify({ body: body });
+            }
             fetch(self.root.dataset.post, {
                 method: 'POST',
                 credentials: 'same-origin',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': token,
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({ body: body })
+                headers: headers,
+                body: payload
             }).then(function (r) {
                 return r.json().catch(function () { return {}; }).then(function (data) { return { ok: r.ok, status: r.status, data: data }; });
             }).then(function (res) {
                 if (res.ok && res.data.message) {
                     self.append(res.data.message);
                     self.input.value = '';
+                    self.clearFile();
                     self.scrollDown();
                     return;
                 }
                 if (res.status === 429) { self.showError('Çox tez-tez göndərirsiniz. Bir az gözləyin.'); return; }
+                if (res.status === 413) { self.showError('Fayl çox böyükdür.'); return; }
                 if (res.status === 419) { self.showError('Səhifənin vaxtı keçib. Səhifəni yeniləyin.'); return; }
-                var errs = res.data.errors && res.data.errors.body;
+                var errs = res.data.errors && (res.data.errors.file || res.data.errors.body);
                 self.showError(errs ? errs[0] : (res.data.message || 'Mesaj göndərilmədi. Yenidən cəhd edin.'));
             }).catch(function () {
                 self.showError('Bağlantı xətası. Yenidən cəhd edin.');
@@ -163,6 +233,20 @@
                 self.input.focus();
             });
         });
+
+        // seçilmiş fayl: adı göstərilir, × ilə silinir
+        if (self.fileInput) {
+            self.fileInput.addEventListener('change', function () {
+                var f = self.fileInput.files[0];
+                if (self.picked) {
+                    self.picked.hidden = !f;
+                    self.picked.querySelector('span').textContent = f ? f.name : '';
+                }
+                if (f) self.input.focus();
+            });
+            var clear = self.picked && self.picked.querySelector('.chat-file-clear');
+            if (clear) clear.addEventListener('click', function () { self.clearFile(); });
+        }
 
         // Enter — göndər, Shift+Enter — yeni sətir
         self.input.addEventListener('keydown', function (e) {

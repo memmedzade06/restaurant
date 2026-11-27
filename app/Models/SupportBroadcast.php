@@ -15,7 +15,8 @@ class SupportBroadcast extends Model
         'active30' => ['Son 30 gündə saytda olanlar', 'Son 30 gün ərzində sayta daxil olmuş təsdiqlənmiş qonaqlar'],
     ];
 
-    protected $fillable = ['admin_id', 'body', 'audience', 'recipients'];
+    protected $fillable = ['admin_id', 'body', 'link_url', 'link_label', 'attachment_path', 'attachment_name', 'attachment_mime',
+        'attachment_size', 'audience', 'recipients'];
 
     public function admin(): BelongsTo
     {

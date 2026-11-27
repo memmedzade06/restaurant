@@ -26,6 +26,7 @@
                         'pollUrl' => route('admin.support.poll', $user),
                         'empty' => 'Bu istifadəçi ilə yazışma yoxdur.',
                         'placeholder' => 'Cavabınızı yazın…',
+                        'attach' => true,
                     ])
                 </div>
             </div>

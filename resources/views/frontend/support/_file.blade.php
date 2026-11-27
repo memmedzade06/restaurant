@@ -1,0 +1,2 @@
+{{-- Mesajdakı fayl ($f — SupportMessage::toChat()['file']): şəkil söhbətdə görünür, qalanı yüklənir. Brauzerdəki eynisi: support-chat.js → fileEl --}}
+@if ($f['image'])<a href="{{ $f['url'] }}" class="chat-file-img" target="_blank" rel="noopener"><img src="{{ $f['url'] }}" alt="{{ $f['name'] }}" loading="lazy"></a>@else<a href="{{ $f['url'] }}" class="chat-file" download="{{ $f['name'] }}"><i class="fa fa-file-alt"></i><span class="chat-file-name">{{ $f['name'] }}</span><small>{{ $f['size'] }}</small></a>@endif

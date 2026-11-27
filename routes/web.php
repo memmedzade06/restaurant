@@ -129,6 +129,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/mesajlar', [\App\Http\Controllers\Frontend\SupportController::class, 'store'])->middleware('throttle:10,1')->name('support.store');
     Route::get('/mesajlar/yeni', [\App\Http\Controllers\Frontend\SupportController::class, 'poll'])->middleware('throttle:poll')->name('support.poll');
     Route::get('/mesajlar/say', [\App\Http\Controllers\Frontend\SupportController::class, 'unread'])->middleware('throttle:poll')->name('support.unread');
+    // mesajdakı fayl: yalnız mesajın sahibi və admin aça bilər
+    Route::get('/mesajlar/fayl/{message}', [\App\Http\Controllers\Frontend\SupportController::class, 'file'])->name('support.file');
 
     // "İndi saytda" siqnalları (açıq səhifədən avtomatik göndərilir)
     Route::post('/aktiv', [\App\Http\Controllers\Frontend\PresenceController::class, 'ping'])->middleware('throttle:poll')->name('presence.ping');

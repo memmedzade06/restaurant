@@ -7,13 +7,29 @@ use App\Models\SupportMessage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /** İstifadəçi: adminə sual yazır və cavabları görür (bir söhbət — "Mesajlar") */
 class SupportController extends Controller
 {
     /** Söhbətdə göstərilən son mesajların sayı */
     private const HISTORY = 200;
+
+    /** Mesajdakı fayl: şəkil brauzerdə açılır, qalanı yüklənir. Başqasının faylı görünmür (404) */
+    public function file(Request $request, SupportMessage $message): StreamedResponse
+    {
+        $user = $request->user();
+        abort_unless($message->attachment_path && ($user->is_admin || $message->user_id === $user->id), 404);
+        abort_unless(Storage::disk('local')->exists($message->attachment_path), 404);
+
+        $headers = ['Content-Type' => $message->attachment_mime ?: 'application/octet-stream', 'X-Content-Type-Options' => 'nosniff'];
+
+        return $message->isImageAttachment()
+            ? Storage::disk('local')->response($message->attachment_path, $message->attachment_name, $headers)
+            : Storage::disk('local')->download($message->attachment_path, $message->attachment_name, $headers);
+    }
 
     public function index(Request $request): View|RedirectResponse
     {

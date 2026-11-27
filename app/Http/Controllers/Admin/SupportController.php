@@ -63,13 +63,16 @@ class SupportController extends Controller
     {
         abort_if($user->is_admin, 404);
         $data = $request->validate([
-            'body' => ['required', 'string', 'max:' . SupportMessage::MAX_LENGTH],
+            'body' => ['required_without:file', 'nullable', 'string', 'max:' . SupportMessage::MAX_LENGTH],
+            'file' => SupportMessage::fileRules(),
         ], [
-            'body.required' => 'Cavabı yazın.',
+            'body.required_without' => 'Cavabı yazın və ya fayl əlavə edin.',
             'body.max' => 'Cavab ən çox ' . SupportMessage::MAX_LENGTH . ' simvol ola bilər.',
-        ]);
+        ] + SupportMessage::fileMessages());
 
-        $message = DB::transaction(function () use ($request, $user, $data) {
+        $file = $request->hasFile('file') ? SupportMessage::storeUpload($request->file('file')) : [];
+
+        $message = DB::transaction(function () use ($request, $user, $data, $file) {
             // cavab yazılırsa, istifadəçinin əvvəlki mesajları oxunmuş sayılır
             SupportMessage::unreadForAdmin()->where('user_id', $user->id)->update(['read_at' => now()]);
 
@@ -77,8 +80,8 @@ class SupportController extends Controller
                 'user_id' => $user->id,
                 'sender_id' => $request->user()->id,
                 'from_admin' => true,
-                'body' => trim($data['body']),
-            ]);
+                'body' => trim((string) ($data['body'] ?? '')),
+            ] + $file);
         });
         $message->setRelation('sender', $request->user());
 
