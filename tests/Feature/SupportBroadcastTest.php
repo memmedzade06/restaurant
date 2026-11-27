@@ -288,6 +288,8 @@ class SupportBroadcastTest extends TestCase
         // heç bir kanal və ya naməlum kanal — xəta
         $this->actingAs($admin)->post(route('admin.support.broadcast.store'), ['body' => 'x', 'audience' => 'all', 'channels' => []])
             ->assertSessionHasErrors('channels');
+        // xətadan sonra formada "faylı yenidən seçin" xəbərdarlığı (brauzer faylı saxlamır)
+        $this->actingAs($admin)->get(route('admin.support.broadcast'))->assertSee('onu yenidən seçin');
         $this->actingAs($admin)->post(route('admin.support.broadcast.store'), ['body' => 'x', 'audience' => 'all', 'channels' => ['sms']])
             ->assertSessionHasErrors('channels.0');
         $this->assertSame(0, SupportBroadcast::where('admin_id', $admin->id)->count());

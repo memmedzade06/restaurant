@@ -50,6 +50,10 @@
                         <label class="form-label fw-bold mb-1 mt-3" for="broadcastFile">Fayl <span class="fw-normal text-muted">(istəyə görə)</span></label>
                         <input type="file" name="file" id="broadcastFile" class="form-control" accept=".{{ str_replace(',', ',.', \App\Models\SupportMessage::FILE_TYPES) }}">
                         @error('file') <div class="text-danger small">{{ $message }}</div> @enderror
+                        @if ($errors->any() && ! $errors->has('file'))
+                            {{-- xəta olanda brauzer seçilmiş faylı saxlamır — yenidən seçmək lazımdır --}}
+                            <div class="text-danger small fw-bold"><i class="fa fa-exclamation-triangle me-1"></i>Fayl seçmişdinizsə, onu yenidən seçin — xətadan sonra fayl yadda qalmır.</div>
+                        @endif
                         <p class="small text-muted mt-1 mb-0">Şəkil, video (mp4, mov, webm — ən çox {{ \App\Models\SupportMessage::VIDEO_MAX_KB / 1024 }} MB), PDF, Word, Excel və ya mətn faylı (ən çox {{ \App\Models\SupportMessage::FILE_MAX_KB / 1024 }} MB). Şəkil və video söhbətdə görünür, video böyük ekranda da açılır; qalan fayllar yüklənir.</p>
                         <p class="small text-muted mt-2 mb-0">Link yazsanız, mesajın altında düymə görünəcək. Saytın səhifəsi üçün yalnız yolu yazın (məs. <code>/hediyye-marketi</code>, <code>/oyunlar</code>). Yazı boş qalsa: «{{ \App\Models\SupportMessage::DEFAULT_LINK_LABEL }}».</p>
 
@@ -102,11 +106,12 @@
                                         @if ($b->hasChannel('chat'))
                                             <span><i class="fa fa-comments me-1"></i>Söhbət: <b>{{ $b->recipients }}</b></span>
                                         @endif
+                                        {{-- "…" — hələ başlamayıb (növbədə), rəqəm — neçəsinə çatıb; səhifəni yeniləyəndə artır --}}
                                         @if ($b->hasChannel('telegram'))
-                                            <span><i class="fab fa-telegram-plane me-1"></i>Telegram: <b>{{ $b->telegram_sent ?? '…' }}</b> / {{ $b->telegram_total }}</span>
+                                            <span><i class="fab fa-telegram-plane me-1"></i>Telegram: <b>{{ $b->telegram_sent ?? '…' }}</b> / {{ $b->telegram_total }}@if ($b->telegram_sent === null && $b->created_at->gt(now()->subHour())) <small class="text-muted">(növbədə)</small>@endif</span>
                                         @endif
                                         @if ($b->hasChannel('email'))
-                                            <span><i class="fa fa-envelope me-1"></i>E-poçt: <b>{{ $b->email_sent ?? '…' }}</b> / {{ $b->email_total }}</span>
+                                            <span><i class="fa fa-envelope me-1"></i>E-poçt: <b>{{ $b->email_sent ?? '…' }}</b> / {{ $b->email_total }}@if ($b->email_sent === null && $b->created_at->gt(now()->subHour())) <small class="text-muted">(növbədə)</small>@endif</span>
                                         @endif
                                     </div>
                                     <div class="broadcast-body">{{ $b->body }}</div>

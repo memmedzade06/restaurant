@@ -18,6 +18,9 @@ class BroadcastSender
     /** Telegram botlara saniyədə ~30 mesaja icazə verir — aralarında fasilə (mikrosaniyə) */
     private const TELEGRAM_PAUSE_US = 40_000;
 
+    /** Gedişat neçə göndərişdən bir bazaya yazılır (admin tarixçədə "45 / 154" görür) */
+    private const PROGRESS_EVERY = 10;
+
     /** Telegram-da şəkil/video/fayl altındakı yazı ən çox 1024 simvol ola bilər */
     private const CAPTION_MAX = 1024;
 
@@ -39,6 +42,7 @@ class BroadcastSender
     public function telegram(SupportBroadcast $b): void
     {
         $sent = 0;
+        $b->forceFill(['telegram_sent' => 0])->save(); // başladı — admin səhifəsində "0 / N", sonra artır
         if ($this->bot->configured()) {
             $text = e((string) $b->body);
             [$text, $buttons] = $this->telegramLink($b, $text);
@@ -50,6 +54,9 @@ class BroadcastSender
                         try {
                             if ($this->telegramOne($b, $u->telegram_chat_id, $text, $buttons, $fileId)) {
                                 $sent++;
+                                if ($sent % self::PROGRESS_EVERY === 0) {
+                                    $b->forceFill(['telegram_sent' => $sent])->save(); // gedişat admin səhifəsində görünsün
+                                }
                             }
                         } catch (Throwable $e) {
                             report($e);
@@ -133,12 +140,16 @@ class BroadcastSender
     public function email(SupportBroadcast $b): void
     {
         $sent = 0;
+        $b->forceFill(['email_sent' => 0])->save();
         SupportBroadcast::channelQuery($b->audience, 'email')
             ->chunkById(100, function ($users) use ($b, &$sent) {
                 foreach ($users as $u) {
                     try {
                         Mail::to($u->email)->send(new BroadcastMail($b, $u));
                         $sent++;
+                        if ($sent % self::PROGRESS_EVERY === 0) {
+                            $b->forceFill(['email_sent' => $sent])->save();
+                        }
                     } catch (Throwable $e) {
                         report($e);
                     }
